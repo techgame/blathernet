@@ -12,13 +12,14 @@
 
 import weakref
 
-from TG.kvObserving import KVObject, KVProperty
+from TG.kvObserving import KVObject, KVProperty, OBFactoryMap
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 #~ Definitions 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 class BlatherObject(KVObject):
+    _fm_ = OBFactoryMap()
     def asWeakProxy(self, cb=None): return weakref.proxy(self, cb)
     def asWeakRef(self, cb=None): return weakref.ref(self, cb)
 

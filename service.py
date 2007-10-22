@@ -15,7 +15,6 @@ from functools import partial
 from TG.kvObserving import KVProperty
 
 from .base import BlatherObject
-from .adverts import BlatherAdvert
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 #~ Definitions 
@@ -45,6 +44,28 @@ class ServiceAdvertRegistration(object):
         for k,v in self.info.items():
             if v is None: del self.info[k]
     
+class BasicBlatherService(BlatherObject):
+    _fm_ = BlatherObject._fm_.branch()
+
+    advertInfo = ServiceAdvertRegistration()
+    advert = KVProperty(None)
+
+    def isBlatherHost(self): return True
+
+    def registerOn(self, blatherObj):
+        blatherObj.registerService(self)
+
+    def registerAdvert(self, advertInfo):
+        advertInfo['key'] = id(self)
+        from .adverts import BlatherAdvert
+        self.advert = BlatherAdvert.fromInfo(advertInfo)
+        self.advert.processMessage = self.processMessage
+
+    def processMessage(self, header, message):
+        raise NotImplementedError('Subclass Responsibility: %r' % (self,))
+
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+#~ Blather Message Service
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 class MessageRegistry(object):
@@ -77,18 +98,34 @@ class MessageRegistry(object):
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-class BlatherService(BlatherObject):
+class MessageObject(object):
+    adreply = None
+
+    def __init__(self, header, message):
+        self.header = header
+        self.message = message
+
+    def getRoute(self):
+        return self.header['route']
+    route = property(getRoute)
+
+    def reply(self, clientFactory=None):
+        reply = self.header['reply']
+        advert = self.route.advertFor(reply['adkey'])
+        if advert is not None:
+            if clientFactory is None:
+                return advert.replyClient(reply)
+            else:
+                return clientFactory(advert, reply)
+
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+class BlatherMessageService(BasicBlatherService):
+    _fm_ = BlatherObject._fm_.branch(MessageObject=MessageObject)
     msgreg = MessageRegistry()
-    advertInfo = ServiceAdvertRegistration()
-    advert = KVProperty(None)
 
-    def isBlatherHost(self): return True
-
-    def registerAdvert(self, advertInfo):
-        advertInfo['key'] = id(self)
-        self.advert = BlatherAdvert.fromInfo(advertInfo)
-        print 'registerAdvert:', advertInfo
-
-    def registerOn(self, blatherObj):
-        blatherObj.registerService(self)
+    def processMessage(self, header, message):
+        method = self.msgreg.get(message[0])
+        msgobj = self._fm_.MessageObject(header, message)
+        method(self, msgobj, *message[1:])
 
