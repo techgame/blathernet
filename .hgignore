@@ -5,6 +5,7 @@
 syntax: glob 
 
 syntax: regexp 
+^sandbox/
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 #~ Generally useful ignore configurations
