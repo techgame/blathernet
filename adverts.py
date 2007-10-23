@@ -10,10 +10,9 @@
 #~ Imports 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-from TG.kvObserving import KVProperty, KVKeyedDict, KVSet
+from TG.kvObserving import KVProperty, KVKeyedDict, KVSet, OBSettings
 
 from .base import BlatherObject
-from . import client
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 #~ Definitions 
@@ -51,7 +50,9 @@ class BlatherAdvertDB(BlatherObject):
         else: return None
 
     def registerService(self, service):
-        self.addAdvert(service.advert)
+        service.advert.registerOn(self)
+    def registerAdvert(self, advert):
+        self.addAdvert(advert)
 
     def addAdvert(self, advert):
         self.db[advert.key] = advert.asWeakRef()
@@ -59,32 +60,38 @@ class BlatherAdvertDB(BlatherObject):
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 class BlatherAdvert(BlatherObject):
-    _fm_ = BlatherObject._fm_.branch(
-            Client=client.BlatherClient,
-            ReplyClient=client.BlatherReplyClient)
+    _fm_ = BlatherObject._fm_.branch()
+    clientMap = dict()
 
     def isBlatherAdvert(self): return True
 
     @classmethod
-    def fromInfo(klass, info):
+    def fromInfo(klass, info, clientMap=None):
         self = klass()
         self.info = info
+        if clientMap is not None:
+            self.clientMap = clientMap
         return self
 
+    def registerOn(self, blatherObj, *args, **kw):
+        blatherObj.registerAdvert(self, *args, **kw)
+    def registerRoute(self, route):
+        self.addOutbound(route)
+
     def getKey(self):
-        return self.info['key']
-    def setKey(self, key):
-        self.info['key'] = key
-    key = property(getKey, setKey)
+        return self.attr('key')
+    key = property(getKey)
+
+    def attr(self, key, default=None):
+        return self.info.get(key, default)
 
     def client(self):
-        return self._fm_.Client(self)
+        clientFactory = self.clientMap['send']
+        return clientFactory(self)
 
     def replyClient(self, header):
-        return self._fm_.ReplyClient(self, header)
-
-    def processMsgObj(self, route, adkey, msg, content):
-        raise NotImplementedError('Service Responsibility: %r' % (self,))
+        clientFactory = self.clientMap['reply']
+        return clientFactory(self, header)
 
     #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -93,5 +100,14 @@ class BlatherAdvert(BlatherObject):
         self.outbound.add(route.asWeakRef(self._updateOutbound))
     def _updateOutbound(self, wrRoute): 
         self.outbound.difference_update([e for e in self.outbound if e() is None])
+
+    def iterRoutes(self):
+        return (route() for route in self.outbound if route() is not None)
+    def allHosts(self):
+        return set(route.host() for route in self.iterRoutes())
+
+    def processMsgObj(self, route, adkey, msg, content):
+        raise NotImplementedError('Service Responsibility: %r' % (self,))
+
 Advert = BlatherAdvert
 

@@ -10,10 +10,11 @@
 #~ Imports 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-from TG.kvObserving import KVProperty, KVSet
+from TG.kvObserving import KVProperty, KVSet, KVKeyedDict
 
 from .base import BlatherObject
 from .adverts import BlatherAdvertDB
+from .advertExchange import AdvertExchangeService
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 #~ Definitions 
@@ -26,13 +27,14 @@ class BlatherRouter(BlatherObject):
     def isBlatherRouter(self): return True
 
     def __init__(self):
-        self.connectDirect(self)
+        pass #self.connectDirect(self)
 
     def registerService(self, service):
         for route in self.routes:
             service.registerOn(route)
 
     def addRoute(self, route):
+        route.router = self.asWeakRef()
         self.routes.add(route)
 
     def connectDirect(self, other):
@@ -43,24 +45,50 @@ class BlatherRouter(BlatherObject):
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 class BlatherRouteAdvertDB(BlatherAdvertDB):
-    _fm_ = BlatherAdvertDB._fm_.branch()
+    services = KVKeyedDict.property()
 
 class BlatherRoute(BlatherObject):
-    _fm_ = BlatherObject._fm_.branch()
+    _fm_ = BlatherObject._fm_.branch(
+            services={
+                'exchange': AdvertExchangeService,
+                })
 
-    routeAdvertDb = KVProperty(BlatherAdvertDB)
+    routeAdvertDb = KVProperty(BlatherRouteAdvertDB)
+    router = None # weakref to BlatherRouter
 
     def isBlatherRoute(self): return True
 
+    def __init__(self):
+        self.createRouteServices()
+
+    def createRouteServices(self):
+        serviceMap = self.routeAdvertDb.services
+        for key, serviceFactory in self._fm_.services.iteritems():
+            service = serviceFactory()
+            service.registerOn(self)
+            serviceMap[key] = service.advert
+
     def registerService(self, service):
-        service.registerOn(self.routeAdvertDb)
-        service.advert.addOutbound(self)
+        service.registerRoute(self)
+    def registerAdvert(self, advert, publish=True):
+        advert.registerRoute(self)
+        advert.registerOn(self.routeAdvertDb)
+        if publish:
+            self.sendAdvert(advert)
+
+    def host(self):
+        return self.router().host()
 
     def advertFor(self, adkey):
         return self.routeAdvertDb.get(adkey)
 
     def sendAdvert(self, advert):
-        raise NotImplementedError('Subclass Responsibility: %r' % (self,))
+        if advert.attr('private', False):
+            return False
+
+        exchangeAdvert = self.routeAdvertDb.services['exchange']
+        exchange = exchangeAdvert.client()
+        return exchange.asyncSend('advert', advert.info)
 
     def sendMessage(self, header, message):
         raise NotImplementedError('Subclass Responsibility: %r' % (self,))

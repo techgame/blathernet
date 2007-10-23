@@ -26,10 +26,10 @@ class BasicBlatherClient(BlatherObject):
 
     def __init__(self, advert, header=None):
         self.advert = advert
-        self.initHeaderTemplate(advert, header)
+        self._initHeaderTemplate(advert, header)
 
     t_header = dict()
-    def initHeaderTemplate(self, advert, header):
+    def _initHeaderTemplate(self, advert, header):
         t_header = self.t_header.copy()
         if header is not None:
             t_header.update(header)
@@ -40,58 +40,47 @@ class BasicBlatherClient(BlatherObject):
     def newHeader(self, **header):
         header.update(self.t_header)
         return header
+    def newFuture(self, header):
+        raise NotImplementedError('Subclass Responsibility: %r' % (self,))
+
+    def iterRoutes(self):
+        return self.advert.iterRoutes()
 
     def sendMessage(self, header, message):
-        for out in self.advert.outbound:
-            out = out()
-            if out is not None:
-                out.sendMessage(header, message)
+        for route in self.iterRoutes():
+            route.sendMessage(header, message)
 
     def registerService(self, service):
-        for out in self.advert.outbound:
-            out = out()
-            if out is not None:
-                service.registerOn(out)
+        for route in self.iterRoutes():
+            service.registerOn(route)
 
-#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-class BlatherReplyClient(BasicBlatherClient):
-    def send(self, *args):
+    def asyncSend(self, *args):
         header = self.newHeader()
         self.sendMessage(header, args)
+        return None
+    asend = asyncSend
 
-class BlatherClient(BasicBlatherClient):
-    def __init__(self, advert, header=None):
-        BasicBlatherClient.__init__(self, advert, header)
-        self.createReplyService()
-
-    def createReplyService(self):
-        self._replyService = BlatherClientReply()
-        self._replyService.registerOn(self)
-
-    def newFuture(self, header):
-        return self._replyService.newFuture(header)
-
-    def send(self, *args):
+    def futureSend(self, *args):
         header = self.newHeader()
         future = self.newFuture(header)
         self.sendMessage(header, args)
         return future
+    fsend = futureSend
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 #~ Client Reply Service
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-class BlatherClientReply(BasicBlatherService):
+class BlatherClientReplyService(BasicBlatherService):
     _fm_ = BasicBlatherService._fm_.branch()
 
     def __init__(self):
         BasicBlatherService.__init__(self)
-        self.initHeaderTemplate(self.advert)
+        self._initHeaderTemplate(self.advert)
         self._replyMap = {}
 
     t_header = dict()
-    def initHeaderTemplate(self, advert):
+    def _initHeaderTemplate(self, advert):
         self.t_header = self.t_header.copy()
         self.t_header.update(adkey=advert.key)
 
@@ -123,4 +112,26 @@ class MessageFuture(BlatherObject):
 
     def processMessage(self, header, message):
         self.reply = message
+
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+class BlatherReplyClient(BasicBlatherClient):
+    pass
+
+class BlatherClient(BasicBlatherClient):
+    _fm_ = BasicBlatherClient._fm_.branch(
+            ReplyService = BlatherClientReplyService)
+
+    _replyService = None
+    def getReplyService(self):
+        replyService = self._replyService
+        if replyService is None:
+            replyService = self._fm_.ReplyService()
+            replyService.registerOn(self)
+            self._replyService = replyService
+        return replyService
+    replyService = property(getReplyService)
+
+    def newFuture(self, header):
+        return self.replyService.newFuture(header)
 

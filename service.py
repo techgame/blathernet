@@ -12,9 +12,10 @@
 
 from functools import partial
 
-from TG.kvObserving import KVProperty
+from TG.kvObserving import KVProperty, OBSettings
 
 from .base import BlatherObject
+from .adverts import BlatherAdvert
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 #~ Definitions 
@@ -29,7 +30,7 @@ class ServiceAdvertRegistration(object):
     def onObservableInit(self, pubName, obInstance):
         self = self.copy()
         setattr(obInstance, pubName, self)
-        obInstance.registerAdvert(self.info)
+        obInstance.createAdvert(self.info)
     onObservableInit.priority = -5
 
     def __init__(self, info=None):
@@ -43,26 +44,46 @@ class ServiceAdvertRegistration(object):
 
         for k,v in self.info.items():
             if v is None: del self.info[k]
+
+    def branch(self, *args, **kw):
+        self = self.copy()
+        self.update(*args, **kw)
+        return self
     
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
 class BasicBlatherService(BlatherObject):
     _fm_ = BlatherObject._fm_.branch()
+
+    clientMap = dict(
+        #send= client.BlatherClient,
+        #reply= client.BlatherReplyClient,
+        )
 
     advertInfo = ServiceAdvertRegistration()
     advert = KVProperty(None)
 
     def isBlatherHost(self): return True
 
-    def registerOn(self, blatherObj):
-        blatherObj.registerService(self)
-
-    def registerAdvert(self, advertInfo):
-        advertInfo['key'] = id(self)
-        from .adverts import BlatherAdvert
-        self.advert = BlatherAdvert.fromInfo(advertInfo)
+    def createAdvert(self, advertInfo):
+        if advertInfo.get('key') is None:
+            advertInfo['key'] = id(self)
+        self.advert = BlatherAdvert.fromInfo(advertInfo, self.clientMap)
         self.advert.processMessage = self.processMessage
+
+    def registerOn(self, blatherObj, *args, **kw):
+        blatherObj.registerService(self, *args, **kw)
+    def registerRoute(self, route):
+        self.advert.registerOn(route)
 
     def processMessage(self, header, message):
         raise NotImplementedError('Subclass Responsibility: %r' % (self,))
+
+    def iterRoutes(self):
+        return self.advert.iterRoutes()
+    def allHosts(self):
+        return self.advert.allHosts()
+
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 #~ Blather Message Service
@@ -128,4 +149,18 @@ class BlatherMessageService(BasicBlatherService):
         method = self.msgreg.get(message[0])
         msgobj = self._fm_.MessageObject(header, message)
         method(self, msgobj, *message[1:])
+
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+#~ Force client update
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+from . import client
+
+BlatherAdvert.clientMap = dict(
+    send = client.BlatherClient,
+    reply = client.BlatherReplyClient,)
+
+BasicBlatherService.clientMap = dict(
+    send = client.BlatherClient,
+    reply = client.BlatherReplyClient,)
 

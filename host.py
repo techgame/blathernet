@@ -26,6 +26,9 @@ class BlatherHost(BlatherObject):
 
     def isBlatherHost(self): return True
 
+    def __init__(self):
+        self.router.host = self.asWeakRef()
+
     def registerService(self, service):
         service.registerOn(self.advertDb)
         service.registerOn(self.router)
