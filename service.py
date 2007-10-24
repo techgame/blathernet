@@ -89,7 +89,7 @@ class BasicBlatherService(BlatherObject):
 #~ Blather Message Service
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-class MessageRegistry(object):
+class MessageHandlerRegistry(object):
     def onObservableClassInit(self, pubName, obKlass):
         self = self.copy()
         setattr(obKlass, pubName, self)
@@ -143,7 +143,7 @@ class MessageObject(object):
 
 class BlatherMessageService(BasicBlatherService):
     _fm_ = BlatherObject._fm_.branch(MessageObject=MessageObject)
-    msgreg = MessageRegistry()
+    msgreg = MessageHandlerRegistry()
 
     def processMessage(self, header, message):
         method = self.msgreg.get(message[0])

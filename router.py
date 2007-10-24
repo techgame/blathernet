@@ -27,7 +27,7 @@ class BlatherRouter(BlatherObject):
     def isBlatherRouter(self): return True
 
     def __init__(self):
-        pass #self.connectDirect(self)
+        self.connectDirect(self)
 
     def registerService(self, service):
         for route in self.routes:
@@ -49,9 +49,7 @@ class BlatherRouteAdvertDB(BlatherAdvertDB):
 
 class BlatherRoute(BlatherObject):
     _fm_ = BlatherObject._fm_.branch(
-            services={
-                'exchange': AdvertExchangeService,
-                })
+            services={'exchange': AdvertExchangeService})
 
     routeAdvertDb = KVProperty(BlatherRouteAdvertDB)
     router = None # weakref to BlatherRouter
