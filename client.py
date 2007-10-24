@@ -19,6 +19,9 @@ from .service import BasicBlatherService
 #~ Definitions 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
+class NoRouteAvailable(Exception):
+    pass
+
 class BasicBlatherClient(BlatherObject):
     _fm_ = BlatherObject._fm_.branch()
 
@@ -47,12 +50,22 @@ class BasicBlatherClient(BlatherObject):
         return self.advert.iterRoutes()
 
     def sendMessage(self, header, message):
+        count = 0
         for route in self.iterRoutes():
             route.sendMessage(header, message)
+            count += 1
+        if not count:
+            raise NoRouteAvailable()
+        return count
 
     def registerService(self, service):
+        count = 0
         for route in self.iterRoutes():
             service.registerOn(route)
+            count += 1
+        if not count:
+            raise NoRouteAvailable()
+        return count
 
     def asyncSend(self, *args):
         header = self.newHeader()

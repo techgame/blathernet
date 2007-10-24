@@ -83,6 +83,8 @@ class BlatherRoute(BlatherObject):
     def sendAdvert(self, advert):
         if advert.attr('private', False):
             return False
+        if self.target is self:
+            return False
 
         exchangeAdvert = self.routeAdvertDb.services['exchange']
         exchange = exchangeAdvert.client()
