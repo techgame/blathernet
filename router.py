@@ -37,8 +37,11 @@ class BlatherRouter(BlatherObject):
         route.router = self.asWeakRef()
         self.routes.add(route)
 
-    def connectDirect(self, other):
-        BlatherDirectRoute.configure(self, other)
+    def connectDirect(self, other=None):
+        if other is self or other is None:
+            return BlatherLoopbackRoute.configure(self)
+        else:
+            return BlatherDirectRoute.configure(self, other)
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 #~ Routes
@@ -91,33 +94,27 @@ class BlatherRoute(BlatherObject):
     def sendMessage(self, header, message):
         raise NotImplementedError('Subclass Responsibility: %r' % (self,))
 
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
 class BlatherDirectRoute(BlatherRoute):
     _fm_ = BlatherRoute._fm_.branch()
 
     @classmethod
     def configure(klass, hostA, hostB=None):
+        if hostA is hostB or hostB is None:
+            return BlatherLoopbackRoute.configure(hostA)
+
         routeA = klass()
         hostA.addRoute(routeA)
 
-        if hostA is not hostB and hostB is not None:
-            routeB = klass()
-            hostB.addRoute(routeB)
+        routeB = klass()
+        hostB.addRoute(routeB)
 
-            routeA.setTarget(routeB)
-            routeB.setTarget(routeA)
-
-    _target = None
-    def getTarget(self):
-        if self._target is None:
-            return self
-        return self._target
-    def setTarget(self, target):
-        self._target = target
-    target = property(getTarget, setTarget)
+        routeA.target = routeB
+        routeB.target = routeA
+        return (routeA, routeB)
 
     def sendAdvert(self, advert):
-        if self.target is self:
-            return False
         return BlatherRoute.sendAdvert(self, advert)
 
     def sendMessage(self, header, message):
@@ -134,4 +131,21 @@ class BlatherDirectRoute(BlatherRoute):
 
         advert = self.advertFor(header['adkey'])
         advert.processMessage(header, message)
+
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+class BlatherLoopbackRoute(BlatherDirectRoute):
+    _fm_ = BlatherRoute._fm_.branch(
+            services={})
+
+    target = property(lambda self: self)
+
+    @classmethod
+    def configure(klass, host):
+        route = klass()
+        host.addRoute(route)
+        return route
+
+    def sendAdvert(self, advert):
+        return False
 
