@@ -88,19 +88,17 @@ class BasicBlatherClient(BlatherObject):
 
 class BlatherClientReplyService(BasicBlatherService):
     _fm_ = BasicBlatherService._fm_.branch()
+    advertInfo = BasicBlatherService.advertInfo.branch(
+        name='-reply-')
 
-    def __init__(self):
+    def __init__(self, fromAdvert):
         BasicBlatherService.__init__(self)
-        self._initHeaderTemplate(self.advert)
+        self.fromAdvert = fromAdvert
+        self.advertInfo.update(name='replyTo-' + fromAdvert.info['name'])
         self._replyMap = {}
 
-    t_header = dict()
-    def _initHeaderTemplate(self, advert):
-        self.t_header = self.t_header.copy()
-        self.t_header.update(adkey=advert.key)
-
     def newFuture(self, header):
-        replyHeader = self.t_header.copy()
+        replyHeader = {'adkey': self.advert.key}
         header['reply'] = replyHeader
         future = MessageFuture()
 
@@ -141,7 +139,7 @@ class BlatherClient(BasicBlatherClient):
     def getReplyService(self):
         replyService = self._replyService
         if replyService is None:
-            replyService = self._fm_.ReplyService()
+            replyService = self._fm_.ReplyService(self.advert)
             replyService.registerOn(self)
             self._replyService = replyService
         return replyService

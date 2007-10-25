@@ -26,8 +26,16 @@ class BlatherHost(BlatherObject):
 
     def isBlatherHost(self): return True
 
-    def __init__(self):
+    name = None
+    def __init__(self, name=None):
+        if name is not None:
+            self.name = name
         self.router.host = self.asWeakRef()
+
+    def __repr__(self):
+        if self.name is None:
+            return '<%s %x>' % (self.__class__.__name__, id(self))
+        else: return '<%s "%s">' % (self.__class__.__name__, self.name)
 
     def registerAdvert(self, advert):
         advert.registerOn(self.advertDb)

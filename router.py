@@ -10,6 +10,8 @@
 #~ Imports 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
+import sys
+
 from TG.kvObserving import KVProperty, KVSet, KVKeyedDict
 
 from .base import BlatherObject
@@ -28,7 +30,7 @@ class BlatherRouter(BlatherObject):
 
     def __init__(self):
         BlatherObject.__init__(self)
-        #self.connectDirect()
+        self.connectDirect()
 
     def registerAdvert(self, advert):
         for route in self.routes:
@@ -49,12 +51,13 @@ class BlatherRouter(BlatherObject):
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 class BlatherRouteAdvertDB(BlatherAdvertDB):
-    services = KVKeyedDict.property()
+    pass
 
-class BlatherRoute(BlatherObject):
+class BasicBlatherRoute(BlatherObject):
     _fm_ = BlatherObject._fm_.branch(
-            services={'exchange': AdvertExchangeService})
+            routeServices={'exchange': AdvertExchangeService})
 
+    routeServices = KVKeyedDict.property()
     routeAdvertDb = KVProperty(BlatherRouteAdvertDB)
     router = None # weakref to BlatherRouter
 
@@ -64,20 +67,15 @@ class BlatherRoute(BlatherObject):
         self.createRouteServices()
 
     def createRouteServices(self):
-        serviceMap = self.routeAdvertDb.services
-        for key, serviceFactory in self._fm_.services.iteritems():
+        for name, serviceFactory in self._fm_.routeServices.iteritems():
             service = serviceFactory()
-            service.registerOn(self)
-            serviceMap[key] = service.advert
+            advert = service.advert
+            self.recvAdvert(advert)
+            self.routeServices[name] = advert.client()
 
-    def registerService(self, service):
-        service.registerRoute(self)
-    def registerAdvert(self, advert, publish=True):
-        advert.registerRoute(self)
+    def registerAdvert(self, advert):
         if advert.key not in self.routeAdvertDb:
-            advert.registerOn(self.routeAdvertDb)
-            if publish:
-                self.sendAdvert(advert)
+            self.sendAdvert(advert)
 
     def host(self):
         return self.router().host()
@@ -86,20 +84,41 @@ class BlatherRoute(BlatherObject):
         return self.routeAdvertDb.get(adkey)
 
     def sendAdvert(self, advert):
+        advert.registerOn(self.routeAdvertDb)
         if advert.attr('private', False):
             return False
 
-        exchangeAdvert = self.routeAdvertDb.services['exchange']
-        exchange = exchangeAdvert.client()
+        exchange = self.routeServices['exchange']
         return exchange.asyncSend('advert', advert.info)
+    
+    def recvAdvert(self, advert):
+        advert.registerRoute(self)
+        advert.registerOn(self.routeAdvertDb)
 
     def sendMessage(self, header, message):
+        adkey = header['adkey']
+        if adkey not in self.routeAdvertDb:
+            raise ValueError('Advert Key %r is not in route\'s advert DB')
+
+        self.dispatch(header.copy(), message)
+        header['sent'] = True
+        return True
+
+    def recvMessage(self, header, message):
+        advert = self.advertFor(header['adkey'])
+        if advert is None:
+            print >> sys.stderr, 'WARN: advert not found for:', header
+            return
+
+        advert.processMessage(self, header, message)
+
+    def dispatch(self, header, message):
         raise NotImplementedError('Subclass Responsibility: %r' % (self,))
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-class BlatherDirectRoute(BlatherRoute):
-    _fm_ = BlatherRoute._fm_.branch()
+class BlatherDirectRoute(BasicBlatherRoute):
+    _fm_ = BasicBlatherRoute._fm_.branch()
 
     @classmethod
     def configure(klass, hostA, hostB=None):
@@ -116,27 +135,14 @@ class BlatherDirectRoute(BlatherRoute):
         routeB.target = routeA
         return (routeA, routeB)
 
-    def sendAdvert(self, advert):
-        return BlatherRoute.sendAdvert(self, advert)
-
-    def sendMessage(self, header, message):
-        adkey = header['adkey']
-        if adkey not in self.routeAdvertDb:
-            raise ValueError('Advert Key %r is not in route\'s advert DB')
-
-        self.target.dispatch(header.copy(), message)
-        header['sent'] = True
-        return True
-
     def dispatch(self, header, message):
-        advert = self.advertFor(header['adkey'])
-        advert.processMessage(self, header, message)
+        self.target.recvMessage(header, message)
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 class BlatherLoopbackRoute(BlatherDirectRoute):
-    _fm_ = BlatherRoute._fm_.branch(
-            services={})
+    _fm_ = BlatherDirectRoute._fm_.branch(
+            routeServices={})
 
     target = property(lambda self: self)
 

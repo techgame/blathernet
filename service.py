@@ -31,7 +31,7 @@ class ServiceAdvertRegistration(object):
         self = self.copy()
         setattr(obInstance, pubName, self)
         obInstance.createAdvert(self.info)
-    onObservableInit.priority = -5
+    onObservableInit.priority = 5
 
     def __init__(self, info=None):
         self.info = dict(info or {})
@@ -44,6 +44,15 @@ class ServiceAdvertRegistration(object):
 
         for k,v in self.info.items():
             if v is None: del self.info[k]
+
+    def get(self, name, default):
+        return self.get(name, default)
+    def __getitem__(self, name):
+        return self.info[name]
+    def __getitem__(self, name, value):
+        self.info[name] = value
+    def __delitem__(self, name):
+        del self.info[name]
 
     def branch(self, *args, **kw):
         self = self.copy()
@@ -73,8 +82,6 @@ class BasicBlatherService(BlatherObject):
 
     def registerOn(self, blatherObj, *args, **kw):
         blatherObj.registerService(self, *args, **kw)
-    def registerRoute(self, route):
-        self.advert.registerOn(route)
 
     def processMessage(self, fromRoute, header, message):
         raise NotImplementedError('Subclass Responsibility: %r' % (self,))
@@ -139,6 +146,11 @@ class MessageObject(object):
         self.route = route
         self.header = header
         self.message = message
+
+    def allRoutes(self):
+        return self.route.router().routes
+    def otherRoutes(self):
+        return self.allRoutes() - set([self.route])
 
     def reply(self, clientFactory=None):
         reply = self.header['reply']

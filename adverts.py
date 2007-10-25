@@ -63,6 +63,9 @@ class BlatherAdvert(BlatherObject):
 
     def isBlatherAdvert(self): return True
 
+    def __repr__(self):
+        return '<%s key:%s name:"%s">' % (self.__class__.__name__, self.info.get('key'), self.info.get('name'))
+
     @classmethod
     def fromInfo(klass, info, clientMap=None):
         self = klass()
@@ -70,6 +73,9 @@ class BlatherAdvert(BlatherObject):
         if clientMap is not None:
             self.clientMap = clientMap
         return self
+
+    def copy(self):
+        return self.fromInfo(self.info, self.clientMap)
 
     def registerOn(self, blatherObj, *args, **kw):
         blatherObj.registerAdvert(self, *args, **kw)

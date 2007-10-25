@@ -33,14 +33,24 @@ class AdvertExchangeService(BlatherMessageService):
     @msgreg.on('advert')
     def advert(self, msgobj, advertInfo):
         advert = BlatherAdvert.fromInfo(advertInfo)
-        service = ForwardingBlatherService(advert)
-        advert.registerOn(msgobj.route, publish=False)
-        advert.registerOn(msgobj.route.host())
+        msgobj.route.recvAdvert(advert)
+
         self.exchanged.append(advert)
 
-        if not advert.attr('private', False):
-            for advertDb in self.iterPublicAdvertDbs():
-                advert.registerOn(advertDb)
+        self.publish(msgobj, advert)
+
+    def publish(self, msgobj, advert):
+        if advert.attr('private', False):
+            return False
+
+        ForwardingBlatherService(advert)
+
+        for advertDb in self.iterPublicAdvertDbs():
+            advert.registerOn(advertDb)
+
+        for route in msgobj.otherRoutes():
+            route.sendAdvert(advert)
+        return True
 
     def iterPublicAdvertDbs(self):
         for host in self.allHosts():
