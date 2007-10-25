@@ -58,14 +58,16 @@ class BasicBlatherClient(BlatherObject):
             raise NoRouteAvailable()
         return count
 
-    def registerService(self, service):
+    def registerAdvert(self, advert):
         count = 0
         for route in self.iterRoutes():
-            service.registerOn(route)
+            advert.registerOn(route)
             count += 1
         if not count:
             raise NoRouteAvailable()
         return count
+    def registerService(self, service):
+        service.advert.registerOn(self)
 
     def asyncSend(self, *args):
         header = self.newHeader()
@@ -108,11 +110,11 @@ class BlatherClientReplyService(BasicBlatherService):
 
         return future
 
-    def processMessage(self, header, message):
+    def processMessage(self, fromRoute, header, message):
         futureid = header.get('id', None)
-        reply = self._replyMap.pop(futureid)
+        reply = self._replyMap.pop(futureid, None)
         if reply is not None:
-            reply.processMessage(header, message)
+            reply.processMessage(fromRoute, header, message)
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -123,7 +125,7 @@ class MessageFuture(BlatherObject):
     def get(self, timeout=None):
         return self.reply
 
-    def processMessage(self, header, message):
+    def processMessage(self, fromRoute, header, message):
         self.reply = message
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

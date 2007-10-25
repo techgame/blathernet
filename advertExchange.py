@@ -13,7 +13,7 @@
 from TG.kvObserving import KVList
 
 from .adverts import BlatherAdvert
-from .service import BlatherMessageService
+from .service import BlatherMessageService, ForwardingBlatherService
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 #~ Definitions 
@@ -33,7 +33,9 @@ class AdvertExchangeService(BlatherMessageService):
     @msgreg.on('advert')
     def advert(self, msgobj, advertInfo):
         advert = BlatherAdvert.fromInfo(advertInfo)
+        service = ForwardingBlatherService(advert)
         advert.registerOn(msgobj.route, publish=False)
+        advert.registerOn(msgobj.route.host())
         self.exchanged.append(advert)
 
         if not advert.attr('private', False):

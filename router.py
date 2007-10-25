@@ -27,11 +27,12 @@ class BlatherRouter(BlatherObject):
     def isBlatherRouter(self): return True
 
     def __init__(self):
-        self.connectDirect(self)
+        BlatherObject.__init__(self)
+        #self.connectDirect()
 
-    def registerService(self, service):
+    def registerAdvert(self, advert):
         for route in self.routes:
-            service.registerOn(route)
+            advert.registerOn(route)
 
     def addRoute(self, route):
         route.router = self.asWeakRef()
@@ -73,9 +74,10 @@ class BlatherRoute(BlatherObject):
         service.registerRoute(self)
     def registerAdvert(self, advert, publish=True):
         advert.registerRoute(self)
-        advert.registerOn(self.routeAdvertDb)
-        if publish:
-            self.sendAdvert(advert)
+        if advert.key not in self.routeAdvertDb:
+            advert.registerOn(self.routeAdvertDb)
+            if publish:
+                self.sendAdvert(advert)
 
     def host(self):
         return self.router().host()
@@ -127,10 +129,8 @@ class BlatherDirectRoute(BlatherRoute):
         return True
 
     def dispatch(self, header, message):
-        header['route'] = self
-
         advert = self.advertFor(header['adkey'])
-        advert.processMessage(header, message)
+        advert.processMessage(self, header, message)
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 

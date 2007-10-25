@@ -49,8 +49,6 @@ class BlatherAdvertDB(BlatherObject):
             return m
         else: return None
 
-    def registerService(self, service):
-        service.advert.registerOn(self)
     def registerAdvert(self, advert):
         self.addAdvert(advert)
 

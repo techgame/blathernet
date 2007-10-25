@@ -76,7 +76,7 @@ class BasicBlatherService(BlatherObject):
     def registerRoute(self, route):
         self.advert.registerOn(route)
 
-    def processMessage(self, header, message):
+    def processMessage(self, fromRoute, header, message):
         raise NotImplementedError('Subclass Responsibility: %r' % (self,))
 
     def iterRoutes(self):
@@ -84,6 +84,19 @@ class BasicBlatherService(BlatherObject):
     def allHosts(self):
         return self.advert.allHosts()
 
+class ForwardingBlatherService(BasicBlatherService):
+    def __init__(self, advert):
+        BasicBlatherService.__init__(self)
+        self.advert = advert
+        self.advert.processMessage = self.processMessage
+
+    def createAdvert(self, advertInfo):
+        pass
+
+    def processMessage(self, fromRoute, header, message):
+        for route in self.iterRoutes():
+            if route is not fromRoute:
+                route.sendMessage(header, message)
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 #~ Blather Message Service
@@ -122,13 +135,10 @@ class MessageHandlerRegistry(object):
 class MessageObject(object):
     adreply = None
 
-    def __init__(self, header, message):
+    def __init__(self, route, header, message):
+        self.route = route
         self.header = header
         self.message = message
-
-    def getRoute(self):
-        return self.header['route']
-    route = property(getRoute)
 
     def reply(self, clientFactory=None):
         reply = self.header['reply']
@@ -145,9 +155,9 @@ class BlatherMessageService(BasicBlatherService):
     _fm_ = BlatherObject._fm_.branch(MessageObject=MessageObject)
     msgreg = MessageHandlerRegistry()
 
-    def processMessage(self, header, message):
+    def processMessage(self, route, header, message):
         method = self.msgreg.get(message[0])
-        msgobj = self._fm_.MessageObject(header, message)
+        msgobj = self._fm_.MessageObject(route, header, message)
         method(self, msgobj, *message[1:])
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
