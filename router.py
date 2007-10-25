@@ -40,6 +40,11 @@ class BlatherRouter(BlatherObject):
         route.router = self.asWeakRef()
         self.routes.add(route)
 
+    def allRoutes(self):
+        return self.routes
+    def publishRoutes(self):
+        return set(r for r in self.routes if not r.isLoopback())
+
     def connectDirect(self, other=None):
         if other is self or other is None:
             return BlatherLoopbackRoute.configure(self)

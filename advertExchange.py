@@ -48,9 +48,8 @@ class AdvertExchangeService(BlatherMessageService):
         for advertDb in self.iterPublicAdvertDbs():
             advert.registerOn(advertDb)
 
-        for route in msgobj.otherRoutes():
-            if not route.isLoopback():
-                route.sendAdvert(advert)
+        for route in msgobj.publishRoutes():
+            route.sendAdvert(advert)
         return True
 
     def iterPublicAdvertDbs(self):

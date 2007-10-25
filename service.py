@@ -148,13 +148,12 @@ class MessageObject(object):
 
     def __init__(self, route, header, message):
         self.route = route
+        self.router = route.router
         self.header = header
         self.message = message
 
-    def allRoutes(self):
-        return self.route.router().routes
-    def otherRoutes(self):
-        return self.allRoutes() - set([self.route])
+    def publishRoutes(self):
+        return self.router().publishRoutes() - set([self.route])
 
     def reply(self, clientFactory=None):
         reply = self.header['reply']
