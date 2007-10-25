@@ -64,6 +64,7 @@ class BasicBlatherRoute(BlatherObject):
     def isBlatherRoute(self): return True
 
     def __init__(self):
+        BlatherObject.__init__(self)
         self.createRouteServices()
 
     def createRouteServices(self):
@@ -72,6 +73,9 @@ class BasicBlatherRoute(BlatherObject):
             advert = service.advert
             self.recvAdvert(advert)
             self.routeServices[name] = advert.client()
+
+    def isLoopback(self):
+        return False
 
     def registerAdvert(self, advert):
         if advert.key not in self.routeAdvertDb:
@@ -152,6 +156,10 @@ class BlatherLoopbackRoute(BlatherDirectRoute):
         host.addRoute(route)
         return route
 
+    def isLoopback(self):
+        return True
+
     def sendAdvert(self, advert):
+        self.recvAdvert(advert)
         return False
 
