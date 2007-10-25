@@ -80,8 +80,8 @@ class BasicBlatherService(BlatherObject):
         self.advert = BlatherAdvert.fromInfo(advertInfo, self.clientMap)
         self.advert.processMessage = self.processMessage
 
-    def registerOn(self, blatherObj, *args, **kw):
-        blatherObj.registerService(self, *args, **kw)
+    def registerOn(self, blatherObj):
+        self.advert.registerOn(blatherObj)
 
     def processMessage(self, fromRoute, header, message):
         raise NotImplementedError('Subclass Responsibility: %r' % (self,))
@@ -90,6 +90,10 @@ class BasicBlatherService(BlatherObject):
         return self.advert.iterRoutes()
     def allHosts(self):
         return self.advert.allHosts()
+
+    def getHost(self):
+        return self.advert.host
+    host = property(getHost)
 
 class ForwardingBlatherService(BasicBlatherService):
     def __init__(self, advert):

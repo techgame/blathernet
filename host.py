@@ -40,8 +40,6 @@ class BlatherHost(BlatherObject):
     def registerAdvert(self, advert):
         advert.registerOn(self.advertDb)
         advert.registerOn(self.router)
-    def registerService(self, service):
-        service.advert.registerOn(self)
 
     def connectDirect(self, other):
         self.router.connectDirect(other.router)

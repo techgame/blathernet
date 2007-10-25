@@ -54,6 +54,6 @@ class AdvertExchangeService(BlatherMessageService):
 
     def iterPublicAdvertDbs(self):
         for host in self.allHosts():
-            yield host.advertDb
+            yield host().advertDb
 
 

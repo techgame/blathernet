@@ -77,8 +77,8 @@ class BlatherAdvert(BlatherObject):
     def copy(self):
         return self.fromInfo(self.info, self.clientMap)
 
-    def registerOn(self, blatherObj, *args, **kw):
-        blatherObj.registerAdvert(self, *args, **kw)
+    def registerOn(self, blatherObj):
+        blatherObj.registerAdvert(self)
     def registerRoute(self, route):
         self.addOutbound(route)
 
@@ -108,7 +108,11 @@ class BlatherAdvert(BlatherObject):
     def iterRoutes(self):
         return (route() for route in self.outbound if route() is not None)
     def allHosts(self):
-        return set(route.host() for route in self.iterRoutes())
+        return set(route.host for route in self.iterRoutes())
+    def getHost(self):
+        for host in self.allHosts():
+            return host
+    host = property(getHost)
 
     def processMsgObj(self, route, adkey, msg, content):
         raise NotImplementedError('Service Responsibility: %r' % (self,))

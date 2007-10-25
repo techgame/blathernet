@@ -66,8 +66,6 @@ class BasicBlatherClient(BlatherObject):
         if not count:
             raise NoRouteAvailable()
         return count
-    def registerService(self, service):
-        service.advert.registerOn(self)
 
     def asyncSend(self, *args):
         header = self.newHeader()
@@ -88,8 +86,7 @@ class BasicBlatherClient(BlatherObject):
 
 class BlatherClientReplyService(BasicBlatherService):
     _fm_ = BasicBlatherService._fm_.branch()
-    advertInfo = BasicBlatherService.advertInfo.branch(
-        name='-reply-')
+    advertInfo = BasicBlatherService.advertInfo.branch()
 
     def __init__(self, fromAdvert):
         BasicBlatherService.__init__(self)
@@ -98,33 +95,39 @@ class BlatherClientReplyService(BasicBlatherService):
         self._replyMap = {}
 
     def newFuture(self, header):
+        future = MessageFuture(self.host)
+        futureid = id(future)
+        self._replyMap[futureid] = future
+
         replyHeader = {'adkey': self.advert.key}
         header['reply'] = replyHeader
-        future = MessageFuture()
-
-        futureid = id(future)
         replyHeader['id'] = futureid
-        self._replyMap[futureid] = future
 
         return future
 
     def processMessage(self, fromRoute, header, message):
         futureid = header.get('id', None)
-        reply = self._replyMap.pop(futureid, None)
+        reply = self._replyMap.get(futureid)
         if reply is not None:
-            reply.processMessage(fromRoute, header, message)
+            if reply.processMessage(fromRoute, header, message):
+                del self._replyMap[futureid]
+
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 class MessageFuture(BlatherObject):
     _fm_ = BlatherObject._fm_.branch()
 
-    reply = None
+    def __init__(self, hostRef):
+        self.host = hostRef
+        self.queue = []
+
     def get(self, timeout=None):
-        return self.reply
+        return self.queue.pop(0)
 
     def processMessage(self, fromRoute, header, message):
-        self.reply = message
+        self.queue.append(message)
+        return False
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -140,7 +143,7 @@ class BlatherClient(BasicBlatherClient):
         replyService = self._replyService
         if replyService is None:
             replyService = self._fm_.ReplyService(self.advert)
-            replyService.registerOn(self)
+            replyService.advert.registerOn(self)
             self._replyService = replyService
         return replyService
     replyService = property(getReplyService)
