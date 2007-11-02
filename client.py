@@ -51,6 +51,13 @@ class BasicBlatherClient(BlatherObject):
     def iterRoutes(self):
         return self.advert.iterRoutes()
 
+    def getHost(self):
+        return self.advert.host
+    host = property(getHost)
+
+    def process(self, allActive=True):
+        return self.host().process(allActive)
+
     def sendMessage(self, header, message):
         count = 0
         for route in self.iterRoutes():
@@ -133,11 +140,12 @@ class MessageFuture(BlatherObject):
     def get(self, timeout=None):
         if not self.queue or self.greenlets:
             g = greenlet.getcurrent()
-            self.greenlets.append(g)
             if g.parent is None:
                 while not self.queue:
                     self.host().process(False)
-            else: g.parent.switch()
+            else: 
+                self.greenlets.append(g)
+                g.parent.switch()
 
         result = self.queue.pop(0)
         return result
