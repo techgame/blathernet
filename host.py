@@ -10,7 +10,6 @@
 #~ Imports 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-import greenlet
 import itertools
 
 from TG.kvObserving import KVProperty, KVInitProperty, KVSet
@@ -29,7 +28,6 @@ class BlatherTaskMgr(BlatherObject):
     def __init__(self, name):
         BlatherObject.__init__(self)
         self.name = name
-        self._g_process = greenlet.greenlet(self._processTasks)
 
     def __repr__(self):
         return '<TM %s |%s|>' % (self.name, len(self.tasks))
@@ -39,20 +37,15 @@ class BlatherTaskMgr(BlatherObject):
         return task
 
     def process(self, allActive=True):
-        if self.tasks:
-            self._g_process.switch(greenlet.getcurrent(), allActive)
-        return bool(self.tasks)
-
-    def _processTasks(self, returnTo, allActive=True):
         activeTasks = self.tasks
-        while 1:
-            if not activeTasks or not allActive:
-                returnTo, allActive = returnTo.switch()
-
+        while activeTasks:
             curTaskList = list(activeTasks)
             for i, task in enumerate(curTaskList):
                 if not task():
                     activeTasks.remove(task)
+
+            if not allActive:
+                break
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -90,7 +83,6 @@ class BlatherHost(BlatherObject):
         masterTaskMgr.process(allActive)
 
     def addTask(self, task):
-        return self.masterTaskMgr.add(task)
         if not self.taskMgr.tasks:
             self.masterTaskMgr.add(self.taskMgr.process)
         return self.taskMgr.add(task)
