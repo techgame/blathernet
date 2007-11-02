@@ -82,7 +82,10 @@ class BasicBlatherService(BlatherObject):
 
     def registerOn(self, blatherObj):
         self.advert.registerOn(blatherObj)
-        self.host().process()
+        self.process()
+
+    def process(self, allActive=True):
+        return self.host().process(allActive)
 
     def processMessage(self, fromRoute, header, message):
         raise NotImplementedError('Subclass Responsibility: %r' % (self,))

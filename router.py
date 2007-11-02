@@ -72,6 +72,7 @@ class BasicBlatherRoute(BlatherObject):
 
     def __init__(self):
         BlatherObject.__init__(self)
+        self._msgKeys = {}
         self.createRouteServices()
 
     def createRouteServices(self):
@@ -116,9 +117,30 @@ class BasicBlatherRoute(BlatherObject):
         if adkey not in self.routeAdvertDb:
             raise ValueError('Advert Key %r is not in route\'s advert DB')
 
-        self.dispatch(header.copy(), message)
+        mkey, menc = self.encodeMessage(header, message)
+        if menc is None:
+            return
+
+        self.sendDispatch(menc)
         header['sent'] = True
         return True
+
+    def sendDispatch(self, menc):
+        raise NotImplementedError('Subclass Responsibility: %r' % (self,))
+
+    def encodeMessage(self, header, message):
+        mkey = repr((header, message))
+        if mkey in self._msgKeys:
+            return mkey, None
+
+        return mkey, (header.copy(), message)
+
+    def decodeMessage(self, menc):
+        return menc
+
+    def recvDispatch(self, menc):
+        header, message = self.decodeMessage(menc)
+        self.recvMessage(header, message)
 
     def recvMessage(self, header, message):
         advert = self.advertFor(header['adkey'])
@@ -127,9 +149,6 @@ class BasicBlatherRoute(BlatherObject):
             return
 
         advert.processMessage(self, header, message)
-
-    def dispatch(self, header, message):
-        raise NotImplementedError('Subclass Responsibility: %r' % (self,))
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -153,20 +172,10 @@ class BlatherDirectRoute(BasicBlatherRoute):
 
     def createRouteServices(self):
         BasicBlatherRoute.createRouteServices(self)
-        self._msgKeys = {}
         self._outbox = Queue.Queue()
         self._inbox = Queue.Queue()
 
-    def encodeMessage(self, header, message):
-        mk = repr((header, message))
-        return mk, (header, message)
-
-    def dispatch(self, header, message):
-        mkey, menc = self.encodeMessage(header, message)
-        if mkey in self._msgKeys:
-            return
-        self._msgKeys[mkey] = True
-
+    def sendDispatch(self, menc):
         if self._outbox.empty():
             self.host().addTask(self._processOutbox)
         self._outbox.put(menc)
@@ -174,24 +183,20 @@ class BlatherDirectRoute(BasicBlatherRoute):
     def _processOutbox(self):
         try:
             menc = self._outbox.get(True, 1)
-            self.target.recvDispatch(menc)
+            self.target.transferDispatch(menc)
             return bool(not self._outbox.empty())
         except Queue.Empty:
             return False
 
-    def recvDispatch(self, menc):
+    def transferDispatch(self, menc):
         if self._inbox.empty():
             self.host().addTask(self._processInbox)
         self._inbox.put(menc)
 
-    def decodeMessage(self, menc):
-        return menc
-
     def _processInbox(self):
         try:
             menc = self._inbox.get(True, 1)
-            header, message = self.decodeMessage(menc)
-            self.recvMessage(header, message)
+            self.recvDispatch(menc)
             return bool(not self._inbox.empty())
         except Queue.Empty:
             return False
