@@ -11,6 +11,7 @@
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 from functools import partial
+from simplejson import dumps as sj_dumps, loads as sj_loads
 
 from TG.kvObserving import KVProperty, OBSettings
 
@@ -175,6 +176,7 @@ class BlatherMessageService(BasicBlatherService):
     msgreg = MessageHandlerRegistry()
 
     def processMessage(self, route, header, message):
+        message = sj_loads(message)
         method = self.msgreg.get(message[0])
         msgobj = self._fm_.MessageObject(route, header, message)
         method(self, msgobj, *message[1:])

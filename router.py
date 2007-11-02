@@ -11,8 +11,9 @@
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 import sys
-
 import Queue
+from md5 import md5
+from simplejson import dumps as sj_dumps, loads as sj_loads
 
 from TG.kvObserving import KVProperty, KVSet, KVKeyedDict
 
@@ -117,29 +118,35 @@ class BasicBlatherRoute(BlatherObject):
         if adkey not in self.routeAdvertDb:
             raise ValueError('Advert Key %r is not in route\'s advert DB')
 
-        mkey, menc = self.encodeMessage(header, message)
-        if menc is None:
+        dmsg = self.encodeDispatch(header, message)
+        if dmsg is None:
             return
 
-        self.sendDispatch(menc)
+        self.sendDispatch(dmsg)
         header['sent'] = True
         return True
 
-    def sendDispatch(self, menc):
+    def sendDispatch(self, dmsg):
         raise NotImplementedError('Subclass Responsibility: %r' % (self,))
 
-    def encodeMessage(self, header, message):
-        mkey = repr((header, message))
+    def encodeDispatch(self, header, message):
+        sj_header = sj_dumps(header)
+        dmsg = '\r\n\r\n'.join((sj_header, message))
+        mkey = md5(dmsg).digest
         if mkey in self._msgKeys:
-            return mkey, None
+            return None
+        return dmsg
 
-        return mkey, (header.copy(), message)
+    def decodeDispatch(self, dmsg):
+        sj_header, sep, message = dmsg.partition('\r\n\r\n')
+        if not sep:
+            return None
 
-    def decodeMessage(self, menc):
-        return menc
+        header = sj_loads(sj_header)
+        return (header, message)
 
-    def recvDispatch(self, menc):
-        header, message = self.decodeMessage(menc)
+    def recvDispatch(self, dmsg):
+        header, message = self.decodeDispatch(dmsg)
         self.recvMessage(header, message)
 
     def recvMessage(self, header, message):
@@ -170,33 +177,33 @@ class BlatherDirectRoute(BasicBlatherRoute):
         routeB.target = routeA
         return (routeA, routeB)
 
-    def createRouteServices(self):
-        BasicBlatherRoute.createRouteServices(self)
+    def __init__(self):
+        BasicBlatherRoute.__init__(self)
         self._outbox = Queue.Queue()
         self._inbox = Queue.Queue()
 
-    def sendDispatch(self, menc):
+    def sendDispatch(self, dmsg):
         if self._outbox.empty():
             self.host().addTask(self._processOutbox)
-        self._outbox.put(menc)
+        self._outbox.put(dmsg)
 
     def _processOutbox(self):
         try:
-            menc = self._outbox.get(True, 1)
-            self.target.transferDispatch(menc)
+            dmsg = self._outbox.get(True, 1)
+            self.target.transferDispatch(dmsg)
             return bool(not self._outbox.empty())
         except Queue.Empty:
             return False
 
-    def transferDispatch(self, menc):
+    def transferDispatch(self, dmsg):
         if self._inbox.empty():
             self.host().addTask(self._processInbox)
-        self._inbox.put(menc)
+        self._inbox.put(dmsg)
 
     def _processInbox(self):
         try:
-            menc = self._inbox.get(True, 1)
-            self.recvDispatch(menc)
+            dmsg = self._inbox.get(True, 1)
+            self.recvDispatch(dmsg)
             return bool(not self._inbox.empty())
         except Queue.Empty:
             return False

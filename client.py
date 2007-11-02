@@ -10,6 +10,7 @@
 #~ Imports 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
+from simplejson import dumps as sj_dumps, loads as sj_loads
 import greenlet
 
 from TG.kvObserving import KVProperty, KVKeyedDict, KVList
@@ -59,6 +60,7 @@ class BasicBlatherClient(BlatherObject):
         return self.host().process(allActive)
 
     def sendMessage(self, header, message):
+        message = sj_dumps(message)
         count = 0
         for route in self.iterRoutes():
             route.sendMessage(header, message)
@@ -151,6 +153,7 @@ class MessageFuture(BlatherObject):
         return result
 
     def processMessage(self, fromRoute, header, message):
+        message = sj_loads(message)
         self.queue.append(message)
         if self.greenlets:
             self.host().addTask(self._processGreenlets)
