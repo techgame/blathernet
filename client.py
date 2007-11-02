@@ -10,6 +10,8 @@
 #~ Imports 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
+import greenlet
+
 from TG.kvObserving import KVProperty, KVKeyedDict, KVList
 
 from .base import BlatherObject
@@ -67,6 +69,11 @@ class BasicBlatherClient(BlatherObject):
             raise NoRouteAvailable()
         return count
 
+    def syncSend(self, *args):
+        future = self.futureSend(*args)
+        return future.get()
+    ssend = syncSend
+
     def asyncSend(self, *args):
         header = self.newHeader()
         self.sendMessage(header, args)
@@ -95,7 +102,7 @@ class BlatherClientReplyService(BasicBlatherService):
         self._replyMap = {}
 
     def newFuture(self, header):
-        future = MessageFuture(self.host)
+        future = MessageFuture(self.fromAdvert.host)
         futureid = id(future)
         self._replyMap[futureid] = future
 
@@ -120,19 +127,34 @@ class MessageFuture(BlatherObject):
 
     def __init__(self, hostRef):
         self.host = hostRef
+        self.greenlets = []
         self.queue = []
 
     def get(self, timeout=None):
-        return self.queue.pop(0)
+        if not self.queue or self.greenlets:
+            g = greenlet.getcurrent()
+            self.greenlets.append(g)
+            if g.parent is None:
+                while not self.queue:
+                    self.host().process(False)
+            else: g.parent.switch()
+
+        result = self.queue.pop(0)
+        return result
 
     def processMessage(self, fromRoute, header, message):
         self.queue.append(message)
+        if self.greenlets:
+            self.host().addTask(self._processGreenlets)
         return False
 
-#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    def _processGreenlets(self):
+        g = self.greenlets.pop(0)
+        g.parent = greenlet.getcurrent()
+        g.switch()
+        return bool(self.greenlets) and bool(self.queue)
 
-class BlatherReplyClient(BasicBlatherClient):
-    pass
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 class BlatherClient(BasicBlatherClient):
     _fm_ = BasicBlatherClient._fm_.branch(
@@ -150,4 +172,7 @@ class BlatherClient(BasicBlatherClient):
 
     def newFuture(self, header):
         return self.replyService.newFuture(header)
+
+class BlatherReplyClient(BlatherClient):
+    pass
 

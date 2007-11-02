@@ -10,7 +10,10 @@
 #~ Imports 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-from TG.kvObserving import KVProperty
+import greenlet
+import itertools
+
+from TG.kvObserving import KVProperty, KVInitProperty, KVSet
 
 from .base import BlatherObject
 from .adverts import BlatherAdvertDB
@@ -20,9 +23,45 @@ from .router import BlatherRouter
 #~ Definitions 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
+class BlatherTaskMgr(BlatherObject):
+    tasks = KVSet.property()
+
+    def __init__(self, name):
+        BlatherObject.__init__(self)
+        self.name = name
+        self._g_process = greenlet.greenlet(self._processTasks)
+
+    def __repr__(self):
+        return '<TM %s |%s|>' % (self.name, len(self.tasks))
+
+    def add(self, task):
+        self.tasks.add(task)
+        return task
+
+    def process(self, allActive=True):
+        if self.tasks:
+            self._g_process.switch(greenlet.getcurrent(), allActive)
+        return bool(self.tasks)
+
+    def _processTasks(self, returnTo, allActive=True):
+        activeTasks = self.tasks
+        while 1:
+            if not activeTasks or not allActive:
+                returnTo, allActive = returnTo.switch()
+
+            curTaskList = list(activeTasks)
+            for i, task in enumerate(curTaskList):
+                if not task():
+                    activeTasks.remove(task)
+
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+masterTaskMgr = BlatherTaskMgr('master')
+
 class BlatherHost(BlatherObject):
     advertDb = KVProperty(BlatherAdvertDB)
     router = KVProperty(BlatherRouter)
+    masterTaskMgr = masterTaskMgr
 
     def isBlatherHost(self): return True
 
@@ -31,6 +70,7 @@ class BlatherHost(BlatherObject):
         if name is not None:
             self.name = name
         self.router.host = self.asWeakRef()
+        self.taskMgr = BlatherTaskMgr(name)
 
     def __repr__(self):
         if self.name is None:
@@ -43,4 +83,15 @@ class BlatherHost(BlatherObject):
 
     def connectDirect(self, other):
         self.router.connectDirect(other.router)
+
+    #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+    def process(self, allActive=True):
+        masterTaskMgr.process(allActive)
+
+    def addTask(self, task):
+        return self.masterTaskMgr.add(task)
+        if not self.taskMgr.tasks:
+            self.masterTaskMgr.add(self.taskMgr.process)
+        return self.taskMgr.add(task)
 

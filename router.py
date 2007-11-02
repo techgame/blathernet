@@ -86,13 +86,18 @@ class BasicBlatherRoute(BlatherObject):
         if advert.key not in self.routeAdvertDb:
             self.sendAdvert(advert)
 
-    def host(self):
-        return self.router().host()
+    def getHost(self):
+        if self.router is not None:
+            return self.router().host
+    host = property(getHost)
 
     def advertFor(self, adkey):
         return self.routeAdvertDb.get(adkey)
 
     def sendAdvert(self, advert):
+        if advert.key in self.routeAdvertDb:
+            return False
+
         advert.registerOn(self.routeAdvertDb)
         if advert.attr('private', False):
             return False
@@ -144,8 +149,37 @@ class BlatherDirectRoute(BasicBlatherRoute):
         routeB.target = routeA
         return (routeA, routeB)
 
+    def createRouteServices(self):
+        BasicBlatherRoute.createRouteServices(self)
+        self._msgs = {}
+        self._outbox = []
+        self._inbox = []
+
     def dispatch(self, header, message):
-        self.target.recvMessage(header, message)
+        mk = repr((header, message))
+        if mk in self._msgs:
+            return
+        self._msgs[mk] = True
+
+        if not self._outbox:
+            self.host().addTask(self._processOutbox)
+
+        self._outbox.append((header, message))
+
+    def _processOutbox(self):
+        item = self._outbox.pop(0)
+        self.target.recvDispatch(item)
+        return bool(self._outbox)
+
+    def recvDispatch(self, item):
+        if not self._inbox:
+            self.host().addTask(self._processInbox)
+        self._inbox.append(item)
+
+    def _processInbox(self):
+        header, message = self._inbox.pop(0)
+        self.recvMessage(header, message)
+        return bool(self._inbox)
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -165,6 +199,9 @@ class BlatherLoopbackRoute(BlatherDirectRoute):
         return True
 
     def sendAdvert(self, advert):
+        if advert.key in self.routeAdvertDb:
+            return False
+
         self.recvAdvert(advert)
         return False
 

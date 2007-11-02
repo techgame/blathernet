@@ -25,11 +25,19 @@ class BlatherAdvertDB(BlatherObject):
 
     def isBlatherAdvertDB(self): return True
 
-    def __contains__(self, key):
+    def asKey(self, keyOrAdvert):
+        if isinstance(keyOrAdvert, BlatherObject):
+            return keyOrAdvert.key
+        return keyOrAdvert
+
+    def __contains__(self, keyOrAdvert):
+        key = self.asKey(keyOrAdvert)
         return self.db.__contains__(key)
-    def __getitem__(self, key):
+    def __getitem__(self, keyOrAdvert):
+        key = self.asKey(keyOrAdvert)
         return self.db.__getitem__(key)()
-    def get(self, key, default=None):
+    def get(self, keyOrAdvert, default=None):
+        key = self.asKey(keyOrAdvert)
         return self.db.get(key, lambda:default)()
 
     def iterFindMatch(self, **kwsearch):
@@ -79,6 +87,9 @@ class BlatherAdvert(BlatherObject):
 
     def registerOn(self, blatherObj):
         blatherObj.registerAdvert(self)
+        #if self.host is not None:
+        #    self.host().process()
+
     def registerRoute(self, route):
         self.addOutbound(route)
 
@@ -102,7 +113,7 @@ class BlatherAdvert(BlatherObject):
     outbound = KVSet.property()
     def addOutbound(self, route):
         self.outbound.add(route.asWeakRef(self._updateOutbound))
-    def _updateOutbound(self, wrRoute): 
+    def _updateOutbound(self, wrRoute=None): 
         self.outbound.difference_update([e for e in self.outbound if e() is None])
 
     def iterRoutes(self):
@@ -111,7 +122,8 @@ class BlatherAdvert(BlatherObject):
         return set(route.host for route in self.iterRoutes())
     def getHost(self):
         for host in self.allHosts():
-            return host
+            if host is not None:
+                return host
     host = property(getHost)
 
     def processMsgObj(self, route, adkey, msg, content):
