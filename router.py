@@ -12,6 +12,8 @@
 
 import sys
 
+import Queue
+
 from TG.kvObserving import KVProperty, KVSet, KVKeyedDict
 
 from .base import BlatherObject
@@ -151,35 +153,48 @@ class BlatherDirectRoute(BasicBlatherRoute):
 
     def createRouteServices(self):
         BasicBlatherRoute.createRouteServices(self)
-        self._msgs = {}
-        self._outbox = []
-        self._inbox = []
+        self._msgKeys = {}
+        self._outbox = Queue.Queue()
+        self._inbox = Queue.Queue()
+
+    def encodeMessage(self, header, message):
+        mk = repr((header, message))
+        return mk, (header, message)
 
     def dispatch(self, header, message):
-        mk = repr((header, message))
-        if mk in self._msgs:
+        mkey, menc = self.encodeMessage(header, message)
+        if mkey in self._msgKeys:
             return
-        self._msgs[mk] = True
+        self._msgKeys[mkey] = True
 
-        if not self._outbox:
+        if self._outbox.empty():
             self.host().addTask(self._processOutbox)
-
-        self._outbox.append((header, message))
+        self._outbox.put(menc)
 
     def _processOutbox(self):
-        item = self._outbox.pop(0)
-        self.target.recvDispatch(item)
-        return bool(self._outbox)
+        try:
+            menc = self._outbox.get(True, 1)
+            self.target.recvDispatch(menc)
+            return bool(not self._outbox.empty())
+        except Queue.Empty:
+            return False
 
-    def recvDispatch(self, item):
-        if not self._inbox:
+    def recvDispatch(self, menc):
+        if self._inbox.empty():
             self.host().addTask(self._processInbox)
-        self._inbox.append(item)
+        self._inbox.put(menc)
+
+    def decodeMessage(self, menc):
+        return menc
 
     def _processInbox(self):
-        header, message = self._inbox.pop(0)
-        self.recvMessage(header, message)
-        return bool(self._inbox)
+        try:
+            menc = self._inbox.get(True, 1)
+            header, message = self.decodeMessage(menc)
+            self.recvMessage(header, message)
+            return bool(not self._inbox.empty())
+        except Queue.Empty:
+            return False
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
