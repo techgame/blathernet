@@ -17,6 +17,8 @@ import select
 
 from TG.metaObserving import MetaObservableType, OBProperty, OBFactoryMap
 
+from .socketConfigTools import SocketConfigUtils, socketErrorMap
+
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 #~ Definitions 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -32,17 +34,10 @@ class NetworkCommon(object):
             return socketError
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+#~ Socket and select.select machenery
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 class NetworkSelectable(NetworkCommon):
-    #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-    #~ Socket and select.select machenery
-    #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-    def getSelectable(self):
-        raise NotImplementedError('Subclass Responsibility: %r' % (self,))
-
-    #~ callbacks selectable/select machenery ~~~~~~~~~~~~~~~~~~~~~~~~~~
-
     def fileno(self):
         """Used by select.select so that we can use this class in a
         non-blocking fasion."""
@@ -69,8 +64,17 @@ class NetworkSelectable(NetworkCommon):
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 class SocketSelectable(NetworkSelectable):
+    _fm_ = NetworkSelectable._fm_.branch(
+            ConfigUtils=SocketConfigUtils)
+
     afamily = socket.AF_INET
     sockType = None
+
+    def fileno(self):
+        sock = self.sock
+        if sock is not None:
+            return sock.fileno()
+        else:return 0
 
     _sock = None
     def getSocket(self):
@@ -83,12 +87,6 @@ class SocketSelectable(NetworkSelectable):
         self._socketConfig(sock, cfgUtils)
 
     sock = property(getSocket, setSocket)
-
-    def fileno(self):
-        sock = self.sock
-        if sock is not None:
-            return sock.fileno()
-        else:return 0
 
     def createSocket(self, afamily=None, sockType=None):
         self.afamily = afamily or self.afamily

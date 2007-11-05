@@ -12,23 +12,24 @@
 
 from socket import INADDR_ANY, SOCK_DGRAM
 
-from .selectTask import NetworkSelectable
+from .selectTask import SocketSelectable
 from .socketConfigTools import SocketConfigUtils, MulticastConfigUtils, udpSocketErrorMap
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 #~ Definitions 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-class UDPGatewayChannel(NetworkSelectable):
-    _fm_ = NetworkSelectable._fm_.branch(
-            ConfigUtils=SocketConfigUtils)
-
+class UDPGatewayChannel(SocketSelectable):
     socketErrorMap = udpSocketErrorMap
 
     sockType = SOCK_DGRAM
     bufferSize = 1<<16
     recvThrottle = bufferSize<<2
     sendThrottle = bufferSize<<2
+
+    def __init__(self, address=None, interface=None):
+        if address:
+            self.setSocketAddress(address, interface)
 
     def getSocketAddress(self):
         return self.sock.getsockname()
@@ -92,10 +93,6 @@ class UDPGatewayChannel(NetworkSelectable):
 class UDPMulticastGatewayChannel(UDPGatewayChannel):
     _fm_ = UDPGatewayChannel._fm_.branch(
             ConfigUtils=MulticastConfigUtils)
-
-    def __init__(self, address=None, interface=None):
-        if address:
-            self.setSocketAddress(address, interface)
 
     def setSocketAddress(self, address, interface=None):
         afamily, address = self.cfgUtil.normSockAddr(address)
