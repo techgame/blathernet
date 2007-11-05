@@ -12,8 +12,10 @@
 
 import time
 import errno
-import socket
+
 import select
+import socket
+from socket import error as SocketError
 
 from TG.metaObserving import MetaObservableType, OBProperty, OBFactoryMap
 
@@ -112,7 +114,7 @@ class SocketSelectable(NetworkSelectable):
 #~ Network Select Task
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-class NetworkSelectTask(NetworkCommon):
+class NetworkSelect(NetworkCommon):
     selectables = OBProperty(set, False)
 
     def add(self, selectable):
@@ -123,19 +125,14 @@ class NetworkSelectTask(NetworkCommon):
     def discard(self, selectable):
         self.selectables.discard(selectable)
 
-    def _iterReadables(self):
-        return [s for s in self.selectables if s.needsRead()]
-    def _iterWriteables(self):
-        return [s for s in self.selectables if s.needsWrite()]
-
     #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     #~ Selectables verification
     #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
     def filterSelectables(self):
-        selectableSet = self.getSelectableSet()
-        badSelectables = set(s for s in selectableSet if not self.verifySelectable(selectable))
-        selectableSet -= badSelectables
+        selectables = self.selectables
+        badSelectables = set(s for s in selectables if not self.verifySelectable(selectable))
+        selectables -= badSelectables
 
     def verifySelectable(self, selectable, reraise=False):
         items = [selectable]
@@ -148,22 +145,28 @@ class NetworkSelectTask(NetworkCommon):
     _select = staticmethod(select.select)
     _delay = staticmethod(time.sleep)
 
+    def _iterReadables(self, selectables):
+        return [s for s in selectables if s.needsRead()]
+    def _iterWriteables(self, selectables):
+        return [s for s in selectables if s.needsWrite()]
+
     def findSelected(self, timeout=0):
-        selectableSet = self.getSelectableSet()
-        if not selectableSet:
+        selectables = self.selectables
+        if not selectables:
             if timeout:
                 # delay manually, since all platform implementations are not
-                # consistent when there are no selectableSet present 
+                # consistent when there are no selectables present 
                 self._delay(timeout)
             return
 
-        readers, writers = self._iterReadables(), self._iterWriteables()
+        readers = self._iterReadables(selectables)
+        writers = self._iterWriteables(selectables)
         try:
             readers, writers, errors = self._select(readers, writers, [], timeout)
         except (ValueError, TypeError), err:
             self.filterSelectables()
             return
-        except socket.error, err:
+        except SocketError, err:
             if err.args[0] == errno.EBADF:
                 self.filterSelectables()
                 return

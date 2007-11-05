@@ -19,7 +19,7 @@ try: import fcntl
 except ImportError:
     fcntl = None
 
-from TG.netTools import netif
+from TG.networkInfo import netif
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 #~ Socket Config Methods 
@@ -132,14 +132,14 @@ class MulticastConfigUtils(SocketConfigUtils):
             return True
         return False
 
-    def groupJoin(self, group, if_address=None):
+    def joinGroup(self, group, if_address=None):
         groupAndIF = self._packedGroup(group, if_address)
         if self.afamily == AF_INET:
             self.sock.setsockopt(socket.IPPROTO_IP, socket.IP_ADD_MEMBERSHIP, groupAndIF)
         elif self.afamily == AF_INET6:
             self.sock.setsockopt(socket.IPPROTO_IPV6, socket.IPV6_JOIN_GROUP, groupAndIF)
 
-    def groupLeave(self, group, if_address=None):
+    def leaveGroup(self, group, if_address=None):
         groupAndIF = self._packedGroup(group, if_address)
         if self.afamily == AF_INET:
             self.sock.setsockopt(socket.IPPROTO_IP, socket.IP_DROP_MEMBERSHIP, groupAndIF)
@@ -156,7 +156,7 @@ class MulticastConfigUtils(SocketConfigUtils):
             else:
                 if_address = self.getMulticastInterface(group)
 
-            return socket.inet_aton(if_address)
+            return socket.inet_pton(self.afamily, if_address)
 
         elif self.afamily == AF_INET6:
             # IPV6 require the interface number to bind the multicast interface
@@ -173,10 +173,7 @@ class MulticastConfigUtils(SocketConfigUtils):
     def _packedGroup(self, group, if_address=None):
         groupAddr = self.asSockAddr(group)
         interface = self._packetInterface(None, if_address)
-        if self.afamily == AF_INET:
-            group = socket.inet_aton(groupAddr[0])
-        elif self.afamily == AF_INET6:
-            group = socket.inet_pton(self.afamily, groupAddr[0])
+        group = socket.inet_pton(self.afamily, groupAddr[0])
         return group + interface
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

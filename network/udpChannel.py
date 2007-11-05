@@ -10,7 +10,10 @@
 #~ Imports 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-from socket import INADDR_ANY, SOCK_DGRAM
+from collections import deque
+
+from socket import SOCK_DGRAM
+from socket import error as SocketError
 
 from .selectTask import SocketSelectable
 from .socketConfigTools import SocketConfigUtils, MulticastConfigUtils, udpSocketErrorMap
@@ -19,7 +22,7 @@ from .socketConfigTools import SocketConfigUtils, MulticastConfigUtils, udpSocke
 #~ Definitions 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-class UDPGatewayChannel(SocketSelectable):
+class UDPChannel(SocketSelectable):
     socketErrorMap = udpSocketErrorMap
 
     sockType = SOCK_DGRAM
@@ -28,20 +31,24 @@ class UDPGatewayChannel(SocketSelectable):
     sendThrottle = bufferSize<<2
 
     def __init__(self, address=None, interface=None):
+        self.sendQueue = deque()
+        self.recvQueue = deque()
         if address:
             self.setSocketAddress(address, interface)
 
     def getSocketAddress(self):
         return self.sock.getsockname()
-    def setSocketAddress(self, address):
+    def setSocketAddress(self, address, interface=None):
         afamily, address = self.cfgUtils.normSockAddr(address)
         self.createSocket(afamily)
         self.sock.bind(address)
 
     def _socketConfig(self, sock, cfgUtils):
-        SocketGatewayChannel._socketConfig(self, sock, cfgUtils)
+        SocketSelectable._socketConfig(self, sock, cfgUtils)
         cfgUtils.setMaxBufferSize()
 
+    def needsRead(self):
+        return True
     def performRead(self):
         recvQueue = self.recvQueue
 
@@ -59,6 +66,8 @@ class UDPGatewayChannel(SocketSelectable):
             if self.reraiseSocketError(err, err.args[0]) is err:
                 raise
 
+    def needsWrite(self):
+        return bool(self.sendQueue)
     def performWrite(self):
         sendQueue = self.sendQueue
         if not sendQueue:
@@ -74,44 +83,51 @@ class UDPGatewayChannel(SocketSelectable):
                     sock.sendto(packet, address)
                     bytes += len(packet)
 
-                    notify('sent', packet, address, None)
+                    if notify is not None:
+                        notify('sent', packet, address, None)
 
             except LookupError:
                 # this exception implies no more items to send, which is just dandy
                 pass 
 
             except SocketError, err:
-                if notify('error', packet, address, err):
-                    continue
-                if self.reraiseSocketError(err, err.args[0]) is err:
-                    raise
+                if notify is not None:
+                    if notify('error', packet, address, err) is err:
+                        raise
+                else:
+                    if self.reraiseSocketError(err, err.args[0]) is err:
+                        raise
 
             break
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+#~ Multicast
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-class UDPMulticastGatewayChannel(UDPGatewayChannel):
-    _fm_ = UDPGatewayChannel._fm_.branch(
+class UDPMulticastChannel(UDPChannel):
+    _fm_ = UDPChannel._fm_.branch(
             ConfigUtils=MulticastConfigUtils)
 
     def setSocketAddress(self, address, interface=None):
-        afamily, address = self.cfgUtil.normSockAddr(address)
+        afamily, address = self.cfgUtils.normSockAddr(address)
         self.createSocket(afamily)
 
-        self.cfgUtil.setMulticastInterface(address, interface)
+        self.cfgUtils.setMulticastInterface(address, interface)
 
-        # multicast addresses should always be bound to INADDR_ANY
-        address = (INADDR_ANY,) + address[1:]
+        # multicast addresses should always be bound to INADDR_ANY=""
+        address = ("",) + address[1:]
         self.sock.bind(address)
 
     def _socketConfig(self, sock, cfgUtils):
-        UDPGatewayChannel._socketConfig(self, sock, cfgUtils)
-        cfgUtil.setMulticastHops(5)
-        cfgUtil.setMulticastLoop(True)
+        UDPChannel._socketConfig(self, sock, cfgUtils)
+        cfgUtils.setMulticastHops(5)
+        cfgUtils.setMulticastLoop(True)
 
     def joinGroup(self, group, interface=None):
-        self.cfgUtil.joinGroup(group, interface)
+        self.cfgUtils.joinGroup(group, interface)
 
     def leaveGroup(self, group, interface=None):
-        self.cfgUtil.leaveGroup(group, interface)
+        self.cfgUtils.leaveGroup(group, interface)
+
+MUDPChannel = UDPMulticastChannel
 
