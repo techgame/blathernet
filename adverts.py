@@ -87,8 +87,6 @@ class BlatherAdvert(BlatherObject):
 
     def registerOn(self, blatherObj):
         blatherObj.registerAdvert(self)
-        #if self.host is not None:
-        #    self.host().process()
 
     def registerRoute(self, route):
         self.addOutbound(route)

@@ -10,9 +10,11 @@
 #~ Imports 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
+from __future__ import with_statement
 import time
 import errno
 
+import threading
 import select
 import socket
 from socket import error as SocketError
@@ -110,6 +112,11 @@ class SocketSelectable(NetworkSelectable):
         return cfgUtils
     cfgUtils = property(getCfgUtils)
 
+    def asSockAddr(self, address):
+        return self.cfgUtils.asSockAddr(address)
+    def normSockAddr(self, address):
+        return self.cfgUtils.normSockAddr(address)
+
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 #~ Network Select Task
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -117,22 +124,30 @@ class SocketSelectable(NetworkSelectable):
 class NetworkSelect(NetworkCommon):
     selectables = OBProperty(set, False)
 
+    def __init__(self):
+        NetworkCommon.__init__(self)
+        self._lock_selectables = threading.Lock()
+
     def add(self, selectable):
         self.verifySelectable(selectable, True)
-        self.selectables.add(selectable)
+        with self._lock_selectables:
+            self.selectables.add(selectable)
     def remove(self, selectable):
-        self.selectables.remove(selectable)
+        with self._lock_selectables:
+            self.selectables.remove(selectable)
     def discard(self, selectable):
-        self.selectables.discard(selectable)
+        with self._lock_selectables:
+            self.selectables.discard(selectable)
 
     #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     #~ Selectables verification
     #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
     def filterSelectables(self):
-        selectables = self.selectables
-        badSelectables = set(s for s in selectables if not self.verifySelectable(selectable))
-        selectables -= badSelectables
+        with self._lock_selectables:
+            selectables = self.selectables
+            badSelectables = set(s for s in selectables if not self.verifySelectable(selectable))
+            selectables -= badSelectables
 
     def verifySelectable(self, selectable, reraise=False):
         items = [selectable]
@@ -152,15 +167,18 @@ class NetworkSelect(NetworkCommon):
 
     def findSelected(self, timeout=0):
         selectables = self.selectables
-        if not selectables:
+        if selectables:
+            with self._lock_selectables:
+                readers = self._iterReadables(selectables)
+                writers = self._iterWriteables(selectables)
+
+        else:
             if timeout:
                 # delay manually, since all platform implementations are not
                 # consistent when there are no selectables present 
                 self._delay(timeout)
             return
 
-        readers = self._iterReadables(selectables)
-        writers = self._iterWriteables(selectables)
         try:
             readers, writers, errors = self._select(readers, writers, [], timeout)
         except (ValueError, TypeError), err:

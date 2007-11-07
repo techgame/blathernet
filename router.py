@@ -11,7 +11,6 @@
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 import sys
-import Queue
 from md5 import md5
 from simplejson import dumps as sj_dumps, loads as sj_loads
 
@@ -50,9 +49,9 @@ class BlatherRouter(BlatherObject):
 
     def connectDirect(self, other=None):
         if other is self or other is None:
-            return BlatherLoopbackRoute.configure(self)
+            return directRoutes.BlatherLoopbackRoute.configure(self)
         else:
-            return BlatherDirectRoute.configure(self, other)
+            return directRoutes.BlatherDirectRoute.configure(self, other)
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 #~ Routes
@@ -126,9 +125,6 @@ class BasicBlatherRoute(BlatherObject):
         header['sent'] = True
         return True
 
-    def sendDispatch(self, dmsg):
-        raise NotImplementedError('Subclass Responsibility: %r' % (self,))
-
     def encodeDispatch(self, header, message):
         sj_header = sj_dumps(header)
         dmsg = '\r\n\r\n'.join((sj_header, message))
@@ -145,7 +141,10 @@ class BasicBlatherRoute(BlatherObject):
         header = sj_loads(sj_header)
         return (header, message)
 
-    def recvDispatch(self, dmsg):
+    def sendDispatch(self, dmsg):
+        raise NotImplementedError('Subclass Responsibility: %r' % (self,))
+
+    def recvDispatch(self, dmsg, addr):
         header, message = self.decodeDispatch(dmsg)
         self.recvMessage(header, message)
 
@@ -158,77 +157,8 @@ class BasicBlatherRoute(BlatherObject):
         advert.processMessage(self, header, message)
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-class BlatherDirectRoute(BasicBlatherRoute):
-    _fm_ = BasicBlatherRoute._fm_.branch()
-
-    @classmethod
-    def configure(klass, hostA, hostB=None):
-        if hostA is hostB or hostB is None:
-            return BlatherLoopbackRoute.configure(hostA)
-
-        routeA = klass()
-        hostA.addRoute(routeA)
-
-        routeB = klass()
-        hostB.addRoute(routeB)
-
-        routeA.target = routeB
-        routeB.target = routeA
-        return (routeA, routeB)
-
-    def __init__(self):
-        BasicBlatherRoute.__init__(self)
-        self._outbox = Queue.Queue()
-        self._inbox = Queue.Queue()
-
-    def sendDispatch(self, dmsg):
-        if self._outbox.empty():
-            self.host().addTask(self._processOutbox)
-        self._outbox.put(dmsg)
-
-    def _processOutbox(self):
-        try:
-            dmsg = self._outbox.get(True, 1)
-            self.target.transferDispatch(dmsg)
-            return bool(not self._outbox.empty())
-        except Queue.Empty:
-            return False
-
-    def transferDispatch(self, dmsg):
-        if self._inbox.empty():
-            self.host().addTask(self._processInbox)
-        self._inbox.put(dmsg)
-
-    def _processInbox(self):
-        try:
-            dmsg = self._inbox.get(True, 1)
-            self.recvDispatch(dmsg)
-            return bool(not self._inbox.empty())
-        except Queue.Empty:
-            return False
-
+#~ Imports 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-class BlatherLoopbackRoute(BlatherDirectRoute):
-    _fm_ = BlatherDirectRoute._fm_.branch(
-            routeServices={})
-
-    target = property(lambda self: self)
-
-    @classmethod
-    def configure(klass, host):
-        route = klass()
-        host.addRoute(route)
-        return route
-
-    def isLoopback(self):
-        return True
-
-    def sendAdvert(self, advert):
-        if advert.key in self.routeAdvertDb:
-            return False
-
-        self.recvAdvert(advert)
-        return False
+from . import directRoutes
 

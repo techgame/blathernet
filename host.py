@@ -12,7 +12,7 @@
 
 import itertools
 
-from TG.kvObserving import KVProperty, KVInitProperty, KVSet
+from TG.kvObserving import KVProperty, KVInitProperty, KVSet, KVList
 
 from .base import BlatherObject
 from .adverts import BlatherAdvertDB
@@ -36,25 +36,63 @@ class BlatherTaskMgr(BlatherObject):
         self.tasks.add(task)
         return task
 
+    def __len__(self):
+        return len(self.tasks)
+
     def process(self, allActive=True):
+        n = 0
         activeTasks = self.tasks
         while activeTasks:
-            curTaskList = list(activeTasks)
-            for i, task in enumerate(curTaskList):
+            for task in list(activeTasks):
+                n += 1
                 if not task():
                     activeTasks.remove(task)
 
             if not allActive:
                 break
+        return n
+    __call__ = process
+
+class MasterTaskMgr(BlatherObject):
+    mgrs = KVList.property()
+
+    def __repr__(self):
+        return '<TM Master |%s|>' % (len(self.mgrs),)
+
+    def __len__(self):
+        return len(self.mgrs)
+    def add(self, mgr):
+        self.mgrs.append(mgr.asWeakRef(self._onDiscardMgr))
+        return mgr
+    def remove(self, mgr):
+        self.mgrs.remove(mgr.asWeakRef())
+    def _onDiscardMgr(self, wrMgr):
+        self.mgrs.remove(wrMgr)
+
+    def process(self, allActive=True):
+        mgrs = self.mgrs
+
+        n = True
+        total = 0
+        while n:
+            n = 0
+            for taskMgr in list(mgrs):
+                n += taskMgr().process(False)
+            total += n
+
+            if not allActive:
+                break
+
+        return total or bool(mgrs)
+    __call__ = process
+
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-masterTaskMgr = BlatherTaskMgr('master')
 
 class BlatherHost(BlatherObject):
     advertDb = KVProperty(BlatherAdvertDB)
     router = KVProperty(BlatherRouter)
-    masterTaskMgr = masterTaskMgr
+    _masterTaskMgr = MasterTaskMgr()
 
     def isBlatherHost(self): return True
 
@@ -64,6 +102,7 @@ class BlatherHost(BlatherObject):
             self.name = name
         self.router.host = self.asWeakRef()
         self.taskMgr = BlatherTaskMgr(name)
+        self._masterTaskMgr.add(self.taskMgr)
 
     def __repr__(self):
         if self.name is None:
@@ -80,10 +119,8 @@ class BlatherHost(BlatherObject):
     #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
     def process(self, allActive=True):
-        masterTaskMgr.process(allActive)
+        return self._masterTaskMgr(allActive)
 
     def addTask(self, task):
-        if not self.taskMgr.tasks:
-            self.masterTaskMgr.add(self.taskMgr.process)
         return self.taskMgr.add(task)
 

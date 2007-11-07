@@ -12,8 +12,6 @@
 
 from .service import BlatherMessageService
 from .host import BlatherHost
-
-#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-#~ Definitions 
-#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+from .network import NetworkSelect
+from .network import UDPChannel, UDPMulticastChannel, MUDPChannel
 
