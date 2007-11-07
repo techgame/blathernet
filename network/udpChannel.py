@@ -10,7 +10,7 @@
 #~ Imports 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-from collections import deque
+import Queue
 
 from socket import SOCK_DGRAM
 from socket import error as SocketError
@@ -33,8 +33,8 @@ class UDPChannel(SocketSelectable):
     def __init__(self, address=None, interface=None):
         SocketSelectable.__init__(self)
         self.registry = {}
-        self.sendQueue = Queue()
-        self.recvQueue = Queue()
+        self.sendQueue = Queue.Queue()
+        self.recvQueue = Queue.Queue()
         if address:
             self.setSocketAddress(address, interface)
 
