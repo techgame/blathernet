@@ -10,10 +10,13 @@
 #~ Imports 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
+import traceback
 import Queue
 
 from socket import SOCK_DGRAM
 from socket import error as SocketError
+
+from TG.kvObserving import KVProperty, KVSet, OBFactoryMap
 
 from .selectTask import SocketSelectable
 from .socketConfigTools import SocketConfigUtils, MulticastConfigUtils, udpSocketErrorMap
@@ -23,12 +26,14 @@ from .socketConfigTools import SocketConfigUtils, MulticastConfigUtils, udpSocke
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 class UDPChannel(SocketSelectable):
+    registry = None
+
     socketErrorMap = udpSocketErrorMap
 
     sockType = SOCK_DGRAM
     bufferSize = 1<<16
-    recvThrottle = bufferSize<<2
-    sendThrottle = bufferSize<<2
+    recvThrottle = 16
+    sendThrottle = 16
 
     def __init__(self, address=None, interface=None):
         SocketSelectable.__init__(self)
@@ -38,24 +43,38 @@ class UDPChannel(SocketSelectable):
         if address:
             self.setSocketAddress(address, interface)
 
+    #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+    def register(self, addr, recv):
+        self.registry[addr] = recv
+
+    def send(self, packet, address, notify=None):
+        self.sendQueue.put((packet, address, notify))
+        self.needsWrite = True
+
+    def recvDefault(self, packet, address):
+        print
+        print self.sock.getsockname(), 'recvDefault:'
+        print '   ', address, 'not in:', self.registry.keys()
+        print
+
+    #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
     def getSocketAddress(self):
         return self.sock.getsockname()
     def setSocketAddress(self, address, interface=None):
         afamily, address = self.normSockAddr(address)
         self.createSocket(afamily)
         self.sock.bind(address)
+        self.needsRead = True
 
     def _socketConfig(self, sock, cfgUtils):
         SocketSelectable._socketConfig(self, sock, cfgUtils)
         cfgUtils.setMaxBufferSize()
 
-    def register(self, addr, recv):
-        self.registry[addr] = recv
+    #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-    def recvDefault(self, packet):
-        print 'recv:', packet
-
-    def _processRecvQueue(self):
+    def processRecvQueue(self):
         registry = self.registry
         default = registry.get(None, self.recvDefault)
         recvQueue = self.recvQueue
@@ -68,61 +87,54 @@ class UDPChannel(SocketSelectable):
         except Queue.Empty:
             pass
 
-    def needsRead(self):
-        return True
-    def performRead(self):
+    def performRead(self, tasks):
         recvQueue = self.recvQueue
 
-        try:
-            bytes = 0
-            bufferSize = self.bufferSize
-            sock = self.sock
+        bufferSize = self.bufferSize
+        sock = self.sock
 
-            while bytes < self.recvThrottle:
-                packet, address = sock.recvfrom(bufferSize)
-                recvQueue.put((packet, address))
-                bytes += len(packet)
+        while 1:
+            try:
+                for n in xrange(self.recvThrottle):
+                    packet, address = sock.recvfrom(bufferSize)
+                    recvQueue.put((packet, address))
 
-        except SocketError, err:
-            if self.reraiseSocketError(err, err.args[0]) is err:
-                raise
+            except SocketError, err:
+                if self.reraiseSocketError(err, err.args[0]):
+                    traceback.print_exc()
+            break
 
-    def send(self, packet, address, notify=None):
-        self.sendQueue.put((packet, address, notify))
+        if not recvQueue.empty():
+            tasks.append(self.processRecvQueue)
+        return n
 
-    def needsWrite(self):
-        return not self.sendQueue.empty()
-    def performWrite(self):
+    def performWrite(self, tasks):
         sendQueue = self.sendQueue
-        if not sendQueue:
+        if sendQueue.empty():
+            self.needsWrite = False
             return
 
-        bytes = 0
         sock = self.sock
         while 1:
             try:
-                while bytes < self.sendThrottle:
-                    packet, address, notify = sendQueue.get(True, 0.1)
-
+                for n in xrange(self.sendThrottle):
+                    packet, address, notify = sendQueue.get(False, 0.1)
                     sock.sendto(packet, address)
-                    bytes += len(packet)
 
                     if notify is not None:
                         notify('sent', packet, address, None)
-
-                break
-
             except Queue.Empty:
-                # this exception implies no more items to send
-                break
-
+                self.needsWrite = False
             except SocketError, err:
-                if notify is not None:
-                    if notify('error', packet, address, err) is err:
-                        raise
-                else:
-                    if self.reraiseSocketError(err, err.args[0]) is err:
-                        raise
+                if notify is None:
+                    reraise = self.reraiseSocketError(err, err.args[0])
+                else: 
+                    reraise = notify('error', packet, address, err)
+                if reraise:
+                    traceback.print_exc()
+            break
+
+        return n
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 #~ Multicast

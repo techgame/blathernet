@@ -17,30 +17,37 @@ from .router import BasicBlatherRoute
 #~ Definitions 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-class BlatherPeer(object):
+class BlatherUDPPeer(object):
     def __init__(self, channel, addr):
         self.channel = channel.asWeakProxy()
         self.addr = channel.asSockAddr(addr)
         channel.register(self.addr, self.recv)
 
     def send(self, packet):
-        self.channel.send(packet, self.addr, None)
+        self.channel.send(packet, self.addr)
 
     def recv(self, packet, address):
         self.transferDispatch(packet, address)
 
     def transferDispatch(self, dmsg, addr=None):
-        print 'peer recv:', dmsg
+        raise NotImplementedError('Route Responsibility: %r' % (self,))
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-class BlatherUDPRoute(BasicBlatherRoute):
+class BlatherNetworkRoute(BasicBlatherRoute):
     _fm_ = BasicBlatherRoute._fm_.branch()
 
     def __init__(self, peer):
-        BasicBlatherRoute.__init__(self)
         self._inbox = Queue.Queue()
         self.peer = peer
+        BasicBlatherRoute.__init__(self)
+
+    @classmethod
+    def configure(klass, router, channel, addr):
+        peer = BlatherUDPPeer(channel, addr)
+        self = klass(peer)
+        router.addRoute(self)
+        return self
 
     _peer = None
     def getPeer(self):

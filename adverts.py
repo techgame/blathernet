@@ -30,6 +30,11 @@ class BlatherAdvertDB(BlatherObject):
             return keyOrAdvert.key
         return keyOrAdvert
 
+    def __iter__(self):
+        return self.db.itervalues()
+
+    def count(self):
+        return len(self.db)
     def __contains__(self, keyOrAdvert):
         key = self.asKey(keyOrAdvert)
         return self.db.__contains__(key)
@@ -124,7 +129,7 @@ class BlatherAdvert(BlatherObject):
                 return host
     host = property(getHost)
 
-    def processMsgObj(self, route, adkey, msg, content):
+    def processRoutedMessage(self, header, message, fromRoute, fromAddr):
         raise NotImplementedError('Service Responsibility: %r' % (self,))
 
 Advert = BlatherAdvert

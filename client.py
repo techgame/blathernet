@@ -10,6 +10,7 @@
 #~ Imports 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
+import time
 from simplejson import dumps as sj_dumps, loads as sj_loads
 import greenlet
 
@@ -121,11 +122,11 @@ class BlatherClientReplyService(BasicBlatherService):
 
         return future
 
-    def processMessage(self, fromRoute, header, message):
+    def processRoutedMessage(self, header, message, fromRoute, fromAddr):
         futureid = header.get('id', None)
         reply = self._replyMap.get(futureid)
         if reply is not None:
-            if reply.processMessage(fromRoute, header, message):
+            if reply.processRoutedMessage(header, message, fromRoute, fromAddr):
                 del self._replyMap[futureid]
 
 
@@ -143,8 +144,9 @@ class MessageFuture(BlatherObject):
         if not self.queue or self.greenlets:
             g = greenlet.getcurrent()
             if g.parent is None:
-                while not self.queue:
+                while True:
                     self.host().process(False)
+                    if self.queue: break
             else: 
                 self.greenlets.append(g)
                 g.parent.switch()
@@ -152,7 +154,7 @@ class MessageFuture(BlatherObject):
         result = self.queue.pop(0)
         return result
 
-    def processMessage(self, fromRoute, header, message):
+    def processRoutedMessage(self, header, message, fromRoute, fromAddr):
         message = sj_loads(message)
         self.queue.append(message)
         if self.greenlets:

@@ -53,6 +53,9 @@ class BlatherRouter(BlatherObject):
         else:
             return directRoutes.BlatherDirectRoute.configure(self, other)
 
+    def connectNetwork(self, channel, addr):
+        return networkRoutes.BlatherNetworkRoute.configure(self, channel, addr)
+
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 #~ Routes
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -76,11 +79,19 @@ class BasicBlatherRoute(BlatherObject):
         self.createRouteServices()
 
     def createRouteServices(self):
+        allServies = []
         for name, serviceFactory in self._fm_.routeServices.iteritems():
             service = serviceFactory()
             advert = service.advert
+
             self.recvAdvert(advert)
-            self.routeServices[name] = advert.client()
+
+            client = advert.client()
+            self.routeServices[name] = client
+            allServies.append((service, client))
+
+        for service, client in allServies:
+            service.initOnRoute(self, client)
 
     def isLoopback(self):
         return False
@@ -146,19 +157,19 @@ class BasicBlatherRoute(BlatherObject):
 
     def recvDispatch(self, dmsg, addr):
         header, message = self.decodeDispatch(dmsg)
-        self.recvMessage(header, message)
+        self.recvMessage(header, message, addr)
 
-    def recvMessage(self, header, message):
+    def recvMessage(self, header, message, addr):
         advert = self.advertFor(header['adkey'])
         if advert is None:
             print >> sys.stderr, 'WARN: advert not found for:', header
             return
 
-        advert.processMessage(self, header, message)
+        advert.processRoutedMessage(header, message, self, addr)
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 #~ Imports 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-from . import directRoutes
+from . import directRoutes, networkRoutes
 

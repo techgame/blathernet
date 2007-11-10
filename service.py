@@ -79,7 +79,7 @@ class BasicBlatherService(BlatherObject):
         if advertInfo.get('key') is None:
             advertInfo['key'] = id(self)
         self.advert = BlatherAdvert.fromInfo(advertInfo, self.clientMap)
-        self.advert.processMessage = self.processMessage
+        self.advert.processRoutedMessage = self.processRoutedMessage
 
     def registerOn(self, blatherObj):
         self.advert.registerOn(blatherObj)
@@ -88,7 +88,7 @@ class BasicBlatherService(BlatherObject):
     def process(self, allActive=True):
         return self.host().process(allActive)
 
-    def processMessage(self, fromRoute, header, message):
+    def processRoutedMessage(self, header, message, fromRoute, fromAddr):
         raise NotImplementedError('Subclass Responsibility: %r' % (self,))
 
     def iterRoutes(self):
@@ -104,12 +104,12 @@ class ForwardingBlatherService(BasicBlatherService):
     def __init__(self, advert):
         BasicBlatherService.__init__(self)
         self.advert = advert
-        self.advert.processMessage = self.processMessage
+        self.advert.processRoutedMessage = self.processRoutedMessage
 
     def createAdvert(self, advertInfo):
         pass
 
-    def processMessage(self, fromRoute, header, message):
+    def processRoutedMessage(self, header, message, fromRoute, fromAddr):
         for route in self.iterRoutes():
             if route is not fromRoute:
                 route.sendMessage(header, message)
@@ -151,7 +151,7 @@ class MessageHandlerRegistry(object):
 class MessageObject(object):
     adreply = None
 
-    def __init__(self, route, header, message):
+    def __init__(self, header, message, route):
         self.route = route
         self.router = route.router
         self.header = header
@@ -175,10 +175,10 @@ class BlatherMessageService(BasicBlatherService):
     _fm_ = BlatherObject._fm_.branch(MessageObject=MessageObject)
     msgreg = MessageHandlerRegistry()
 
-    def processMessage(self, route, header, message):
+    def processRoutedMessage(self, header, message, fromRoute, fromAddr):
         message = sj_loads(message)
         method = self.msgreg.get(message[0])
-        msgobj = self._fm_.MessageObject(route, header, message)
+        msgobj = self._fm_.MessageObject(header, message, fromRoute)
         method(self, msgobj, *message[1:])
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
