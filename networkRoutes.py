@@ -11,20 +11,29 @@
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 import Queue
-from .router import BasicBlatherRoute
+from .basicRoute import BasicBlatherRoute
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 #~ Definitions 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 class BlatherUDPPeer(object):
-    def __init__(self, channel, addr):
+    channel = None
+    addr_in = None
+    addr_out = None
+
+    def __init__(self, channel, addr_in, addr_out=None):
         self.channel = channel.asWeakProxy()
-        self.addr = channel.asSockAddr(addr)
-        channel.register(self.addr, self.recv)
+        if addr_in is not None:
+            self.addr_in = channel.asSockAddr(addr_in)
+        if addr_out is not None:
+            self.addr_out = channel.asSockAddr(addr_out)
+        else: self.addr_out = self.addr_in
+
+        channel.register(self.addr_in, self.recv)
 
     def send(self, packet):
-        self.channel.send(packet, self.addr)
+        self.channel.send(packet, self.addr_out)
 
     def recv(self, packet, address):
         self.transferDispatch(packet, address)
@@ -43,8 +52,8 @@ class BlatherNetworkRoute(BasicBlatherRoute):
         BasicBlatherRoute.__init__(self)
 
     @classmethod
-    def configure(klass, router, channel, addr):
-        peer = BlatherUDPPeer(channel, addr)
+    def configure(klass, router, channel, addr_in, addr_out=None):
+        peer = BlatherUDPPeer(channel, addr_in, addr_out)
         self = klass(peer)
         router.addRoute(self)
         return self

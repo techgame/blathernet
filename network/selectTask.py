@@ -22,7 +22,7 @@ from socket import error as SocketError
 
 from TG.kvObserving import KVObject, KVProperty, KVSet, OBFactoryMap
 
-from .socketConfigTools import SocketConfigUtils, socketErrorMap
+from .socketConfigTools import socketErrorMap
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 #~ Definitions 
@@ -54,83 +54,6 @@ class NetworkCommon(KVObject):
         return weakref.ref(self, cb)
     def asWeakProxy(self, cb=None):
         return weakref.proxy(self, cb)
-
-#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-#~ Socket and select.select machenery
-#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-class NetworkSelectable(NetworkCommon):
-    needsRead = KVProperty(False)
-    needsWrite = KVProperty(False)
-
-    def fileno(self):
-        """Used by select.select so that we can use this class in a
-        non-blocking fasion."""
-        return 0
-
-    def performRead(self, tasks):
-        """Called by the selectable select/poll process when selectable is ready to
-        harvest.  Note that this is called during NetworkSelectTask's
-        timeslice, and should not be used for intensive processing."""
-        pass
-
-    def performWrite(self, tasks):
-        """Called by the selectable select/poll process when selectable is ready for
-        writing.  Note that this is called during NetworkSelectTask's timeslice, and
-        should not be used for intensive processing."""
-        pass
-
-#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-class SocketSelectable(NetworkSelectable):
-    _fm_ = NetworkSelectable._fm_.branch(
-            ConfigUtils=SocketConfigUtils)
-
-    afamily = socket.AF_INET
-    sockType = None
-
-    def fileno(self):
-        sock = self.sock
-        if sock is not None:
-            return sock.fileno()
-        else:return 0
-
-    _sock = None
-    def getSocket(self):
-        return self._sock
-    def setSocket(self, sock):
-        self._sock = sock
-
-        cfgUtils = self.cfgUtils
-        cfgUtils.setSocketInfo(sock, self.afamily)
-        self._socketConfig(sock, cfgUtils)
-
-    sock = property(getSocket, setSocket)
-
-    def createSocket(self, afamily=None, sockType=None):
-        self.afamily = afamily or self.afamily
-        self.sockType = sockType or self.sockType
-        sock = socket.socket(self.afamily, self.sockType)
-        self.setSocket(sock)
-
-    def _socketConfig(self, sock, cfgUtils):
-        sock.setblocking(False)
-        cfgUtils.reuseAddress()
-        cfgUtils.configFcntl()
-
-    _cfgUtils = None
-    def getCfgUtils(self):
-        cfgUtils = self._cfgUtils
-        if cfgUtils is None:
-            cfgUtils = self._fm_.ConfigUtils()
-            self._cfgUtils = cfgUtils
-        return cfgUtils
-    cfgUtils = property(getCfgUtils)
-
-    def asSockAddr(self, address):
-        return self.cfgUtils.asSockAddr(address)
-    def normSockAddr(self, address):
-        return self.cfgUtils.normSockAddr(address)
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 #~ Network Select Task

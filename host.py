@@ -11,6 +11,8 @@
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 import threading
+import uuid
+import md5
 
 from .base import BlatherObject
 from . import adverts
@@ -23,6 +25,13 @@ from . import taskMgrs
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 class BlatherHost(BlatherObject):
+    _fm_ = BlatherObject._fm_.branch(
+            newNodeId = uuid.uuid4,
+            AdvertDB = adverts.BlatherAdvertDB,
+            Router = router.BlatherRouter,
+            TaskMgr = taskMgrs.BlatherTaskMgr,
+            NetworkMgr = network.BlatherNetworkMgr,
+            )
     advertDb = None
     router = None
     taskMgr = None
@@ -35,20 +44,26 @@ class BlatherHost(BlatherObject):
         if name is not None:
             self.name = name
 
-        self.etasks = threading.Event()
+        self.nodeId = self._fm_.newNodeId()
+        self.midHash = md5.md5(str(self.nodeId))
 
-        self.advertDb = adverts.BlatherAdvertDB()
+        self.advertDb = self._fm_.AdvertDB()
+        self.advertDb.host = self.asWeakRef()
 
-        self.router = router.BlatherRouter()
+        self.router = self._fm_.Router()
         self.router.host = self.asWeakRef()
 
-        self.taskMgr = taskMgrs.BlatherTaskMgr(name)
+        self.etasks = threading.Event()
+        self.taskMgr = self._fm_.TaskMgr(name)
         self._masterTaskMgr.add(self.taskMgr)
+
+        self.netMgr = self._fm_.NetworkMgr()
+        self.netMgr.host = self.asWeakRef()
 
     def __repr__(self):
         if self.name is None:
-            return '<%s %x>' % (self.__class__.__name__, id(self))
-        else: return '<%s "%s">' % (self.__class__.__name__, self.name)
+            return '<%s %s>' % (self.__class__.__name__, self.nodeId)
+        else: return '<%s "%s" %s>' % (self.__class__.__name__, self.name, self.nodeId)
 
     def registerAdvert(self, advert):
         advert.registerOn(self.advertDb)
@@ -56,68 +71,25 @@ class BlatherHost(BlatherObject):
 
     #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-    _networkSelect = None
-    def getNetworkSelect(self):
-        result = self._networkSelect
-        if result is None:
-            result = network.NetworkSelect()
-            result.run()
-            self._networkSelect = result
-        return result
-    networkSelect = property(getNetworkSelect)
-
-    def addUdpChannel(self, address='127.0.0.1', port=8470):
-        if not isinstance(address, tuple):
-            address = address, port
-        result = network.UDPChannel(address)
-
-        self.networkSelect.add(result)
-        if self._udpChannel is None:
-            self._udpChannel = result
-        return result
-
-    _udpChannel = None
-    def getUdpChannel(self, create=True):
-        result = self._udpChannel
-        if result is None and not create:
-            result = self.addUdpChannel()
-            self._udpChannel = result
-
-        return result
-    def setUdpChannel(self, udpChannel):
-        self._udpChannel = udpChannel
-    udpChannel = property(getUdpChannel, setUdpChannel)
-
-    def addMudpChannel(self, address='238.1.9.1', port=8469):
-        if not isinstance(address, tuple):
-            address = address, port
-        result = network.MUDPChannel(address)
-        result.joinGroup(address)
-        result.grpAddr = address
-
-        self.networkSelect.add(result)
-        return result
-
-    _mudpChannel = None
-    def getMudpChannel(self, create=True):
-        result = self._mudpChannel
-        if result is None and not create:
-            result = self.addMudpChannel()
-            self._mudpChannel = result
-
-        return result
-    def setMudpChannel(self, mudpChannel):
-        self._mudpChannel = mudpChannel
-    mudpChannel = property(getMudpChannel, setMudpChannel)
+    def addUdpChannel(self, *args, **kw):
+        ch = self.netMgr.addUdpChannel(*args, **kw)
+        self.netMgr.udpChannel = ch
+        return ch
+    def addMudpChannel(self, *args, **kw):
+        ch = self.netMgr.addMudpChannel(*args, **kw)
+        self.netMgr.mudpChannel = ch
+        return ch
 
     def connectDirect(self, other):
+        assert False
+        return 
         self.router.connectDirect(other.router)
     def connectMUDP(self):
-        mudpChannel = self.mudpChannel
-        self.router.connectNetwork(mudpChannel, mudpChannel.grpAddr)
+        mudpChannel = self.netMgr.mudpChannel
+        self.router.connectNetwork(mudpChannel, None, mudpChannel.grpAddr)
     def connectUDP(self, addr):
-        udpChannel = self.udpChannel
-        self.router.connectNetwork(udpChannel, addr)
+        udpChannel = self.netMgr.udpChannel
+        self.router.connectNetwork(udpChannel, addr, addr)
 
     #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 

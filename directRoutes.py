@@ -11,7 +11,7 @@
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 import Queue
-from .router import BasicBlatherRoute
+from .basicRoute import BasicBlatherRoute
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 #~ Definitions 
@@ -26,13 +26,12 @@ class BlatherDirectRoute(BasicBlatherRoute):
             return BlatherLoopbackRoute.configure(hostA)
 
         routeA = klass()
-        hostA.addRoute(routeA)
-
         routeB = klass()
-        hostB.addRoute(routeB)
-
         routeA.peer = routeB
         routeB.peer = routeA
+
+        hostA.addRoute(routeA)
+        hostB.addRoute(routeB)
         return (routeA, routeB)
 
     def __init__(self):

@@ -60,8 +60,24 @@ class BasicBlatherClient(BlatherObject):
     def process(self, allActive=True):
         return self.host().process(allActive)
 
+    _midHash = None
+    def getMidHash(self):
+        result = self._midHash
+        if result is None:
+            result = self.host().midHash.copy()
+            result.update(str(time.time()))
+            result.update(str(id(self)))
+            self._midHash = result
+        return result
+    midHash = property(getMidHash)
+
+    def messageId(self, message):
+        midHash = self.midHash
+        midHash.update(message)
+        return midHash.hexdigest()
     def sendMessage(self, header, message):
         message = sj_dumps(message)
+        header['mid'] = self.messageId(message)
         count = 0
         for route in self.iterRoutes():
             route.sendMessage(header, message)

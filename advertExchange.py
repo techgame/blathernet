@@ -26,9 +26,8 @@ class AdvertExchangeService(BlatherMessageService):
         name='advert exchange',
         service='exchange')
 
-    exchanged = KVList.property()
-
     msgreg = BlatherMessageService.msgreg.copy()
+    exchanged = KVList.property()
 
     @msgreg.on('hello')
     def hello(self, msgobj, advertCount=0):
@@ -50,20 +49,25 @@ class AdvertExchangeService(BlatherMessageService):
     @msgreg.on('advert')
     def advert(self, msgobj, advertInfo):
         advert = BlatherAdvert.fromInfo(advertInfo)
-        msgobj.route.recvAdvert(advert)
-
-        self.exchanged.append(advert)
-
         self.publishAdvert(msgobj, advert)
 
     def publishAdvert(self, msgobj, advert):
         if advert.attr('private', False):
             return False
 
-        ForwardingBlatherService(advert)
+        if advert in self.route().routeAdvertDb:
+            return False
+
+        for advertDb in self.iterPublicAdvertDbs():
+            if advert in advertDb:
+                return False
 
         for advertDb in self.iterPublicAdvertDbs():
             advert.registerOn(advertDb)
+
+        ForwardingBlatherService(advert)
+        msgobj.route.recvAdvert(advert)
+        self.exchanged.append(advert)
 
         for route in msgobj.publishRoutes():
             route.sendAdvert(advert)

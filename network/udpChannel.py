@@ -16,16 +16,16 @@ import Queue
 from socket import SOCK_DGRAM
 from socket import error as SocketError
 
-from TG.kvObserving import KVProperty, KVSet, OBFactoryMap
+from TG.kvObserving import KVProperty, KVSet
 
-from .selectTask import SocketSelectable
+from .socketChannel import SocketChannel
 from .socketConfigTools import SocketConfigUtils, MulticastConfigUtils, udpSocketErrorMap
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 #~ Definitions 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-class UDPChannel(SocketSelectable):
+class UDPChannel(SocketChannel):
     registry = None
 
     socketErrorMap = udpSocketErrorMap
@@ -35,13 +35,13 @@ class UDPChannel(SocketSelectable):
     recvThrottle = 16
     sendThrottle = 16
 
-    def __init__(self, address=None, interface=None):
-        SocketSelectable.__init__(self)
+    def __init__(self, address=None, interface=None, onBindError=None):
+        SocketChannel.__init__(self)
         self.registry = {}
         self.sendQueue = Queue.Queue()
         self.recvQueue = Queue.Queue()
         if address:
-            self.setSocketAddress(address, interface)
+            self.setSocketAddress(address, interface, onBindError)
 
     #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -62,15 +62,24 @@ class UDPChannel(SocketSelectable):
 
     def getSocketAddress(self):
         return self.sock.getsockname()
-    def setSocketAddress(self, address, interface=None):
+    def setSocketAddress(self, address, interface=None, onBindError=None):
         afamily, address = self.normSockAddr(address)
-        self.createSocket(afamily)
-        self.sock.bind(address)
+        if self.sock is None or self.afamily != afamily:
+            self.createSocket(afamily)
+
+        self.bindSocket(address, onBindError)
         self.needsRead = True
 
     def _socketConfig(self, sock, cfgUtils):
-        SocketSelectable._socketConfig(self, sock, cfgUtils)
+        SocketChannel._socketConfig(self, sock, cfgUtils)
+        cfgUtils.disallowMixed()
+        #cfgUtils.reuseAddress()
         cfgUtils.setMaxBufferSize()
+
+    def _onBindError(self, address, err):
+        r = list(address)
+        r[1] += 1
+        return tuple(r)
 
     #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -144,20 +153,28 @@ class UDPMulticastChannel(UDPChannel):
     _fm_ = UDPChannel._fm_.branch(
             ConfigUtils=MulticastConfigUtils)
 
-    def setSocketAddress(self, address, interface=None):
+    def setSocketAddress(self, address, interface=None, onBindError=None):
         afamily, address = self.normSockAddr(address)
-        self.createSocket(afamily)
+
+        if self.sock is None or self.afamily != afamily:
+            self.createSocket(afamily)
 
         self.cfgUtils.setMulticastInterface(address, interface)
 
         # multicast addresses should always be bound to INADDR_ANY=""
-        address = ("",) + address[1:]
-        self.sock.bind(address)
+        bindAddr = ("",) + address[1:]
+        self.bindSocket(bindAddr, onBindError)
+
+        self.needsRead = True
 
     def _socketConfig(self, sock, cfgUtils):
         UDPChannel._socketConfig(self, sock, cfgUtils)
+        cfgUtils.reuseAddress()
         cfgUtils.setMulticastHops(5)
         cfgUtils.setMulticastLoop(True)
+
+    def _onBindError(self, address, err):
+        pass
 
     def joinGroup(self, group, interface=None):
         self.cfgUtils.joinGroup(group, interface)

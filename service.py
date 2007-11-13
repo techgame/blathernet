@@ -10,6 +10,8 @@
 #~ Imports 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
+import time
+import uuid
 from functools import partial
 from simplejson import dumps as sj_dumps, loads as sj_loads
 
@@ -77,7 +79,7 @@ class BasicBlatherService(BlatherObject):
 
     def createAdvert(self, advertInfo):
         if advertInfo.get('key') is None:
-            advertInfo['key'] = id(self)
+            advertInfo['key'] = str(uuid.uuid4())
         self.advert = BlatherAdvert.fromInfo(advertInfo, self.clientMap)
         self.advert.processRoutedMessage = self.processRoutedMessage
 
