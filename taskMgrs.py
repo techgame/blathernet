@@ -10,6 +10,7 @@
 #~ Imports 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
+import traceback
 from TG.kvObserving import KVSet, KVList
 
 from .base import BlatherObject
@@ -41,7 +42,11 @@ class BlatherTaskMgr(BlatherObject):
         while activeTasks:
             for task in list(activeTasks):
                 n += 1
-                if not task():
+                try:
+                    if not task():
+                        activeTasks.discard(task)
+                except Exception:
+                    traceback.print_exc()
                     activeTasks.discard(task)
 
             if not allActive:

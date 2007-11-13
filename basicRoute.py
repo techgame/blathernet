@@ -11,6 +11,7 @@
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 import sys
+import traceback
 from md5 import md5
 from simplejson import dumps as sj_dumps, loads as sj_loads
 
@@ -139,5 +140,8 @@ class BasicBlatherRoute(BlatherObject):
             print >> sys.stderr, 'WARN: advert not found for:', header
             return
 
-        advert.processRoutedMessage(header, message, self, addr)
+        try:
+            advert.processRoutedMessage(header, message, self, addr)
+        except Exception:
+            traceback.print_exc()
 
