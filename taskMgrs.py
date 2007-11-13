@@ -11,6 +11,8 @@
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 import traceback
+import threading
+
 from TG.kvObserving import KVSet, KVList
 
 from .base import BlatherObject
@@ -59,6 +61,10 @@ class BlatherTaskMgr(BlatherObject):
 class MasterTaskMgr(BlatherObject):
     mgrs = KVList.property()
 
+    def __init__(self):
+        BlatherObject.__init__(self)
+        self.etasks = threading.Event()
+
     def __repr__(self):
         return '<TM Master |%s|>' % (len(self.mgrs),)
 
@@ -72,12 +78,14 @@ class MasterTaskMgr(BlatherObject):
     def _onDiscardMgr(self, wrMgr):
         self.mgrs.remove(wrMgr)
 
-    def process(self, allActive=True):
+    def process(self, allActive=True, timeout=1.0):
         mgrs = self.mgrs
 
         n = True
         total = 0
         while n:
+            self.etasks.clear()
+
             n = 0
             for taskMgr in list(mgrs):
                 n += taskMgr().process(False)
@@ -86,9 +94,13 @@ class MasterTaskMgr(BlatherObject):
             if not allActive:
                 break
 
+            if not total and timeout:
+                self.etasks.wait(timeout)
+                if not self.etasks.isSet():
+                    break
         return total
     __call__ = process
 
-
-#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    def onTaskAdded(self):
+        self.etasks.set()
 

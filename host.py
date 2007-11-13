@@ -10,7 +10,6 @@
 #~ Imports 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-import threading
 import uuid
 import md5
 
@@ -53,7 +52,6 @@ class BlatherHost(BlatherObject):
         self.router = self._fm_.Router()
         self.router.host = self.asWeakRef()
 
-        self.etasks = threading.Event()
         self.taskMgr = self._fm_.TaskMgr(name)
         self._masterTaskMgr.add(self.taskMgr)
 
@@ -94,15 +92,11 @@ class BlatherHost(BlatherObject):
     #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
     def process(self, allActive=True, timeout=1.0):
-        n = self._masterTaskMgr(allActive)
-        if not n and timeout:
-            self.etasks.wait(timeout)
-            if self.etasks.isSet():
-                n = self._masterTaskMgr(allActive)
-        self.etasks.clear()
+        n = self._masterTaskMgr(allActive, timeout)
         return n
 
     def addTask(self, task):
-        self.etasks.set()
-        return self.taskMgr.add(task)
+        task = self.taskMgr.add(task)
+        self._masterTaskMgr.onTaskAdded()
+        return task
 

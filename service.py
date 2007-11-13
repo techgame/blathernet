@@ -135,6 +135,12 @@ class MessageHandlerRegistry(object):
     def on(self, key, fn=None):
         return self.set(key, fn)
 
+    def __getitem__(self, key):
+        return self.registry[key]
+    def __setitem__(self, key, fn):
+        self.registry[key] = fn
+    def __delitem__(self, key, fn):
+        del self.registry[key]
     def get(self, key, default=None):
         return self.registry.get(key, default)
 
@@ -179,7 +185,13 @@ class BlatherMessageService(BasicBlatherService):
 
     def processRoutedMessage(self, header, message, fromRoute, fromAddr):
         message = sj_loads(message)
-        method = self.msgreg.get(message[0])
+        try:
+            method = self.msgreg[message[0]]
+        except LookupError:
+            method = self.msgreg.get(None)
+            if method is None:
+                raise
+
         msgobj = self._fm_.MessageObject(header, message, fromRoute)
         method(self, msgobj, *message[1:])
 
