@@ -12,7 +12,6 @@
 
 import sys
 import traceback
-from md5 import md5
 from simplejson import dumps as sj_dumps, loads as sj_loads
 
 from TG.kvObserving import KVProperty, KVKeyedDict
@@ -101,26 +100,28 @@ class BasicBlatherRoute(BlatherObject):
         self._msgKeys = {}
 
     def encodeDispatch(self, header, message):
+        mkey = header['mid']
+        if mkey in self._msgKeys:
+            return None
+        self._msgKeys[mkey] = 1
+
         sj_header = sj_dumps(header)
         dmsg = '\r\n\r\n'.join((sj_header, message))
 
-        mkey = md5(dmsg).hexdigest()
-        if mkey in self._msgKeys:
-            return None
-        self._msgKeys[mkey] = 1
         return dmsg
 
     def decodeDispatch(self, dmsg):
-        mkey = md5(dmsg).hexdigest()
-        if mkey in self._msgKeys:
-            return None
-        self._msgKeys[mkey] = 1
-
         sj_header, sep, message = dmsg.partition('\r\n\r\n')
         if not sep:
             return None
 
         header = sj_loads(sj_header)
+
+        mkey = header['mid']
+        if mkey in self._msgKeys:
+            return None
+        self._msgKeys[mkey] = 1
+
         return (header, message)
 
     def sendDispatch(self, dmsg):
