@@ -103,6 +103,8 @@ class BasicBlatherRoute(BlatherObject):
         mkey = header['mid']
         if mkey in self._msgKeys:
             return None
+        if len(self._msgKeys) > 1000:
+            self._msgKeys.clear()
         self._msgKeys[mkey] = 1
 
         sj_header = sj_dumps(header)
@@ -111,6 +113,9 @@ class BasicBlatherRoute(BlatherObject):
         return dmsg
 
     def decodeDispatch(self, dmsg):
+        if len(self._msgKeys) > 1000:
+            self._msgKeys.clear()
+
         sj_header, sep, message = dmsg.partition('\r\n\r\n')
         if not sep:
             return None

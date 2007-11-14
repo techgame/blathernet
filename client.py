@@ -50,15 +50,26 @@ class BasicBlatherClient(BlatherObject):
     def newFuture(self, header):
         raise NotImplementedError('Subclass Responsibility: %r' % (self,))
 
-    def iterRoutes(self):
-        return self.advert.iterRoutes()
-
     def getHost(self):
         return self.advert.host
     host = property(getHost)
 
+    def iterRoutes(self):
+        return self.advert.iterRoutes()
+
+    def registerAdvert(self, advert):
+        count = 0
+        for route in self.iterRoutes():
+            advert.registerOn(route)
+            count += 1
+        if not count:
+            raise NoRouteAvailable()
+        return count
+
     def process(self, allActive=True):
         return self.host().process(allActive)
+
+    #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
     _midHash = None
     def getMidHash(self):
@@ -75,21 +86,16 @@ class BasicBlatherClient(BlatherObject):
         midHash = self.midHash
         midHash.update(message)
         return midHash.hexdigest()
-    def sendMessage(self, header, message):
-        message = sj_dumps(message)
+
+    #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+    def rawSend(self, header, message):
+        if header is None:
+            header = self.newHeader()
         header['mid'] = self.messageId(message)
         count = 0
         for route in self.iterRoutes():
             route.sendMessage(header, message)
-            count += 1
-        if not count:
-            raise NoRouteAvailable()
-        return count
-
-    def registerAdvert(self, advert):
-        count = 0
-        for route in self.iterRoutes():
-            advert.registerOn(route)
             count += 1
         if not count:
             raise NoRouteAvailable()
@@ -102,14 +108,14 @@ class BasicBlatherClient(BlatherObject):
 
     def asyncSend(self, *args):
         header = self.newHeader()
-        self.sendMessage(header, args)
+        self.rawSend(header, sj_dumps(args))
         return None
     asend = asyncSend
 
     def futureSend(self, *args):
         header = self.newHeader()
         future = self.newFuture(header)
-        self.sendMessage(header, args)
+        self.rawSend(header, sj_dumps(args))
         return future
     fsend = futureSend
 
@@ -134,12 +140,12 @@ class BlatherClientReplyService(BasicBlatherService):
 
         replyHeader = {'adkey': self.advert.key}
         header['reply'] = replyHeader
-        replyHeader['id'] = futureid
+        replyHeader['fid'] = futureid
 
         return future
 
     def processRoutedMessage(self, header, message, fromRoute, fromAddr):
-        futureid = header.get('id', None)
+        futureid = header.get('fid', None)
         reply = self._replyMap.get(futureid)
         if reply is not None:
             if reply.processRoutedMessage(header, message, fromRoute, fromAddr):
@@ -156,22 +162,23 @@ class MessageFuture(BlatherObject):
         self.greenlets = []
         self.queue = []
 
-    def get(self, timeout=None):
+    def get(self, timeout=None, decode=True):
         if not self.queue or self.greenlets:
             g = greenlet.getcurrent()
             if g.parent is None:
-                while True:
-                    self.host().process(False)
-                    if self.queue: break
+                self.host().process(True, timeout)
+                if not self.queue:
+                    return None
             else: 
                 self.greenlets.append(g)
                 g.parent.switch()
 
-        result = self.queue.pop(0)
-        return result
+        message = self.queue.pop(0)
+        if decode:
+            message = sj_loads(message)
+        return message
 
     def processRoutedMessage(self, header, message, fromRoute, fromAddr):
-        message = sj_loads(message)
         self.queue.append(message)
         if self.greenlets:
             self.host().addTask(self._processGreenlets)

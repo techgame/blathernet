@@ -91,13 +91,14 @@ class MasterTaskMgr(BlatherObject):
                 n += taskMgr().process(False)
             total += n
 
-            if not allActive:
-                break
-
             if not total and timeout:
                 self.etasks.wait(timeout)
                 if not self.etasks.isSet():
                     break
+
+            if not allActive:
+                break
+
         return total
     __call__ = process
 

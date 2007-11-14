@@ -87,8 +87,7 @@ class BlatherHost(BlatherObject):
     #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
     def process(self, allActive=True, timeout=1.0):
-        n = self._masterTaskMgr(allActive, timeout)
-        return n
+        return self._masterTaskMgr(allActive, timeout)
 
     def addTask(self, task):
         task = self.taskMgr.add(task)
