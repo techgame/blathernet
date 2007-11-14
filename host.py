@@ -47,16 +47,13 @@ class BlatherHost(BlatherObject):
         self.midHash = md5.md5(str(self.nodeId))
 
         self.advertDb = self._fm_.AdvertDB()
-        self.advertDb.host = self.asWeakRef()
 
-        self.router = self._fm_.Router()
-        self.router.host = self.asWeakRef()
+        self.router = self._fm_.Router(self)
 
         self.taskMgr = self._fm_.TaskMgr(name)
         self._masterTaskMgr.add(self.taskMgr)
 
-        self.netMgr = self._fm_.NetworkMgr()
-        self.netMgr.host = self.asWeakRef()
+        self.netMgr = self._fm_.NetworkMgr(self)
 
     def __repr__(self):
         if self.name is None:
@@ -79,8 +76,6 @@ class BlatherHost(BlatherObject):
         return ch
 
     def connectDirect(self, other):
-        assert False
-        return 
         self.router.connectDirect(other.router)
     def connectMUDP(self):
         mudpChannel = self.netMgr.mudpChannel

@@ -25,6 +25,10 @@ class BlatherNetworkMgr(BlatherObject):
             UDPChannel=UDPChannel,
             UDPMulticastChannel=UDPMulticastChannel,)
 
+    def __init__(self, host):
+        BlatherObject.__init__(self)
+        self.host = host.asWeakRef()
+
     _networkSelect = None
     def getNetworkSelect(self):
         result = self._networkSelect

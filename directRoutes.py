@@ -21,17 +21,20 @@ class BlatherDirectRoute(BasicBlatherRoute):
     _fm_ = BasicBlatherRoute._fm_.branch()
 
     @classmethod
-    def configure(klass, hostA, hostB=None):
-        if hostA is hostB or hostB is None:
-            return BlatherLoopbackRoute.configure(hostA)
+    def configure(klass, routerA, routerB=None):
+        if routerA is routerB or routerB is None:
+            return BlatherLoopbackRoute.configure(routerA)
 
         routeA = klass()
         routeB = klass()
         routeA.peer = routeB
         routeB.peer = routeA
 
-        hostA.addRoute(routeA)
-        hostB.addRoute(routeB)
+        routerA.addRoute(routeA)
+        routerB.addRoute(routeB)
+
+        routeA.initRoute()
+        routeB.initRoute()
         return (routeA, routeB)
 
     def __init__(self):
@@ -83,5 +86,5 @@ class BlatherLoopbackRoute(BlatherDirectRoute):
             return False
 
         self.recvAdvert(advert)
-        return False
+        return True
 

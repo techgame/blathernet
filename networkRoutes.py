@@ -56,6 +56,7 @@ class BlatherNetworkRoute(BasicBlatherRoute):
         peer = BlatherUDPPeer(channel, addr_in, addr_out)
         self = klass(peer)
         router.addRoute(self)
+        self.initRoute()
         return self
 
     _peer = None

@@ -34,7 +34,8 @@ class BasicBlatherRoute(BlatherObject):
 
     routeServices = KVKeyedDict.property()
     routeAdvertDb = KVProperty(BlatherRouteAdvertDB)
-    router = None # weakref to BlatherRouter
+    ##host = None # weakref to BlatherHost
+    ##router = None # weakref to BlatherRouter
 
     def isBlatherRoute(self): return True
 
@@ -52,8 +53,11 @@ class BasicBlatherRoute(BlatherObject):
             self.routeServices[name] = client
             allServies.append((service, client))
 
-        for service, client in allServies:
-            service.initOnRoute(self, client)
+        def startupServices():
+            for service, client in allServies:
+                service.initOnRoute(self, client)
+
+        self.host().addTask(startupServices)
 
     def isLoopback(self):
         return False
@@ -61,11 +65,6 @@ class BasicBlatherRoute(BlatherObject):
     def registerAdvert(self, advert):
         if advert.key not in self.routeAdvertDb:
             self.sendAdvert(advert)
-
-    def getHost(self):
-        if self.router is not None:
-            return self.router().host
-    host = property(getHost)
 
     def advertFor(self, adkey):
         return self.routeAdvertDb.get(adkey)

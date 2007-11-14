@@ -58,11 +58,12 @@ class AdvertExchangeService(BlatherMessageService):
         if advert in self.route().routeAdvertDb:
             return False
 
-        for advertDb in self.iterPublicAdvertDbs():
+        allAdvertDbs = list(self.iterPublicAdvertDbs())
+        for advertDb in allAdvertDbs:
             if advert in advertDb:
                 return False
 
-        for advertDb in self.iterPublicAdvertDbs():
+        for advertDb in allAdvertDbs:
             advert.registerOn(advertDb)
 
         ForwardingBlatherService(advert)
