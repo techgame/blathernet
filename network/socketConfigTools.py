@@ -157,7 +157,7 @@ class MulticastConfigUtils(SocketConfigUtils):
             else:
                 if_address = self.getMulticastInterface(group)
 
-            return socket.inet_pton(self.afamily, if_address)
+            return self._inet_pton(self.afamily, if_address)
 
         elif self.afamily == AF_INET6:
             # IPV6 require the interface number to bind the multicast interface
@@ -174,8 +174,24 @@ class MulticastConfigUtils(SocketConfigUtils):
     def _packedGroup(self, group, if_address=None):
         groupAddr = self.asSockAddr(group)
         interface = self._packetInterface(None, if_address)
-        group = socket.inet_pton(self.afamily, groupAddr[0])
+        group = self._inet_pton(self.afamily, groupAddr[0])
         return group + interface
+
+    if hasattr(socket, 'inet_pton'):
+        _inet_pton = staticmethod(socket.inet_pton)
+        _inet_ntop = staticmethod(socket.inet_ntop)
+    else:
+        @staticmethod
+        def _inet_ntop(afamily, addr):
+            if afamily != AF_INET:
+                raise NotImplementedError()
+            return socket.inet_ntoa(addr)
+
+        @staticmethod
+        def _inet_pton(afamily, addr):
+            if afamily != AF_INET:
+                raise NotImplementedError()
+            return socket.inet_aton(addr)
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 #~ Constants / Variiables / Etc. 
