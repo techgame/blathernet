@@ -89,6 +89,12 @@ class BasicBlatherClient(BlatherObject):
 
     #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
+    def jsonSend(self, data):
+        header = self.newHeader()
+        return self.rawJsonSend(header, data)
+    def rawJsonSend(self, header, data):
+        return self.rawSend(header, sj_dumps(data, ensure_ascii=False, encoding='utf-8'))
+
     def rawSend(self, header, message):
         if header is None:
             header = self.newHeader()
@@ -108,14 +114,14 @@ class BasicBlatherClient(BlatherObject):
 
     def asyncSend(self, *args):
         header = self.newHeader()
-        self.rawSend(header, sj_dumps(args))
+        self.rawJsonSend(header, args)
         return None
     asend = asyncSend
 
     def futureSend(self, *args):
         header = self.newHeader()
         future = self.newFuture(header)
-        self.rawSend(header, sj_dumps(args))
+        self.rawJsonSend(header, args)
         return future
     fsend = futureSend
 
