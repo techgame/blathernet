@@ -12,14 +12,18 @@
 
 from TG.kvObserving import KVList
 
-from .adverts import BlatherAdvert
-from .service import BlatherMessageService, ForwardingBlatherService
+from ..adverts import BlatherAdvert
+from .messageService import BlatherMessageService
+from .forwardingService import ForwardingBlatherService
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 #~ Definitions 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 class AdvertExchangeService(BlatherMessageService):
+    _fm_ = BlatherMessageService._fm_.branch(
+                ForwardingService=ForwardingBlatherService,)
+
     advertInfo = BlatherMessageService.advertInfo.branch(
         private=True,
         key='advert-exchange',
@@ -66,7 +70,7 @@ class AdvertExchangeService(BlatherMessageService):
         for advertDb in allAdvertDbs:
             advert.registerOn(advertDb)
 
-        ForwardingBlatherService(advert)
+        self._fm_.ForwardingService(advert)
         msgobj.route.recvAdvert(advert)
         self.exchanged.append(advert)
 

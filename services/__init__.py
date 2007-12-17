@@ -10,11 +10,7 @@
 #~ Imports 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-from .adverts import BlatherAdvert
-from .services import (
-        BlatherMessageService, MessageService,
-        BasicBlatherService, BasicService,
-        BlatherMessageService, MessageService,
-        ForwardingBlatherService, ForwardingService,)
+from .basicService import BasicBlatherService, BasicService
+from .messageService import BlatherMessageService, MessageService
+from .forwardingService import ForwardingBlatherService, ForwardingService
 
-from .host import BlatherHost

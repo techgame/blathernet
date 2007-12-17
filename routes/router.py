@@ -12,7 +12,7 @@
 
 from TG.kvObserving import KVSet
 
-from .base import BlatherObject
+from ..base import BlatherObject
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 #~ Definitions 

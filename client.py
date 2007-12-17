@@ -17,7 +17,7 @@ import greenlet
 from TG.kvObserving import KVProperty, KVKeyedDict, KVList
 
 from .base import BlatherObject
-from .service import BasicBlatherService
+from .services import BasicBlatherService
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 #~ Definitions 
@@ -208,7 +208,22 @@ class BlatherClient(BasicBlatherClient):
 
     def newFuture(self, header):
         return self.replyService.newFuture(header)
+Client = BlatherClient
 
 class BlatherReplyClient(BlatherClient):
     pass
+
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+#~ Force client update
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+from .adverts import BlatherAdvert
+
+BlatherAdvert.clientMap = dict(
+    send = BlatherClient,
+    reply = BlatherReplyClient,)
+
+BasicBlatherService.clientMap = dict(
+    send = BlatherClient,
+    reply = BlatherReplyClient,)
 

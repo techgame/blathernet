@@ -14,8 +14,9 @@ import uuid
 import md5
 
 from .base import BlatherObject
+from . import client
 from . import adverts
-from . import router 
+from . import routes 
 from . import network
 from . import taskMgrs
 
@@ -27,7 +28,7 @@ class BlatherHost(BlatherObject):
     _fm_ = BlatherObject._fm_.branch(
             newNodeId = uuid.uuid4,
             AdvertDB = adverts.BlatherAdvertDB,
-            Router = router.BlatherRouter,
+            Router = routes.BlatherRouter,
             TaskMgr = taskMgrs.BlatherTaskMgr,
             NetworkMgr = network.BlatherNetworkMgr,
             )
@@ -93,4 +94,6 @@ class BlatherHost(BlatherObject):
         task = self.taskMgr.add(task)
         self._masterTaskMgr.onTaskAdded()
         return task
+
+Host = BlatherHost
 
