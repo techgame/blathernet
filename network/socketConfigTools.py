@@ -50,10 +50,13 @@ class SocketConfigUtils(object):
             fcntl.fcntl(fileno, fcntl.F_SETFD, bitmask)
 
     def setMaxBufferSize(self):
-        sock = self.sock
-        size = self.findMaxBufferSize(sock)
-        sock.setsockopt(socket.SOL_SOCKET, socket.SO_RCVBUF, size)
-        sock.setsockopt(socket.SOL_SOCKET, socket.SO_SNDBUF, size)
+        size = self.findMaxBufferSize(self.sock)
+        return self.setBufferSize(size)
+
+    def setBufferSize(self, recvSize, sendSize=None):
+        if sendSize is None: sendSize = recvSize
+        self.sock.setsockopt(socket.SOL_SOCKET, socket.SO_RCVBUF, recvSize)
+        self.sock.setsockopt(socket.SOL_SOCKET, socket.SO_SNDBUF, sendSize)
 
     #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 

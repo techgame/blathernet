@@ -54,7 +54,7 @@ class BlatherHost(BlatherObject):
         self.taskMgr = self._fm_.TaskMgr(name)
         self._masterTaskMgr.add(self.taskMgr)
 
-        self.netMgr = self._fm_.NetworkMgr(self)
+        self.networkMgr = self._fm_.NetworkMgr(self)
 
     def __repr__(self):
         if self.name is None:
@@ -68,21 +68,21 @@ class BlatherHost(BlatherObject):
     #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
     def addUdpChannel(self, *args, **kw):
-        ch = self.netMgr.addUdpChannel(*args, **kw)
-        self.netMgr.udpChannel = ch
+        ch = self.networkMgr.addUdpChannel(*args, **kw)
+        self.networkMgr.udpChannel = ch
         return ch
     def addMudpChannel(self, *args, **kw):
-        ch = self.netMgr.addMudpChannel(*args, **kw)
-        self.netMgr.mudpChannel = ch
+        ch = self.networkMgr.addMudpChannel(*args, **kw)
+        self.networkMgr.mudpChannel = ch
         return ch
 
     def connectDirect(self, other):
         self.router.connectDirect(other.router)
     def connectMUDP(self):
-        mudpChannel = self.netMgr.mudpChannel
+        mudpChannel = self.networkMgr.mudpChannel
         self.router.connectNetwork(mudpChannel, None, mudpChannel.grpAddr)
     def connectUDP(self, addr):
-        udpChannel = self.netMgr.udpChannel
+        udpChannel = self.networkMgr.udpChannel
         self.router.connectNetwork(udpChannel, addr, addr)
 
     #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

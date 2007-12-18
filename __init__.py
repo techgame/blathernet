@@ -17,4 +17,5 @@ from .services import (
         BlatherMessageService, MessageService,
         ForwardingBlatherService, ForwardingService,)
 
-from .host import BlatherHost
+from .client import BlatherClient, Client
+from .host import BlatherHost, Host

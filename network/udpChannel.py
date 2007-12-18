@@ -74,7 +74,7 @@ class UDPChannel(SocketChannel):
         SocketChannel._socketConfig(self, sock, cfgUtils)
         cfgUtils.disallowMixed()
         #cfgUtils.reuseAddress()
-        cfgUtils.setMaxBufferSize()
+        cfgUtils.setBufferSize(65536)
 
     def _onBindError(self, address, err):
         r = list(address)
