@@ -80,8 +80,10 @@ class SocketChannel(NetworkChannel):
         sock.setblocking(False)
         cfgUtils.configFcntl()
 
+    def onBindError(self, address, err):
+        return None
     def bindSocket(self, address, onBindError=None):
-        onBindError = onBindError or self._onBindError
+        onBindError = onBindError or self.onBindError
         while 1:
             try: 
                 self.sock.bind(address)
@@ -91,10 +93,6 @@ class SocketChannel(NetworkChannel):
                 address = onBindError(address, e)
                 if address is None:
                     raise
-
-    def _onBindError(self, address, err):
-        pass
-
 
     _cfgUtils = None
     def getCfgUtils(self):

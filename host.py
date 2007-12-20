@@ -14,9 +14,8 @@ import uuid
 import md5
 
 from .base import BlatherObject
-from . import client
-from . import adverts
-from . import routes 
+from . import msgRouter
+from . import sroutes 
 from . import network
 from . import taskMgrs
 
@@ -24,68 +23,43 @@ from . import taskMgrs
 #~ Definitions 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-class BlatherHost(BlatherObject):
+class BlatherSHost(BlatherObject):
     _fm_ = BlatherObject._fm_.branch(
-            newNodeId = uuid.uuid4,
-            AdvertDB = adverts.BlatherAdvertDB,
-            Router = routes.BlatherRouter,
             TaskMgr = taskMgrs.BlatherTaskMgr,
             NetworkMgr = network.BlatherNetworkMgr,
+            MessageRouter = msgRouter.MessageRouter,
+            RouteFactory = sroutes.BlatherRouteFactory,
             )
-    advertDb = None
-    router = None
-    taskMgr = None
     _masterTaskMgr = taskMgrs.MasterTaskMgr()
+    taskMgr = None
+    msgRouter = None
+    networkMgr = None
+    routeFactory = None
 
     def isBlatherHost(self): return True
 
     name = None
     def __init__(self, name=None):
+        BlatherObject.__init__(self)
         if name is not None:
             self.name = name
-
-        self.nodeId = self._fm_.newNodeId()
-        self.midHash = md5.md5(str(self.nodeId))
-
-        self.advertDb = self._fm_.AdvertDB()
-
-        self.router = self._fm_.Router(self)
 
         self.taskMgr = self._fm_.TaskMgr(name)
         self._masterTaskMgr.add(self.taskMgr)
 
+        self.msgRouter = self._fm_.MessageRouter(self)
         self.networkMgr = self._fm_.NetworkMgr(self)
+        self.routeFactory = self._fm_.RouteFactory(self)
 
     def __repr__(self):
         if self.name is None:
-            return '<%s %s>' % (self.__class__.__name__, self.nodeId)
-        else: return '<%s "%s" %s>' % (self.__class__.__name__, self.name, self.nodeId)
+            return '<%s %s>' % (self.__class__.__name__, id(self))
+        else: return '<%s "%s" %s>' % (self.__class__.__name__, self.name, id(self))
 
     def registerAdvert(self, advert):
-        advert.registerOn(self.advertDb)
-        advert.registerOn(self.router)
-
-    #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-    def addUdpChannel(self, *args, **kw):
-        ch = self.networkMgr.addUdpChannel(*args, **kw)
-        self.networkMgr.udpChannel = ch
-        return ch
-    def addMudpChannel(self, *args, **kw):
-        ch = self.networkMgr.addMudpChannel(*args, **kw)
-        self.networkMgr.mudpChannel = ch
-        return ch
-
-    def connectDirect(self, other):
-        self.router.connectDirect(other.router)
-    def connectMUDP(self):
-        mudpChannel = self.networkMgr.mudpChannel
-        self.router.connectNetwork(mudpChannel, None, mudpChannel.grpAddr)
-    def connectUDP(self, addr):
-        udpChannel = self.networkMgr.udpChannel
-        self.router.connectNetwork(udpChannel, addr, addr)
-
-    #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+        advert.registerOn(self.msgRouter)
+    def registerRoute(self, route):
+        route.registerOn(self.msgRouter)
 
     def process(self, allActive=True, timeout=1.0):
         return self._masterTaskMgr(allActive, timeout)
@@ -95,5 +69,5 @@ class BlatherHost(BlatherObject):
         self._masterTaskMgr.onTaskAdded()
         return task
 
-Host = BlatherHost
+SHost = BlatherSHost
 

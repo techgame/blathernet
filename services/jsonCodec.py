@@ -10,27 +10,31 @@
 #~ Imports 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-import Queue
-from .basicRoute import BasicBlatherRoute
+from simplejson import dumps as sj_dumps, loads as sj_loads
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 #~ Definitions 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-class BlatherNetworkRoute(BasicBlatherRoute):
-    _fm_ = BasicBlatherRoute._fm_.branch()
+class JsonMessageCodec(object):
+    json_loads = staticmethod(simplejson.loads)
+    json_dumps = staticmethod(simplejson.dumps)
 
-    def setChannel(self, channel, addrInbound, addrOutbound):
-        self.channel = channel.asWeakProxy()
-        if addrInbound is not None:
-            self.addrInbound = channel.asSockAddr(addrInbound)
-        else: self.addrInbound = None
-        if addrOutbound is not None:
-            self.addrOutbound = channel.asSockAddr(addrOutbound)
-        else: self.addrOutbound = self.addrInbound
+    def encode(self, method, args, kw):
+        return self.json_dumps([method, args, kw])
 
-        channel.register(self.addrInbound, self.recvDispatch)
+    def decode(self, dmsg, table=None):
+        method, args, kw = self.json_loads(dmsg)
+        if table is not None:
+            method = self.lookup(method, table)
+        return (method, args, kw)
 
-    def sendDispatch(self, packet):
-        self.channel.send(packet, self.addrOutbound)
+    def lookup(self, method, table):
+        try:
+            method = table[methodName]
+        except LookupError:
+            method = table.get(None)
+            if method is None:
+                raise
+        return method
 

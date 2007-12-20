@@ -10,5 +10,5 @@
 #~ Imports 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-from .factory import BlatherRouteFactory
+from .router import BlatherMessageRouter, MessageRouter
 

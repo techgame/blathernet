@@ -12,5 +12,4 @@
 
 from .basicService import BasicBlatherService, BasicService
 from .messageService import BlatherMessageService, MessageService
-from .forwardingService import ForwardingBlatherService, ForwardingService
 

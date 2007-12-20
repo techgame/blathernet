@@ -10,25 +10,27 @@
 #~ Imports 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-from .basicService import BasicBlatherService
+from TG.metaObserving.obRegistry import OBRegistry
+
+from .basicClient import BasicBlatherClient
+from .jsonCodec import JsonMessageCodec
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-#~ Definitions 
+#~ Blather Client
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-class ForwardingBlatherService(BasicBlatherService):
-    def __init__(self, advert):
-        BasicBlatherService.__init__(self)
-        self.advert = advert
-        self.advert.processRoutedMessage = self.processRoutedMessage
+class MsgObject(object):
+    def __init__(self, rinfo, advEntry):
+        self.rinfo = rinfo
+        self.advEntry = advEntry
 
-    def createAdvert(self, advertInfo):
-        pass
+class BlatherClient(BasicBlatherClient):
+    msgreg = OBRegistry()
+    msgCodec = JsonMessageCodec()
 
-    def processRoutedMessage(self, header, message, fromRoute, fromAddr):
-        for route in self.iterRoutes():
-            if route is not fromRoute:
-                route.sendMessage(header, message)
+    def _processMessage(self, dmsg, rinfo, advEntry):
+        method, args, kw = self.msgCodec.decode(dmsg, self.msgreg)
 
-ForwardingService = ForwardingBlatherService
-
+        msgobj = self._fm_.MsgObject(rinfo, advEntry)
+        method(self, msgobj, *args)
+    

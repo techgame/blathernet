@@ -31,7 +31,7 @@ class UDPChannel(SocketChannel):
     socketErrorMap = udpSocketErrorMap
 
     sockType = SOCK_DGRAM
-    bufferSize = 1<<16
+    bufferSize = 65536
     recvThrottle = 16
     sendThrottle = 16
 
@@ -48,8 +48,8 @@ class UDPChannel(SocketChannel):
     def register(self, addr, recv):
         self.registry[addr] = recv
 
-    def send(self, packet, address, notify=None):
-        self.sendQueue.put((packet, address, notify))
+    def send(self, packet, address, onNotify=None):
+        self.sendQueue.put((packet, address, onNotify))
         self.needsWrite = True
 
     def recvDefault(self, packet, address):
@@ -73,10 +73,9 @@ class UDPChannel(SocketChannel):
     def _socketConfig(self, sock, cfgUtils):
         SocketChannel._socketConfig(self, sock, cfgUtils)
         cfgUtils.disallowMixed()
-        #cfgUtils.reuseAddress()
         cfgUtils.setBufferSize(65536)
 
-    def _onBindError(self, address, err):
+    def onBindError(self, address, err):
         r = list(address)
         r[1] += 1
         return tuple(r)
@@ -127,18 +126,18 @@ class UDPChannel(SocketChannel):
         while 1:
             try:
                 for n in xrange(self.sendThrottle):
-                    packet, address, notify = sendQueue.get(False, 0.1)
+                    packet, address, onNotify = sendQueue.get(False, 0.1)
                     sock.sendto(packet, address)
 
-                    if notify is not None:
-                        notify('sent', packet, address, None)
+                    if onNotify is not None:
+                        onNotify('sent', packet, address, None)
             except Queue.Empty:
                 self.needsWrite = False
             except SocketError, err:
-                if notify is None:
+                if onNotify is None:
                     reraise = self.reraiseSocketError(err, err.args[0])
                 else: 
-                    reraise = notify('error', packet, address, err)
+                    reraise = onNotify('error', packet, address, err)
                 if reraise:
                     traceback.print_exc()
             break
@@ -173,8 +172,8 @@ class UDPMulticastChannel(UDPChannel):
         cfgUtils.setMulticastHops(5)
         cfgUtils.setMulticastLoop(True)
 
-    def _onBindError(self, address, err):
-        pass
+    def onBindError(self, address, err):
+        return None
 
     def joinGroup(self, group, interface=None):
         self.cfgUtils.joinGroup(group, interface)

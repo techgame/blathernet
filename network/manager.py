@@ -59,3 +59,19 @@ class BlatherNetworkMgr(BlatherObject):
         self.networkSelect.add(ch)
         return ch
 
+    #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+    _udpChannel = None
+    def getUdpChannel(self):
+        if self._udpChannel is None:
+            self._udpChannel = self.addUdpChannel()
+        return self._udpChannel
+    udpChannel = property(getUdpChannel)
+
+    _mudpChannel = None
+    def getMudpChannel(self):
+        if self._mudpChannel is None:
+            self._mudpChannel = self.addMudpChannel()
+        return self._mudpChannel
+    mudpChannel = property(getMudpChannel)
+

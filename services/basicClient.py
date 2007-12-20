@@ -18,21 +18,32 @@ from .adverts import BlatherObject, BlatherServiceAdvert
 #~ Definitions 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-class BasicBlatherService(BlatherObject):
+class BasicBlatherClient(BlatherObject):
     _fm_ = BlatherObject._fm_.branch()
-    advert = BlatherServiceAdvert('advertInfo')
-    advertInfo = {'service': True}
+    _send_rinfo = {'msgIdLen': 0}
 
-    def isBlatherService(self): return True
+    advert = BlatherServiceAdvert('retAdvertInfo')
+    retAdvertInfo = {'reply': True}
+
+    def isBlatherClient(self): return True
+
+    def __init__(self):
+        BlatherObject.__init__(self)
 
     def updateAdvert(self, advert):
         if advert.key is None:
             advert.key = str(uuid.uuid4())
+        self._updateHeaderForAdvert(advert)
+
+    def _updateHeaderForAdvert(self, advert):
+        self._send_rinfo = self._send_rinfo.copy()
+        self._send_rinfo['retAdvertId'] = advert.key
+        self._send_rinfo['retAdvertOpt'] = advert.attr('opt', 0)
 
     #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
     def registerOn(self, blatherObj):
-        blatherObj.registerService(self)
+        blatherObj.registerClient(self)
 
     def registerAdvertEntry(self, advEntry):
         self.advEntry = advEntry
@@ -43,5 +54,10 @@ class BasicBlatherService(BlatherObject):
     def _processMessage(self, dmsg, rinfo, advEntry):
         raise NotImplementedError('Subclass Responsibility: %r' % (self,))
 
-BasicService = BasicBlatherService
+    def sendRaw(self, dmsg, rinfo=None):
+        if rinfo is None: rinfo = {}
+        rinfo.update((k,v) for k,v in self._send_rinfo.iteritems() if k not in rinfo)
 
+        return self.advEntry.sendMessage(dmsg, rinfo)
+
+BasicClient = BasicBlatherClient

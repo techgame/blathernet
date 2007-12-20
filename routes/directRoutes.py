@@ -20,45 +20,34 @@ from .basicRoute import BasicBlatherRoute
 class BlatherDirectRoute(BasicBlatherRoute):
     _fm_ = BasicBlatherRoute._fm_.branch()
 
-    @classmethod
-    def configure(klass, routerA, routerB=None):
-        if routerA is routerB or routerB is None:
-            return BlatherLoopbackRoute.configure(routerA)
-
-        routeA = klass()
-        routeB = klass()
-        routeA.peer = routeB
-        routeB.peer = routeA
-
-        routerA.addRoute(routeA)
-        routerB.addRoute(routeB)
-
-        routeA.initRoute()
-        routeB.initRoute()
-        return (routeA, routeB)
+    def isLoopback(self): return False
 
     def __init__(self):
         BasicBlatherRoute.__init__(self)
+        self.addr = self.asWeakRef()
         self._inbox = Queue.Queue()
 
-    def encodeDispatch(self, header, message):
-        return (header, message)
+    _peer = None
+    def getPeer(self):
+        return self._peer
+    def setPeer(self, peer):
+        self._peer = peer
+    peer = property(getPeer, setPeer)
 
-    def decodeDispatch(self, dmsg):
-        return dmsg
+    def sendDispatch(self, packet, onNotify=None):
+        self.peer.transferDispatch(packet, self.addr)
+        if onNotify is not None:
+            onNotify('sent', packet, self.addr, None)
 
-    def sendDispatch(self, dmsg):
-        self.peer.transferDispatch(dmsg, None)
-
-    def transferDispatch(self, dmsg, addr=None):
-        self._inbox.put((dmsg, addr))
+    def transferDispatch(self, packet, addr):
+        self._inbox.put((packet, addr))
         self.host().addTask(self._processInbox)
 
     def _processInbox(self):
         try:
             while 1:
-                dmsg, addr = self._inbox.get(False)
-                self.recvDispatch(dmsg, addr)
+                packet, addr = self._inbox.get(False)
+                self.recvDispatch(packet, addr)
 
         except Queue.Empty: pass
 
@@ -72,19 +61,5 @@ class BlatherLoopbackRoute(BlatherDirectRoute):
 
     peer = property(lambda self: self)
 
-    @classmethod
-    def configure(klass, host):
-        route = klass()
-        host.addRoute(route)
-        return route
-
-    def isLoopback(self):
-        return True
-
-    def sendAdvert(self, advert):
-        if advert.key in self.routeAdvertDb:
-            return False
-
-        self.recvAdvert(advert)
-        return True
+    def isLoopback(self): return True
 
