@@ -10,7 +10,7 @@
 #~ Imports 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-from .base import BlatherObject
+from ..base import BlatherObject
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 #~ Definitions 
@@ -36,12 +36,16 @@ class BlatherAdvert(BlatherObject):
     #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
     @classmethod
-    def fromInfo(klass, info)
-        self = klass()
+    def fromInfo(klass, info):
+        self = klass.__new__(klass)
         self.update(info)
+        return self
 
     def copy(self):
-        return self.fromInfo(self.info)
+        klass = type(self)
+        newSelf = klass.__new__(klass)
+        newSelf.update(self.info)
+        return newSelf
 
     def branch(self, *args, **kw):
         self = self.copy()
@@ -74,9 +78,16 @@ Advert = BlatherAdvert
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 class BlatherServiceAdvert(BlatherAdvert):
+    _infoAttrName = None
+
     def __init__(self, infoAttrName):
         BlatherAdvert.__init__(self)
         self._infoAttrName = infoAttrName
+
+    def copy(self):
+        newSelf = BlatherAdvert.copy(self)
+        newSelf._infoAttrName = self._infoAttrName
+        return newSelf
 
     #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 

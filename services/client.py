@@ -34,3 +34,5 @@ class BlatherClient(BasicBlatherClient):
         msgobj = self._fm_.MsgObject(rinfo, advEntry)
         method(self, msgobj, *args)
     
+Client = BlatherClient
+

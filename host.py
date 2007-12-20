@@ -15,7 +15,7 @@ import md5
 
 from .base import BlatherObject
 from . import msgRouter
-from . import sroutes 
+from . import routes 
 from . import network
 from . import taskMgrs
 
@@ -23,12 +23,12 @@ from . import taskMgrs
 #~ Definitions 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-class BlatherSHost(BlatherObject):
+class BlatherHost(BlatherObject):
     _fm_ = BlatherObject._fm_.branch(
             TaskMgr = taskMgrs.BlatherTaskMgr,
             NetworkMgr = network.BlatherNetworkMgr,
             MessageRouter = msgRouter.MessageRouter,
-            RouteFactory = sroutes.BlatherRouteFactory,
+            RouteFactory = routes.BlatherRouteFactory,
             )
     _masterTaskMgr = taskMgrs.MasterTaskMgr()
     taskMgr = None
@@ -69,5 +69,5 @@ class BlatherSHost(BlatherObject):
         self._masterTaskMgr.onTaskAdded()
         return task
 
-SHost = BlatherSHost
+Host = BlatherHost
 
