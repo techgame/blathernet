@@ -22,8 +22,8 @@ class BlatherDirectRoute(BasicBlatherRoute):
 
     def isLoopback(self): return False
 
-    def __init__(self):
-        BasicBlatherRoute.__init__(self)
+    def __init__(self, msgRouter):
+        BasicBlatherRoute.__init__(self, msgRouter)
         self.addr = self.asWeakRef()
         self._inbox = Queue.Queue()
 

@@ -12,6 +12,8 @@
 
 import time
 
+from TG.metaObserving.obRegistry import OBClassRegistry
+
 from ..base import BlatherObject
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -21,6 +23,7 @@ from ..base import BlatherObject
 class AdvertRouterEntry(BlatherObject):
     codec = None # flyweight shared
     msgRouter = None # flyweight shared
+    fwdKindFilters = OBClassRegistry()
 
     advertId = None # assigned when created
     advertOpt = None # assigned when created
@@ -98,7 +101,7 @@ class AdvertRouterEntry(BlatherObject):
         self.kvpub('@recvRoute', rinfo)
         self._incRecvStats()
         # TODO: How do we weight routes for this advert?
-        self.addRoute(rinfo['route'], rinfo.get('msgIdDup', 0))
+        self.addRoute(rinfo['route'], -rinfo.get('msgIdDup', 0))
         return True
 
     #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -127,8 +130,8 @@ class AdvertRouterEntry(BlatherObject):
     def deliverMessage(self, dmsg, rinfo):
         delivered = False
         for fn in self.handlerFns:
-            delivered = fn(dmsg, rinfo, self._wself)
-            if delivered: 
+            if fn(dmsg, rinfo, self._wself) is not False:
+                delivered = True
                 break
 
         rinfo['delivered'] = delived
@@ -140,28 +143,46 @@ class AdvertRouterEntry(BlatherObject):
         self.kvpub('@deliver', dmsg, rinfo)
 
     def forwardPacket(self, packet, rinfo):
+        fwroutes = self.forwardRoutesFor(rinfo)
+        forwarded = False
+        for r in fwroutes:
+            r.sendPacket(packet)
+            forwarded = True
+        rinfo['forwarded'] = forwarded
+        return forwarded
+
+    def forwardRoutesFor(self, rinfo):
+        advertOpt = rinfo.get('advertOpt', 0)
+        flags = advertOpt >> 4
+        fwdkind = advertOpt & 0xf
+
+        if not (flags & 0x2) and rinfo['delivered']:
+            # flags b0010 signals to forward even if delivered
+            return []
+
+        if (flags & 0x1):
+            # flags b0001 signals broadcast to all
+            routes = self.allRoutes
+        else: routes = self.routes
+
+        # discard our route
+        routes = routes.copy()
+        routes.pop(rinfo.get('route'), None)
+
+        fwdFilter = self.fwdKindFilters.get(fwdKind, None)
+        if fwdFilter is not None:
+            return fwdFilter(self, routes)
+
         # TODO: Implement delivery types 
         #   best route, 
         #   best n routes, 
         #   broadcast single handler, 
         #   broadcast multiple handlers
-        if rinfo['delivered']:
-            return False
+        return [r() for r in routes.keys()]
 
-        routes = self.routes
-        fwroutes = routes.copy()
-        fwroutes.discard(rinfo.get('route'))
-
-        forwarded = False
-        for wr in fwroutes:
-            r = wr()
-            if r is None:
-                routes.remove(wr)
-                continue
-            r.sendPacket(packet)
-            forwarded = True
-        rinfo['forwarded'] = forwarded
-        return forwarded
+    @fwdKindFilters.on(0)
+    def fwdKindFilter_0(self, routes):
+        return [r() for r in routes.keys()]
 
     #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     #~ Stats Tracking

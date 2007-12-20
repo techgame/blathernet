@@ -39,20 +39,24 @@ class BlatherMessageRouter(BlatherObject):
 
     def __init__(self, host):
         BlatherObject.__init__(self, host)
-        self.allRoutes = set()
+        self.allRoutes = dict()
         self.recentMsgIdSets = [set(), set()]
 
         self.routeTable = self._fm_.RouterTable()
         self.routeTable.setupEntryFlyweight(
                 msgRouter=self.asWeakProxy(),
-                codec=self.codec)
+                codec=self.codec,
+                allRoutes=self.allRoutes)
 
     def registerRoute(self, route):
-        self.allRoutes.add(route)
+        self.addRoute(route)
 
     def registerAdvert(self, advert):
         advEntry = self.routeTable[advert.key]
         advert.registerOn(advEntry)
+
+    def addRoute(self, route, weight=0):
+        self.allRoutes.setdefault(route, weight)
 
     #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
