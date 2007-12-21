@@ -29,12 +29,9 @@ class BlatherRouteFactory(BlatherObject):
     def newDirectRoute(self):
         route = BlatherDirectRoute(self.msgRouter())
         return route
-    def connectDirect(self, otherHost=None):
+    def connectDirect(self, otherHost):
         route = self.newDirectRoute()
-        if otherHost is self or otherHost is None:
-            return route
-
-        peer = otherHost.newDirectRoute()
+        peer = otherHost.routeFactory.newDirectRoute()
         route.setPeer(peer)
         peer.setPeer(route)
         return route

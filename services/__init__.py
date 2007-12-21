@@ -14,6 +14,7 @@ from .adverts import BlatherAdvert, Advert
 from .adverts import BlatherServiceAdvert, ServiceAdvert
 
 from .basicService import BasicBlatherService, BasicService
+from .basicService import BlatherService, Service
 from .messageService import BlatherMessageService, MessageService
 
 from .basicClient import BasicBlatherClient, BasicClient

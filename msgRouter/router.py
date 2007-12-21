@@ -50,10 +50,15 @@ class BlatherMessageRouter(BlatherObject):
 
     def registerRoute(self, route):
         self.addRoute(route)
-
     def registerAdvert(self, advert):
-        advEntry = self.routeTable[advert.key]
+        advEntry = self.routeTable[advert.advertId]
         advert.registerOn(advEntry)
+    def registerClient(self, client):
+        advEntry = self.routeTable[client.advertId]
+        client.registerOn(advEntry)
+    def registerService(self, service):
+        advEntry = self.routeTable[service.advertId]
+        service.registerOn(advEntry)
 
     def addRoute(self, route, weight=0):
         self.allRoutes.setdefault(route, weight)

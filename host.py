@@ -56,13 +56,21 @@ class BlatherHost(BlatherObject):
             return '<%s %s>' % (self.__class__.__name__, id(self))
         else: return '<%s "%s" %s>' % (self.__class__.__name__, self.name, id(self))
 
-    def registerAdvert(self, advert):
-        advert.registerOn(self.msgRouter)
     def registerRoute(self, route):
         route.registerOn(self.msgRouter)
+    def registerAdvert(self, advert):
+        advert.registerOn(self.msgRouter)
+    def registerClient(self, client):
+        client.registerOn(self.msgRouter)
+    def registerService(self, service):
+        service.registerOn(self.msgRouter)
+
+    @classmethod
+    def processAll(klass, allActive=True, timeout=1.0):
+        return klass._masterTaskMgr(allActive, timeout)
 
     def process(self, allActive=True, timeout=1.0):
-        return self._masterTaskMgr(allActive, timeout)
+        return self.taskMgr(allActive, timeout)
 
     def addTask(self, task):
         task = self.taskMgr.add(task)

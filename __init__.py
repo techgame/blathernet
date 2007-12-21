@@ -14,7 +14,8 @@ from .services import (
         BlatherAdvert, Advert,
         BlatherServiceAdvert, ServiceAdvert,
 
-        BasicBlatherService, BasicService,
+        BasicBlatherService, BasicService, 
+        BlatherService, Service,
         BlatherMessageService, MessageService,
 
         BasicBlatherClient, BasicClient,

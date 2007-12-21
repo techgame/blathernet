@@ -61,6 +61,8 @@ class BlatherAdvert(BlatherObject):
 
     def attr(self, key, default=None):
         return self.info.get(key, default)
+    def setAttr(self, key, value):
+        self.info[key] = value
 
     def getKey(self):
         return self.attr('key')
@@ -96,9 +98,7 @@ class BlatherServiceAdvert(BlatherAdvert):
 
         self = self.branch(info)
         setattr(obKlass, pubName, self)
-
-        if hasattr(obKlass, 'classUpdateAdvert'):
-            obKlass.classUpdateAdvert(self)
+        self._updateAdvertOn(obKlass, 'classUpdate', pubName)
 
     onObservableClassInit.priority = -5
 
@@ -107,13 +107,17 @@ class BlatherServiceAdvert(BlatherAdvert):
 
         self = self.branch(info)
         setattr(obInstance, pubName, self)
-
-        if hasattr(obInstance, 'updateAdvert'):
-            obInstance.updateAdvert(self)
+        self._updateAdvertOn(obInstance, 'update', pubName)
 
     onObservableInit.priority = 5
 
     #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+    def _updateAdvertOn(self, obj, prefix, pubName):
+        updateFn = '%s_%s' % (prefix, pubName)
+        updateFn = getattr(obj, updateFn, None)
+        if updateFn is not None:
+            return updateFn(self)
 
     def _copyAdvertInfoOn(self, obj):
         info = getattr(obj, self._infoAttrName, {})

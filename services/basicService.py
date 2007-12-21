@@ -25,9 +25,17 @@ class BasicBlatherService(BlatherObject):
 
     def isBlatherService(self): return True
 
-    def updateAdvert(self, advert):
+    #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+    def update_advert(self, advert):
         if advert.key is None:
-            advert.key = str(uuid.uuid4())
+            advert.key = uuid.uuid4().bytes
+
+    def getAdvertId(self):
+        return self.advert.advertId
+    def setAdvertId(self, advertId):
+        self.advert.advertId = advertId
+    advertId = property(getAdvertId, setAdvertId)
 
     #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -36,7 +44,7 @@ class BasicBlatherService(BlatherObject):
 
     def registerAdvertEntry(self, advEntry):
         self.advEntry = advEntry
-        advEntry.handlers.append(self._processMessage)
+        advEntry.addHandlerFn(self._processMessage)
 
     #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -44,4 +52,11 @@ class BasicBlatherService(BlatherObject):
         raise NotImplementedError('Subclass Responsibility: %r' % (self,))
 
 BasicService = BasicBlatherService
+
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+class BlatherService(BasicBlatherService):
+    pass
+
+Service = BasicBlatherService
 

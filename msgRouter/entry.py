@@ -73,15 +73,12 @@ class AdvertRouterEntry(BlatherObject):
 
     def registerOn(self, blatherObj):
         blatherObj.registerAdvertEntry(self)
-
     def registerAdvert(self, advert):
         self.advert = advert.asWeakRef()
         self.registerOn(advert)
-
     def registerService(self, service):
         self.service = service
         self.registerOn(service)
-
     def registerClient(self, client):
         self.registerOn(client)
 
