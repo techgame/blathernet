@@ -10,13 +10,14 @@
 #~ Imports 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
+from .adverts import BlatherServiceAdvert
 from .baseMsgHandler import MessageHandlerBase
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 #~ Definitions 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-class BlatherClient(MessageHandlerBase):
+class BasicBlatherClient(MessageHandlerBase):
     advert = BlatherServiceAdvert('advertInfo')
     advertInfo = {'name': 'Blather Client'}
     chan = None

@@ -96,7 +96,7 @@ class BlatherAdvert(BlatherObject):
     def asReplyTo(self, pinfo):
         if self.advertId is None:
             raise RuntimeError("Advert's advertID is already set")
-        if self.advEntry is None
+        if self.advEntry is None:
             raise RuntimeError("Advert's advEntry is already registered")
 
         self.advertId = pinfo['retAdvertId']

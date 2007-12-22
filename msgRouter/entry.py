@@ -101,7 +101,7 @@ class AdvertRouterEntry(BlatherObject):
 
     def sendRaw(self, dmsg, retEntry, pinfo={}):
         packet, pinfo = self.encodePacket(dmsg, retEntry, pinfo)
-        return self.sendPacket(packet, dmsg, enc_pinfo)
+        return self.sendPacket(packet, dmsg, pinfo)
 
     def sendPacket(self, packet, dmsg, pinfo):
         self.kvpub('@sendPacket', packet, dmsg, pinfo)
@@ -124,7 +124,7 @@ class AdvertRouterEntry(BlatherObject):
                 delivered = True
                 break
 
-        pinfo['delivered'] = delived
+        pinfo['delivered'] = delivered
         return delivered
 
     def forwardPacket(self, packet, pinfo):
@@ -154,7 +154,7 @@ class AdvertRouterEntry(BlatherObject):
         routes = routes.copy()
         routes.pop(pinfo.get('route'), None)
 
-        fwdFilter = self.fwdKindFilters.get(fwdKind, None)
+        fwdFilter = self.fwdKindFilters.get(fwdkind, None)
         if fwdFilter is not None:
             return fwdFilter(self, routes)
 
@@ -169,33 +169,32 @@ class AdvertRouterEntry(BlatherObject):
     def fwdKindFilter_0(self, routes):
         return [r() for r in routes.keys()]
 
-    if 1:
-        #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-        #~ Stats Tracking
-        #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    #~ Stats Tracking
+    #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-        stats = {
-            'sent_time': None, 'sent_count': 0, 'sent_bytes': 0,
-            'recv_time': None, 'recv_count': 0, 'recv_bytes': 0, 
-            'dup_time': None, 'dup_count': 0, 'dup_bytes': 0, 
-            }
-        timestamp = time.time
+    stats = {
+        'sent_time': None, 'sent_count': 0, 'sent_bytes': 0,
+        'recv_time': None, 'recv_count': 0, 'recv_bytes': 0, 
+        'dup_time': None, 'dup_count': 0, 'dup_bytes': 0, 
+        }
+    timestamp = time.time
 
-        def _incSentStats(self, bytes=None):
-            self.stats['sent_time'] = self.timestamp()
-            if bytes is not None:
-                self.stats['sent_count'] += 1
-                self.stats['sent_bytes'] += bytes
+    def _incSentStats(self, bytes=None):
+        self.stats['sent_time'] = self.timestamp()
+        if bytes is not None:
+            self.stats['sent_count'] += 1
+            self.stats['sent_bytes'] += bytes
 
-        def _incRecvStats(self, bytes=None):
-            self.stats['recv_time'] = self.timestamp()
-            if bytes is not None:
-                self.stats['recv_count'] += 1
-                self.stats['recv_bytes'] += bytes
+    def _incRecvStats(self, bytes=None):
+        self.stats['recv_time'] = self.timestamp()
+        if bytes is not None:
+            self.stats['recv_count'] += 1
+            self.stats['recv_bytes'] += bytes
 
-        def _incRecvDupStats(self, bytes=None):
-            self.stats['dup_time'] = self.timestamp()
-            if bytes is not None:
-                self.stats['dup_count'] += 1
-                self.stats['dup_bytes'] += bytes
+    def _incRecvDupStats(self, bytes=None):
+        self.stats['dup_time'] = self.timestamp()
+        if bytes is not None:
+            self.stats['dup_count'] += 1
+            self.stats['dup_bytes'] += bytes
 

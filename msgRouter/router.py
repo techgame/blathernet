@@ -10,6 +10,8 @@
 #~ Imports 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
+import uuid
+
 from ..base import BlatherObject
 from .entry import AdvertRouterEntry
 from .headerCodec import RouteHeaderCodec
@@ -62,6 +64,12 @@ class BlatherMessageRouter(BlatherObject):
         return self.entryForId(advert.advertId)
     def entryForId(self, advertId):
         return self.routeTable[advertId]
+
+    def newSession(self, advertOpt=None):
+        advEntry = self.entryForId(uuid.uuid4().bytes)
+        if advertOpt is not None:
+            advEntry.updateAdvertInfo(None, advertOpt)
+        return advEntry
 
     #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 

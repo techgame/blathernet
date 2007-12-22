@@ -12,7 +12,7 @@
 
 from TG.metaObserving.obRegistry import OBRegistry
 
-from .adverts import BlatherObject, BlatherServiceAdvert
+from ..base import BlatherObject
 from .channel import BasicChannel
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -40,7 +40,7 @@ class MessageHandlerBase(BlatherObject):
             fromEntry = toEntry.msgRouter.newSession()
         fromEntry.addHandlerFn(self._processMessage)
 
-        return self._fm_.Channel(toEntry, fromEntry)
+        return self._fm_.Channel(toEntry, fromEntry, None, self.codec)
 
     def _processMessage(self, dmsg, pinfo, advEntry):
         chan = self.replyChannel(pinfo, self.codec)

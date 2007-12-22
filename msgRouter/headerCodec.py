@@ -59,7 +59,7 @@ class RouteHeaderCodec(RouteHeaderCodecBase):
         
     def encode(self, dmsg, pinfo):
         codec = self.codecs[pinfo.get('packetVersion')]
-        return codec.encode(packet, pinfo)
+        return codec.encode(dmsg, pinfo)
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -130,7 +130,7 @@ class RouteHeaderCodecV1(RouteHeaderCodecBase):
 
         msgIdLen = pinfo.setdefault('msgIdLen', 0)
         part[2] = chr((msgInfo << 4) | ((msgIdLen >> 1) & 0x0f))
-        part[5] = dmsg
+        part[4] = dmsg
 
         packet = ''.join(part)
 
