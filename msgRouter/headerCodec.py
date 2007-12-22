@@ -36,15 +36,15 @@ class RouteHeaderCodecBase(object):
     codecs = CodecRegistration()
     packetVersion = None
 
-    def decode(self, packet, rinfo):
+    def decode(self, packet, pinfo):
         raise NotImplementedError('Subclass Responsibility: %r' % (self,))
-    def encode(self, dmsg, rinfo):
+    def encode(self, dmsg, pinfo):
         raise NotImplementedError('Subclass Responsibility: %r' % (self,))
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 class RouteHeaderCodec(RouteHeaderCodecBase):
-    def decode(self, packet, rinfo):
+    def decode(self, packet, pinfo):
         """Packet Coding:
             [0]         -> Header Info
                 .4:7    Version 
@@ -53,20 +53,20 @@ class RouteHeaderCodec(RouteHeaderCodecBase):
         packetVersion = ord(packet[0]) >> 4
         codec = self.codecs.get(packetVersion)
         if codec is None:
-            return None, rinfo
+            return None, pinfo
 
-        return codec.decode(packet, rinfo)
+        return codec.decode(packet, pinfo)
         
-    def encode(self, dmsg, rinfo):
-        codec = self.codecs[rinfo.get('packetVersion')]
-        return codec.encode(packet, rinfo)
+    def encode(self, dmsg, pinfo):
+        codec = self.codecs[pinfo.get('packetVersion')]
+        return codec.encode(packet, pinfo)
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 class RouteHeaderCodecV1(RouteHeaderCodecBase):
     packetVersion = 0x1
 
-    def decode(self, packet, rinfo):
+    def decode(self, packet, pinfo):
         """Packet Coding:
             [0]         -> Header Info
                 .4:7    Packet Version 
@@ -92,51 +92,51 @@ class RouteHeaderCodecV1(RouteHeaderCodecBase):
         dataOffset = 20
 
         headerInfo = ord(packet[0])
-        rinfo['packetVersion'] = headerInfo >> 4
-        rinfo['packetInfo'] = headerInfo & 0x0f
+        pinfo['packetVersion'] = headerInfo >> 4
+        pinfo['packetInfo'] = headerInfo & 0x0f
 
-        rinfo['advertOpt'] = ord(packet[1])
-        rinfo['advertId'] = packet[2:18]
+        pinfo['advertOpt'] = ord(packet[1])
+        pinfo['advertId'] = packet[2:18]
 
         msgInfo = ord(packet[18])
         msgIdLen = (msgInfo & 0xf) << 1
-        rinfo['msgIdLen'] = msgIdLen
+        pinfo['msgIdLen'] = msgIdLen
         msgInfo >>= 4
 
         if msgInfo & 0x1:
-            rinfo['retAdvertOpt'] = ord(packet[19])
-            rinfo['retAdvertId'] = packet[20:36]
+            pinfo['retAdvertOpt'] = ord(packet[19])
+            pinfo['retAdvertId'] = packet[20:36]
             dataOffset += 16
             msgIdLen += 16
 
-        rinfo['msgId'] = packet[20:20+msgIdLen]
+        pinfo['msgId'] = packet[20:20+msgIdLen]
         dmsg = packet[dataOffset:]
-        return dmsg, rinfo
+        return dmsg, pinfo
 
     #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-    def encode(self, dmsg, rinfo):
-        advertId = rinfo['advertId']
+    def encode(self, dmsg, pinfo):
+        advertId = pinfo['advertId']
         part = [None, None, None, None, None]
 
-        part[0] = chr((self.packetVersion << 4) | (rinfo.get('packetInfo', 0) & 0xf))
-        part[1] = chr(rinfo.setdefault('advertOpt', 0)) + advertId
+        part[0] = chr((self.packetVersion << 4) | (pinfo.get('packetInfo', 0) & 0xf))
+        part[1] = chr(pinfo.setdefault('advertOpt', 0)) + advertId
 
         msgInfo = 0
-        retAdvertId = rinfo.setdefault('retAdvertId', None)
+        retAdvertId = pinfo.setdefault('retAdvertId', None)
         if retAdvertId:
-            part[3] = chr(rinfo.setdefault('retAdvertOpt', 0)) + retAdvertId
+            part[3] = chr(pinfo.setdefault('retAdvertOpt', 0)) + retAdvertId
             msgInfo |= 1
 
-        msgIdLen = rinfo.setdefault('msgIdLen', 0)
+        msgIdLen = pinfo.setdefault('msgIdLen', 0)
         part[2] = chr((msgInfo << 4) | ((msgIdLen >> 1) & 0x0f))
         part[5] = dmsg
 
         packet = ''.join(part)
 
-        # annotate rinfo with msgId
+        # annotate pinfo with msgId
         if msgInfo & 0x1:
             msgIdLen += 16
-        rinfo['msgId'] = packet[20:20+msgIdLen]
-        return packet
+        pinfo['msgId'] = packet[20:20+msgIdLen]
+        return packet, pinfo
 

@@ -10,30 +10,29 @@
 #~ Imports 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-from TG.metaObserving.obRegistry import OBRegistry
-
-from .basicService import BasicBlatherService
+from .basicService import BasicBlatherSession, BasicBlatherService
 from .jsonCodec import JsonMessageCodec
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-#~ Blather Message Service
+#~ Definitions 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-class MsgObject(object):
-    def __init__(self, rinfo, advEntry):
-        self.rinfo = rinfo
-        self.advEntry = advEntry
+class BlatherMessageSession(BasicBlatherSession):
+    _fm_ = BasicBlatherSession._fm_.branch(
+            Codec = JsonMessageCodec,)
+
+MessageSession = BlatherMessageSession
+BlatherSession = BlatherMessageSession
+Session = BlatherSession
+
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 class BlatherMessageService(BasicBlatherService):
-    _fm_ = BasicBlatherService._fm_.branch(MsgObject=MsgObject)
-    msgreg = OBRegistry()
-    msgCodec = JsonMessageCodec()
+    _fm_ = BasicBlatherService._fm_.branch(
+            Service = BlatherMessageSession,
+            Codec = JsonMessageCodec,)
 
-    def _processMessage(self, dmsg, rinfo, advEntry):
-        method, args, kw = self.msgCodec.decode(dmsg, self.msgreg)
-
-        msgobj = self._fm_.MsgObject(rinfo, advEntry)
-        method(self, msgobj, *args)
-    
 MessageService = BlatherMessageService
+BlatherService = BlatherMessageService
+Service = BlatherService
 

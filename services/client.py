@@ -10,29 +10,18 @@
 #~ Imports 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-from TG.metaObserving.obRegistry import OBRegistry
-
 from .basicClient import BasicBlatherClient
 from .jsonCodec import JsonMessageCodec
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-#~ Blather Client
+#~ Definitions 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-class MsgObject(object):
-    def __init__(self, rinfo, advEntry):
-        self.rinfo = rinfo
-        self.advEntry = advEntry
+class BlatherMessageClient(BasicBlatherClient):
+    _fm_ = BasicBlatherClient._fm_.branch(
+            Codec = JsonMessageCodec,)
 
-class BlatherClient(BasicBlatherClient):
-    msgreg = OBRegistry()
-    msgCodec = JsonMessageCodec()
-
-    def _processMessage(self, dmsg, rinfo, advEntry):
-        method, args, kw = self.msgCodec.decode(dmsg, self.msgreg)
-
-        msgobj = self._fm_.MsgObject(rinfo, advEntry)
-        method(self, msgobj, *args)
-    
+MessageClient = BlatherMessageClient
+BlatherClient = BlatherMessageClient
 Client = BlatherClient
 

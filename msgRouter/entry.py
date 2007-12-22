@@ -26,13 +26,11 @@ class AdvertRouterEntry(BlatherObject):
     fwdKindFilters = OBClassRegistry()
 
     advertId = None # assigned when created
-    advertOpt = None # assigned when created
-    advert = None # assigned if advert is registered
     routes = None # a dict() of routes to forward to
     handlerFns = None # a list() of handler callbacks
 
-    _send_rinfo = {}
-    _reply_rinfo = {}
+    pinfoSend = None
+    pinfoReturn = None
 
     def __init__(self, advertId, advertOpt=0):
         BlatherObject.__init__(self, advertId)
@@ -53,15 +51,8 @@ class AdvertRouterEntry(BlatherObject):
             self.advertId = advertId
         if advertOpt is not None:
             self.advertOpt = advertOpt
-
-        self._send_rinfo = self._send_rinfo.copy()
-        self._send_rinfo['advertId'] = self.advertId
-        self._send_rinfo['advertOpt'] = self.advertOpt
-
-        self._reply_rinfo = self._reply_rinfo.copy()
-        self._reply_rinfo['retAdvertId'] = self.advertId
-        self._reply_rinfo['retAdvertOpt'] = self.advertOpt
-
+        self.pinfoSend = {'advertId': self.advertId, 'advertOpt': self.advertOpt}
+        self.pinfoReturn = {'retAdvertId': self.advertId, 'retAdvertOpt': self.advertOpt}
 
     def addRoute(self, route, weight=0):
         self.routes.setdefault(route, weight)
@@ -73,87 +64,84 @@ class AdvertRouterEntry(BlatherObject):
 
     def registerOn(self, blatherObj):
         blatherObj.registerAdvertEntry(self)
-    def registerAdvert(self, advert):
-        self.advert = advert.asWeakRef()
-        self.registerOn(advert)
-    def registerService(self, service):
-        self.service = service
-        self.registerOn(service)
-    def registerClient(self, client):
-        self.registerOn(client)
 
     #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-    def recvPacket(self, packet, dmsg, rinfo):
-        self.kvpub('@recvPacket', packet, dmsg, rinfo)
+    def recvPacket(self, packet, dmsg, pinfo):
+        self.kvpub('@recvPacket', packet, dmsg, pinfo)
         self._incRecvStats(len(packet))
-        self.deliverPacket(packet, dmsg, rinfo)
+        self.deliverPacket(packet, dmsg, pinfo)
         return True
 
-    def recvPacketDup(self, packet, dmsg, rinfo):
+    def recvPacketDup(self, packet, dmsg, pinfo):
         self._incDupStats(len(packet))
         return False
 
-    def recvReturnRoute(self, rinfo):
-        self.kvpub('@recvRoute', rinfo)
+    def recvReturnRoute(self, pinfo):
+        self.kvpub('@recvRoute', pinfo)
         self._incRecvStats()
-        # TODO: How do we weight routes for this advert?
-        self.addRoute(rinfo['route'], -rinfo.get('msgIdDup', 0))
+        self.addRoute(pinfo['route'], 2)
+        return True
+
+    def recvReturnRouteDup(self, pinfo):
+        self.kvpub('@recvRoute', pinfo)
+        self._incRecvStats()
+        self.addRoute(pinfo['route'], 1)
         return True
 
     #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-    def encodePacket(self, dmsg, rinfo, d_rinfo):
-        rinfo.update((k,v) for k,v in d_rinfo.iteritems() if k not in rinfo)
-        packet = self.codec.encode(dmsg, rinfo)
-        self.msgRouter.addMessageId(rinfo['msgId'])
-        return packet
+    def encodePacket(self, dmsg, retEntry, pinfo={}):
+        enc_pinfo = self.pinfoSend.copy()
+        if retEntry is not None:
+            enc_pinfo.update(retEntry.pinfoReturn)
+        enc_pinfo.update(pinfo)
 
-    def sendMessage(self, dmsg, rinfo):
-        packet = self.encodePacket(dmsg, rinfo, self._send_rinfo)
-        return self.sendPacket(packet, dmsg, rinfo)
+        return self.codec.encode(dmsg, enc_pinfo)
 
-    def replyMessage(self, dmsg, rinfo):
-        packet = self.encodePacket(dmsg, rinfo, self._reply_rinfo)
-        return self.sendPacket(packet, dmsg, rinfo)
+    def sendRaw(self, dmsg, retEntry, pinfo={}):
+        packet, pinfo = self.encodePacket(dmsg, retEntry, pinfo)
+        return self.sendPacket(packet, dmsg, enc_pinfo)
 
-    def sendPacket(self, packet, dmsg, rinfo):
-        self.kvpub('@sendPacket', packet, dmsg, rinfo)
+    def sendPacket(self, packet, dmsg, pinfo):
+        self.kvpub('@sendPacket', packet, dmsg, pinfo)
         self._incSentStats(len(packet))
-        self.deliverPacket(packet, dmsg, rinfo)
+        self.msgRouter.addMessageId(pinfo['msgId'])
+        self.deliverPacket(packet, dmsg, pinfo)
+        return pinfo
 
     #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-    def deliverMessage(self, dmsg, rinfo):
+    def deliverPacket(self, packet, dmsg, pinfo):
+        self.handleDelivery(dmsg, pinfo)
+        self.forwardPacket(packet, pinfo)
+        self.kvpub('@deliverPacket', dmsg, pinfo)
+
+    def handleDelivery(self, dmsg, pinfo):
         delivered = False
         for fn in self.handlerFns:
-            if fn(dmsg, rinfo, self._wself) is not False:
+            if fn(dmsg, pinfo, self._wself) is not False:
                 delivered = True
                 break
 
-        rinfo['delivered'] = delived
+        pinfo['delivered'] = delived
         return delivered
 
-    def deliverPacket(self, packet, dmsg, rinfo):
-        self.deliverMessage(dmsg, rinfo)
-        self.forwardPacket(packet, rinfo)
-        self.kvpub('@deliver', dmsg, rinfo)
-
-    def forwardPacket(self, packet, rinfo):
-        fwroutes = self.forwardRoutesFor(rinfo)
+    def forwardPacket(self, packet, pinfo):
+        fwroutes = self.forwardRoutesFor(pinfo)
         forwarded = False
         for r in fwroutes:
             r.sendPacket(packet)
             forwarded = True
-        rinfo['forwarded'] = forwarded
+        pinfo['forwarded'] = forwarded
         return forwarded
 
-    def forwardRoutesFor(self, rinfo):
-        advertOpt = rinfo.get('advertOpt', 0)
+    def forwardRoutesFor(self, pinfo):
+        advertOpt = pinfo.get('advertOpt', 0)
         flags = advertOpt >> 4
         fwdkind = advertOpt & 0xf
 
-        if not (flags & 0x2) and rinfo['delivered']:
+        if not (flags & 0x2) and pinfo['delivered']:
             # flags b0010 signals to forward even if delivered
             return []
 
@@ -164,7 +152,7 @@ class AdvertRouterEntry(BlatherObject):
 
         # discard our route
         routes = routes.copy()
-        routes.pop(rinfo.get('route'), None)
+        routes.pop(pinfo.get('route'), None)
 
         fwdFilter = self.fwdKindFilters.get(fwdKind, None)
         if fwdFilter is not None:
@@ -181,32 +169,33 @@ class AdvertRouterEntry(BlatherObject):
     def fwdKindFilter_0(self, routes):
         return [r() for r in routes.keys()]
 
-    #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-    #~ Stats Tracking
-    #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    if 1:
+        #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+        #~ Stats Tracking
+        #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-    stats = {
-        'sent_time': None, 'sent_count': 0, 'sent_bytes': 0,
-        'recv_time': None, 'recv_count': 0, 'recv_bytes': 0, 
-        'dup_time': None, 'dup_count': 0, 'dup_bytes': 0, 
-        }
-    timestamp = time.time
+        stats = {
+            'sent_time': None, 'sent_count': 0, 'sent_bytes': 0,
+            'recv_time': None, 'recv_count': 0, 'recv_bytes': 0, 
+            'dup_time': None, 'dup_count': 0, 'dup_bytes': 0, 
+            }
+        timestamp = time.time
 
-    def _incSentStats(self, bytes=None):
-        self.stats['sent_time'] = self.timestamp()
-        if bytes is not None:
-            self.stats['sent_count'] += 1
-            self.stats['sent_bytes'] += bytes
+        def _incSentStats(self, bytes=None):
+            self.stats['sent_time'] = self.timestamp()
+            if bytes is not None:
+                self.stats['sent_count'] += 1
+                self.stats['sent_bytes'] += bytes
 
-    def _incRecvStats(self, bytes=None):
-        self.stats['recv_time'] = self.timestamp()
-        if bytes is not None:
-            self.stats['recv_count'] += 1
-            self.stats['recv_bytes'] += bytes
+        def _incRecvStats(self, bytes=None):
+            self.stats['recv_time'] = self.timestamp()
+            if bytes is not None:
+                self.stats['recv_count'] += 1
+                self.stats['recv_bytes'] += bytes
 
-    def _incRecvDupStats(self, bytes=None):
-        self.stats['dup_time'] = self.timestamp()
-        if bytes is not None:
-            self.stats['dup_count'] += 1
-            self.stats['dup_bytes'] += bytes
+        def _incRecvDupStats(self, bytes=None):
+            self.stats['dup_time'] = self.timestamp()
+            if bytes is not None:
+                self.stats['dup_count'] += 1
+                self.stats['dup_bytes'] += bytes
 

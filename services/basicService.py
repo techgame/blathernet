@@ -10,53 +10,47 @@
 #~ Imports 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-import uuid
-
-from .adverts import BlatherObject, BlatherServiceAdvert
+from .baseMsgHandler import MessageHandlerBase
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 #~ Definitions 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-class BasicBlatherService(BlatherObject):
-    _fm_ = BlatherObject._fm_.branch()
-    advert = BlatherServiceAdvert('advertInfo')
-    advertInfo = {'service': True}
+class BasicBlatherSession(MessageHandlerBase):
+    chan = None
 
-    def isBlatherService(self): return True
+    def isBlatherSession(self): return True
 
-    #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    def __init__(self, service, toEntry):
+        MessageHandlerBase.__init__(self)
 
-    def update_advert(self, advert):
-        if advert.key is None:
-            advert.key = uuid.uuid4().bytes
+        self.service = service
+        self.createChannel(toEntry)
 
-    def getAdvertId(self):
-        return self.advert.advertId
-    def setAdvertId(self, advertId):
-        self.advert.advertId = advertId
-    advertId = property(getAdvertId, setAdvertId)
-
-    #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-    def registerOn(self, blatherObj):
-        blatherObj.registerService(self)
-
-    def registerAdvertEntry(self, advEntry):
-        self.advEntry = advEntry
-        advEntry.addHandlerFn(self._processMessage)
-
-    #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-    def _processMessage(self, dmsg, rinfo, advEntry):
-        raise NotImplementedError('Subclass Responsibility: %r' % (self,))
-
-BasicService = BasicBlatherService
+BasicSession = BasicBlatherSession
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-class BlatherService(BasicBlatherService):
-    pass
+class BasicBlatherService(MessageHandlerBase):
+    advert = BlatherServiceAdvert('advertInfo')
+    advertInfo = {'name': 'Blather Service'}
 
-Service = BasicBlatherService
+    def isBlatherService(self): return True
+
+    def registerOn(self, blatherObj):
+        blatherObj.registerService(self)
+    def registerMsgRouter(self, msgRouter):
+        self.advert.registerOn(msgRouter)
+        self.advert.addHandlerFn(self._processMessage)
+
+    def newSession(self, chan):
+        return self._fm_.Session(self, chan.toEntry)
+
+    #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+    def _update_advert(self, advert):
+        if advert.advertId is None:
+            advert.advertUUID = uuid.uuid4()
+
+BasicService = BasicBlatherService
 

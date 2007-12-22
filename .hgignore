@@ -5,7 +5,7 @@
 syntax: glob 
 
 syntax: regexp 
-^sandbox/
+oow/
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 #~ Generally useful ignore configurations

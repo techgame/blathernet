@@ -13,10 +13,14 @@
 from .adverts import BlatherAdvert, Advert
 from .adverts import BlatherServiceAdvert, ServiceAdvert
 
-from .basicService import BasicBlatherService, BasicService
-from .basicService import BlatherService, Service
-from .messageService import BlatherMessageService, MessageService
-
+from .basicService import BasicBlatherService, BasicService, BasicSession
 from .basicClient import BasicBlatherClient, BasicClient
+
+from .service import BlatherMessageSession, MessageSession
+from .service import BlatherSession, Session
+from .service import BlatherMessageService, MessageService
+from .service import BlatherService, Service
+
+from .client import BlatherMessageClient, MessageClient
 from .client import BlatherClient, Client
 

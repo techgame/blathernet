@@ -20,7 +20,9 @@ class JsonMessageCodec(object):
     json_loads = staticmethod(simplejson.loads)
     json_dumps = staticmethod(simplejson.dumps)
 
-    def encode(self, method, args, kw):
+    def encode(self, method, *args, **kw):
+        return self.json_dumps([method, args, kw])
+    def encodeRaw(self, method, args, kw):
         return self.json_dumps([method, args, kw])
 
     def decode(self, dmsg, table=None):

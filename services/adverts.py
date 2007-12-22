@@ -10,6 +10,10 @@
 #~ Imports 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
+import uuid
+
+from TG.metaObserving.obRegistry import OBClassRegistry
+
 from ..base import BlatherObject
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -17,33 +21,53 @@ from ..base import BlatherObject
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 class BlatherAdvert(BlatherObject):
-    info = dict()
+    infoSetter = OBClassRegistry()
+    info = None
     advEntry = None
 
     def isBlatherAdvert(self): return True
 
+    def __init__(self):
+        BlatherObject.__init__(self)
+        self.info = dict()
+
     def __repr__(self):
-        return '<%s key:%s name:"%s">' % (self.__class__.__name__, self.info.get('key'), self.info.get('name'))
+        return '<%s %s name:"%s">' % (self.__class__.__name__, self.advertUUID, self.info.get('name'))
 
     #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
     def registerOn(self, blatherObj):
         blatherObj.registerAdvert(self)
-
+    def registerMsgRouter(self, msgRouter):
+        advEntry = msgRouter.entryForId(self.advertId)
+        advEntry.registerOn(self)
     def registerAdvertEntry(self, advEntry):
         self.advEntry = advEntry
+    def registerClient(self, client):
+        self.msgRouter.registerOn(client)
+    def registerService(self, service):
+        self.msgRouter.registerOn(service)
+
+    def getMsgRouter(self):
+        return self.advEntry.msgRouter
+    msgRouter = property(getMsgRouter)
 
     #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
     @classmethod
     def fromInfo(klass, info):
-        self = klass.__new__(klass)
+        self = klass.new()
         self.update(info)
         return self
 
-    def copy(self):
-        klass = type(self)
+    @classmethod
+    def new(klass):
         newSelf = klass.__new__(klass)
+        newSelf.info = dict()
+        return newSelf
+
+    def copy(self):
+        newSelf = self.new()
         newSelf.update(self.info)
         return newSelf
 
@@ -55,23 +79,68 @@ class BlatherAdvert(BlatherObject):
     #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
     def update(self, *args, **kw):
-        self.info = self.info.copy()
-        self.info.update(*args)
-        self.info.update(**kw)
+        newInfo = dict(*args, **kw)
+        for k,v in newInfo.iteritems():
+            self.setAttr(k, v)
 
     def attr(self, key, default=None):
         return self.info.get(key, default)
     def setAttr(self, key, value):
-        self.info[key] = value
+        setter = self.infoSetter[key]
+        if setter is None:
+            self.info[key] = value
+        else: setter(self, value)
 
-    def getKey(self):
-        return self.attr('key')
-    def setKey(self, key):
-        if key is not None and len(key) != 16:
-            raise ValueError("Key must be None or a string of length 16")
+    #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-        return self.setAttr('key', key)
-    advertId = key = property(getKey, setKey)
+    def asReplyTo(self, pinfo):
+        if self.advertId is None:
+            raise RuntimeError("Advert's advertID is already set")
+        if self.advEntry is None
+            raise RuntimeError("Advert's advEntry is already registered")
+
+        self.advertId = pinfo['retAdvertId']
+        self.advertOpt = pinfo['retAdvertOpt']
+
+    def getAdvertId(self):
+        advertId = self.attr('id')
+        if advertId is not None and len(advertId) != 16:
+            raise ValueError("AdvertId must be None or a string of length 16")
+        return advertId
+    @infoSetter.on('id')
+    @infoSetter.on('advertId')
+    def setAdvertId(self, advertId):
+        if advertId is not None and len(advertId) != 16:
+            raise ValueError("AdvertId must be None or a string of length 16")
+        self.info['id'] = advertId
+    id = advertId = property(getAdvertId, setAdvertId)
+
+    def getAdvertUUID(self):
+        advertId = self.advertId
+        if advertId is None:
+            return advertId
+        return uuid.UUID(bytes=advertId)
+    def setAdvertUUID(self, uuid):
+        self.advertId = uuid.bytes
+    advertUUID = property(getAdvertUUID, setAdvertUUID)
+
+    def getAdvertOpt(self):
+        return self.attr('opt')
+    @infoSetter.on('opt')
+    @infoSetter.on('advertOpt')
+    def setAdvertOpt(self, advertOpt):
+        self.info['opt'] = int(advertOpt) & 0xff
+    opt = advertOpt = property(getAdvertOpt, setAdvertOpt)
+
+    #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    #~ Convinence methods
+    #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+    def addHandlerFn(self, fn):
+        self.advEntry.addHandlerFn(fn)
+
+    def sendRaw(self, dmsg, retEntry=None, **kwpinfo):
+        return self.advEntry.sendRaw(dmsg, pinfo)
 
 Advert = BlatherAdvert
 
@@ -80,6 +149,7 @@ Advert = BlatherAdvert
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 class BlatherServiceAdvert(BlatherAdvert):
+    NAMESPACE_BLATHER = uuid.NAMESPACE_OID
     _infoAttrName = None
 
     def __init__(self, infoAttrName):
@@ -97,8 +167,9 @@ class BlatherServiceAdvert(BlatherAdvert):
         info = self._copyAdvertInfoOn(obKlass)
 
         self = self.branch(info)
+        self.applyAdvertIdMorph()
         setattr(obKlass, pubName, self)
-        self._updateAdvertOn(obKlass, 'classUpdate', pubName)
+        self._updateAdvertOn(obKlass, '_classUpdate', pubName)
 
     onObservableClassInit.priority = -5
 
@@ -106,8 +177,9 @@ class BlatherServiceAdvert(BlatherAdvert):
         info = self._copyAdvertInfoOn(obInstance)
 
         self = self.branch(info)
+        self.applyAdvertIdMorph()
         setattr(obInstance, pubName, self)
-        self._updateAdvertOn(obInstance, 'update', pubName)
+        self._updateAdvertOn(obInstance, '_update', pubName)
 
     onObservableInit.priority = 5
 
@@ -124,6 +196,15 @@ class BlatherServiceAdvert(BlatherAdvert):
         info = info.copy()
         setattr(obj, self._infoAttrName, info)
         return info
+
+    #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+    def applyAdvertIdMorph(self):
+        uri = self.info.get('uri')
+        if not uri: return
+        
+        advertUUID = uuid.uuid3(self.NAMESPACE_BLATHER, uri)
+        self.advertUUID = advertUUID
 
 ServiceAdvert = BlatherServiceAdvert
 

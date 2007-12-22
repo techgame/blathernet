@@ -33,6 +33,8 @@ class BasicBlatherRoute(BlatherObject):
 
     def registerOn(self, blatherObj):
         blatherObj.registerRoute(self)
+    def registerMsgRouter(self, msgRouter):
+        self.registerOn(msgRouter)
 
     def sendPacket(self, packet, onNotify=None):
         self._incSentStats(len(packet))
@@ -44,8 +46,8 @@ class BasicBlatherRoute(BlatherObject):
         self._incRecvStats(len(packet))
         self.recvPacket(packet, addr)
     def recvPacket(self, packet, addr):
-        rinfo = {'addr': addr, 'route': self._wpSelf}
-        self.msgRouter.recvPacket(packet, rinfo)
+        pinfo = {'addr': addr, 'route': self._wpSelf}
+        self.msgRouter.recvPacket(packet, pinfo)
 
     #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     #~ Stats Tracking

@@ -48,44 +48,46 @@ class BlatherMessageRouter(BlatherObject):
                 codec=self.codec,
                 allRoutes=self.allRoutes)
 
+    def registerOn(self, blatherObj):
+        blatherObj.registerMsgRouter(self)
     def registerRoute(self, route):
         self.addRoute(route)
     def registerAdvert(self, advert):
-        advEntry = self.routeTable[advert.advertId]
-        advert.registerOn(advEntry)
-    def registerClient(self, client):
-        advEntry = self.routeTable[client.advertId]
-        client.registerOn(advEntry)
-    def registerService(self, service):
-        advEntry = self.routeTable[service.advertId]
-        service.registerOn(advEntry)
+        self.registerOn(advert)
 
     def addRoute(self, route, weight=0):
         self.allRoutes.setdefault(route, weight)
 
+    def entryForAdvert(self, advert):
+        return self.entryForId(advert.advertId)
+    def entryForId(self, advertId):
+        return self.routeTable[advertId]
+
     #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-    def recvPacket(self, packet, rinfo):
-        dmsg, rinfo = self.codec.decode(packet, rinfo)
+    def recvPacket(self, packet, pinfo):
+        dmsg, pinfo = self.codec.decode(packet, pinfo)
         if dmsg is None:
             return False
 
-        advEntry = self.routeTable.get(rinfo.get('advertId'))
+        advEntry = self.routeTable.get(pinfo.get('advertId'))
         if advEntry is None: 
             return False
+        pinfo['advEntry'] = advEntry
 
-        msgIdDup = self.isDuplicateMessageId(rinfo['msgId'])
-        rinfo['msgIdDup'] = msgIdDup
+        msgIdDup = self.isDuplicateMessageId(pinfo['msgId'])
 
-        retAdvertId = rinfo.get('retAdvertId')
+        retAdvertId = pinfo.get('retAdvertId')
         if retAdvertId is not None:
             retAdvertEntry = self.routeTable[retAdvertId]
-            retAdvertEntry.recvReturnRoute(rinfo)
+            if not msgIdDup:
+                retAdvertEntry.recvReturnRoute(pinfo)
+            else: retAdvertEntry.recvReturnRouteDup(pinfo)
+            pinfo['retEntry'] = retAdvertEntry
 
         if not msgIdDup:
-            return advEntry.recvPacket(packet, dmsg, rinfo)
-        else:
-            return advEntry.recvPacketDup(packet, dmsg, rinfo)
+            return advEntry.recvPacket(packet, dmsg, pinfo)
+        else: return advEntry.recvPacketDup(packet, dmsg, pinfo)
 
     #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
