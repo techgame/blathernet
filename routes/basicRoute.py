@@ -27,9 +27,12 @@ class BasicBlatherRoute(BlatherObject):
     def __init__(self, msgRouter):
         BlatherObject.__init__(self)
         self.stats = self.stats.copy()
-        self._wpSelf = self.asWeakProxy()
         self.msgRouter = msgRouter
         self.registerOn(msgRouter)
+
+    def getHost(self):
+        return self.msgRouter.host
+    host = property(getHost)
 
     def registerOn(self, blatherObj):
         blatherObj.registerRoute(self)
@@ -46,7 +49,7 @@ class BasicBlatherRoute(BlatherObject):
         self._incRecvStats(len(packet))
         self.recvPacket(packet, addr)
     def recvPacket(self, packet, addr):
-        pinfo = {'addr': addr, 'route': self._wpSelf}
+        pinfo = {'addr': addr, 'route': self}
         self.msgRouter.recvPacket(packet, pinfo)
 
     #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

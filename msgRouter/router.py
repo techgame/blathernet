@@ -41,6 +41,7 @@ class BlatherMessageRouter(BlatherObject):
 
     def __init__(self, host):
         BlatherObject.__init__(self, host)
+        self.host = host.asWeakRef()
         self.allRoutes = dict()
         self.recentMsgIdSets = [set(), set()]
 
@@ -65,10 +66,10 @@ class BlatherMessageRouter(BlatherObject):
     def entryForId(self, advertId):
         return self.routeTable[advertId]
 
-    def newSession(self, advertOpt=None):
+    def newSession(self, sendOpt=None):
         advEntry = self.entryForId(uuid.uuid4().bytes)
-        if advertOpt is not None:
-            advEntry.updateAdvertInfo(None, advertOpt)
+        if sendOpt is not None:
+            advEntry.updateAdvertInfo(None, sendOpt)
         return advEntry
 
     #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -78,16 +79,16 @@ class BlatherMessageRouter(BlatherObject):
         if dmsg is None:
             return False
 
-        advEntry = self.routeTable.get(pinfo.get('advertId'))
+        advEntry = self.routeTable.get(pinfo.get('sendId'))
         if advEntry is None: 
             return False
         pinfo['advEntry'] = advEntry
 
         msgIdDup = self.isDuplicateMessageId(pinfo['msgId'])
 
-        retAdvertId = pinfo.get('retAdvertId')
-        if retAdvertId is not None:
-            retAdvertEntry = self.routeTable[retAdvertId]
+        replyId = pinfo.get('replyId')
+        if replyId is not None:
+            retAdvertEntry = self.routeTable[replyId]
             if not msgIdDup:
                 retAdvertEntry.recvReturnRoute(pinfo)
             else: retAdvertEntry.recvReturnRouteDup(pinfo)

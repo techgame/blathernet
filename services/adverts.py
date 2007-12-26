@@ -99,8 +99,8 @@ class BlatherAdvert(BlatherObject):
         if self.advEntry is None:
             raise RuntimeError("Advert's advEntry is already registered")
 
-        self.advertId = pinfo['retAdvertId']
-        self.advertOpt = pinfo['retAdvertOpt']
+        self.id = pinfo['replyId']
+        self.opt = pinfo['replyOpt']
 
     def getAdvertId(self):
         advertId = self.attr('id')
@@ -124,13 +124,12 @@ class BlatherAdvert(BlatherObject):
         self.advertId = uuid.bytes
     advertUUID = property(getAdvertUUID, setAdvertUUID)
 
-    def getAdvertOpt(self):
+    def getOpt(self):
         return self.attr('opt')
     @infoSetter.on('opt')
-    @infoSetter.on('advertOpt')
-    def setAdvertOpt(self, advertOpt):
-        self.info['opt'] = int(advertOpt) & 0xff
-    opt = advertOpt = property(getAdvertOpt, setAdvertOpt)
+    def setOpt(self, opt):
+        self.info['opt'] = int(opt) & 0xff
+    opt = property(getOpt, setOpt)
 
     #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     #~ Convinence methods

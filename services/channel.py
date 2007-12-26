@@ -43,3 +43,7 @@ class BasicChannel(object):
         dmsg = self.codec.encode(*args, **kw)
         return self.sendRaw(dmsg)
 
+    def broadcast(self, *args, **kw):
+        dmsg = self.codec.encode(*args, **kw)
+        return self.sendRaw(dmsg, sendOpt=0x10)
+

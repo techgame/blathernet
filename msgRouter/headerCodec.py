@@ -95,8 +95,8 @@ class RouteHeaderCodecV1(RouteHeaderCodecBase):
         pinfo['packetVersion'] = headerInfo >> 4
         pinfo['packetInfo'] = headerInfo & 0x0f
 
-        pinfo['advertOpt'] = ord(packet[1])
-        pinfo['advertId'] = packet[2:18]
+        pinfo['sendOpt'] = ord(packet[1])
+        pinfo['sendId'] = packet[2:18]
 
         msgInfo = ord(packet[18])
         msgIdLen = (msgInfo & 0xf) << 1
@@ -104,8 +104,8 @@ class RouteHeaderCodecV1(RouteHeaderCodecBase):
         msgInfo >>= 4
 
         if msgInfo & 0x1:
-            pinfo['retAdvertOpt'] = ord(packet[19])
-            pinfo['retAdvertId'] = packet[20:36]
+            pinfo['replyOpt'] = ord(packet[19])
+            pinfo['replyId'] = packet[20:36]
             dataOffset += 16
             msgIdLen += 16
 
@@ -116,16 +116,16 @@ class RouteHeaderCodecV1(RouteHeaderCodecBase):
     #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
     def encode(self, dmsg, pinfo):
-        advertId = pinfo['advertId']
+        sendId = pinfo['sendId']
         part = [None, None, None, None, None]
 
         part[0] = chr((self.packetVersion << 4) | (pinfo.get('packetInfo', 0) & 0xf))
-        part[1] = chr(pinfo.setdefault('advertOpt', 0)) + advertId
+        part[1] = chr(pinfo.setdefault('sendOpt', 0)) + sendId
 
         msgInfo = 0
-        retAdvertId = pinfo.setdefault('retAdvertId', None)
-        if retAdvertId:
-            part[3] = chr(pinfo.setdefault('retAdvertOpt', 0)) + retAdvertId
+        replyId = pinfo.setdefault('replyId', None)
+        if replyId:
+            part[3] = chr(pinfo.setdefault('replyOpt', 0)) + replyId
             msgInfo |= 1
 
         msgIdLen = pinfo.setdefault('msgIdLen', 0)

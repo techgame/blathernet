@@ -31,7 +31,7 @@ class JsonMessageCodec(object):
             method = self.lookup(method, table)
         return (method, args, kw)
 
-    def lookup(self, method, table):
+    def lookup(self, methodName, table):
         try:
             method = table[methodName]
         except LookupError:

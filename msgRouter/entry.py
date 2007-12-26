@@ -32,27 +32,27 @@ class AdvertRouterEntry(BlatherObject):
     pinfoSend = None
     pinfoReturn = None
 
-    def __init__(self, advertId, advertOpt=0):
+    def __init__(self, advertId, sendOpt=0):
         BlatherObject.__init__(self, advertId)
         self._wself = self.asWeakProxy()
         self.routes = dict()
         self.handlerFns = []
         self.stats = self.stats.copy()
 
-        self.updateAdvertInfo(advertId, advertOpt)
+        self.updateAdvertInfo(advertId, sendOpt)
 
     @classmethod
     def factoryFlyweight(klass, **ns):
         ns['__flyweight__'] = True
         return type(klass)(klass.__name__+"_", (klass,), ns)
 
-    def updateAdvertInfo(self, advertId, advertOpt=0):
+    def updateAdvertInfo(self, advertId, sendOpt=0):
         if advertId is not None:
             self.advertId = advertId
-        if advertOpt is not None:
-            self.advertOpt = advertOpt
-        self.pinfoSend = {'advertId': self.advertId, 'advertOpt': self.advertOpt}
-        self.pinfoReturn = {'retAdvertId': self.advertId, 'retAdvertOpt': self.advertOpt}
+        if sendOpt is not None:
+            self.sendOpt = sendOpt
+        self.pinfoSend = {'sendId': self.advertId, 'sendOpt': self.sendOpt}
+        self.pinfoReturn = {'replyId': self.advertId, 'replyOpt': self.sendOpt}
 
     def addRoute(self, route, weight=0):
         self.routes.setdefault(route, weight)
@@ -137,9 +137,9 @@ class AdvertRouterEntry(BlatherObject):
         return forwarded
 
     def forwardRoutesFor(self, pinfo):
-        advertOpt = pinfo.get('advertOpt', 0)
-        flags = advertOpt >> 4
-        fwdkind = advertOpt & 0xf
+        sendOpt = pinfo.get('sendOpt', 0)
+        flags = sendOpt >> 4
+        fwdkind = sendOpt & 0xf
 
         if not (flags & 0x2) and pinfo['delivered']:
             # flags b0010 signals to forward even if delivered
@@ -157,17 +157,15 @@ class AdvertRouterEntry(BlatherObject):
         fwdFilter = self.fwdKindFilters.get(fwdkind, None)
         if fwdFilter is not None:
             return fwdFilter(self, routes)
+        return routes.keys()
 
-        # TODO: Implement delivery types 
-        #   best route, 
-        #   best n routes, 
-        #   broadcast single handler, 
-        #   broadcast multiple handlers
-        return [r() for r in routes.keys()]
+    # TODO: Implement delivery filters
+    #   best route, 
+    #   best n routes, 
 
     @fwdKindFilters.on(0)
     def fwdKindFilter_0(self, routes):
-        return [r() for r in routes.keys()]
+        return routes.keys()
 
     #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     #~ Stats Tracking
