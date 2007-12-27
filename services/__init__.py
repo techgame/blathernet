@@ -19,3 +19,15 @@ from .basicClient import BasicBlatherClient
 
 from .jsonServices import BlatherJsonClient, BlatherJsonSession, BlatherJsonService
 
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+#~ Aliases
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+BasicClient = BasicBlatherClient
+BasicSession = BasicBlatherSession
+BasicService = BasicBlatherService
+
+JsonClient = BlatherJsonClient
+JsonSession = BlatherJsonSession
+JsonService = BlatherJsonService
+

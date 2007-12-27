@@ -48,13 +48,18 @@ class MessageHandlerBase(BlatherObject):
 
     def _processMessage(self, dmsg, pinfo, advEntry):
         dmsg, pinfo = self.codec.decode(dmsg, pinfo)
-        chan = self.replyChannel(pinfo)
+        if dmsg:
+            return self._dispatchMessage(dmsg, pinfo)
+        else: return self._emptyMessage(pinfo)
 
-        return self._dispatchMessage(dmsg, chan)
-
-    def _dispatchMessage(self, dmsg, chan):
+    def _dispatchMessage(self, dmsg, pinfo):
         method, args, kw = self.marshal.load(dmsg)
 
         method = self.msgreg[method]
-        return method(self, chan, *args, **kw)
+        if method is not None:
+            chan = self.replyChannel(pinfo)
+            return method(self, chan, *args, **kw)
+
+    def _emptyMessage(self, chan):
+        pass
 

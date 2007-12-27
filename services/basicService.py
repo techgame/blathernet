@@ -11,7 +11,7 @@
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 from .adverts import BlatherServiceAdvert
-from .baseMsgHandler import MessageHandlerBase
+from .msgHandler import MessageHandlerBase
 from .basicSession import BasicBlatherSession
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -19,7 +19,7 @@ from .basicSession import BasicBlatherSession
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 class BasicBlatherService(MessageHandlerBase):
-    _fm_ = self._fm_.branch(
+    _fm_ = MessageHandlerBase._fm_.branch(
             Session=BasicBlatherSession)
     advert = BlatherServiceAdvert('advertInfo')
     advertInfo = {'name': 'Blather Service'}

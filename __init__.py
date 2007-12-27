@@ -15,15 +15,13 @@ from .services import (
         BlatherServiceAdvert, ServiceAdvert,
 
         BasicBlatherSession, BasicSession, 
-        BlatherMessageSession, MessageSession,
-        BlatherSession, Session,
-
         BasicBlatherService, BasicService, 
-        BlatherMessageService, MessageService,
-        BlatherService, Service,
-
         BasicBlatherClient, BasicClient,
-        BlatherClient, Client,
+
+        BlatherJsonSession, JsonSession,
+        BlatherJsonService, JsonService,
+        BlatherJsonClient, JsonClient,
+
         )
         
 
