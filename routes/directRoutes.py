@@ -27,6 +27,9 @@ class BlatherDirectRoute(BasicBlatherRoute):
         self.addr = self.asWeakRef()
         self._inbox = Queue.Queue()
 
+    def __repr__(self):
+        return "<%s %s on: %r>" % (self.__class__.__name__, id(self), self.msgRouter.host())
+
     _peer = None
     def getPeer(self):
         return self._peer

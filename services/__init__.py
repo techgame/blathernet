@@ -13,15 +13,9 @@
 from .adverts import BlatherAdvert, Advert
 from .adverts import BlatherServiceAdvert, ServiceAdvert
 
-from .basicService import BasicBlatherSession, BasicSession
-from .basicService import BasicBlatherService, BasicService
-from .basicClient import BasicBlatherClient, BasicClient
+from .basicSession import BasicBlatherSession
+from .basicService import BasicBlatherService
+from .basicClient import BasicBlatherClient
 
-from .service import BlatherMessageSession, MessageSession
-from .service import BlatherSession, Session
-from .service import BlatherMessageService, MessageService
-from .service import BlatherService, Service
-
-from .client import BlatherMessageClient, MessageClient
-from .client import BlatherClient, Client
+from .jsonServices import BlatherJsonClient, BlatherJsonSession, BlatherJsonService
 

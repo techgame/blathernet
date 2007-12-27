@@ -10,18 +10,21 @@
 #~ Imports 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-from .basicClient import BasicBlatherClient
-from .jsonCodec import JsonMessageCodec
+from .adverts import BlatherServiceAdvert
+from .baseMsgHandler import MessageHandlerBase
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 #~ Definitions 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-class BlatherMessageClient(BasicBlatherClient):
-    _fm_ = BasicBlatherClient._fm_.branch(
-            Codec = JsonMessageCodec,)
+class BasicBlatherSession(MessageHandlerBase):
+    chan = None
 
-MessageClient = BlatherMessageClient
-BlatherClient = BlatherMessageClient
-Client = BlatherClient
+    def isBlatherSession(self): return True
+
+    def __init__(self, service, chan):
+        MessageHandlerBase.__init__(self)
+
+        self.service = service
+        self.chan = self.newSessionChannel(chan)
 

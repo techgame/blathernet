@@ -14,19 +14,25 @@
 #~ Definitions 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-class BasicChannel(object):
+class Channel(object):
     toEntry = None
     fromEntry = None
+    msgHandler = None
     pinfo = None
-    codec = None
 
-    def __init__(self, toEntry, fromEntry, pinfo=None, codec=None):
+    def __init__(self, toEntry, fromEntry, msgHandler=None):
         self.toEntry = toEntry
         self.fromEntry = fromEntry
-        if pinfo is not None:
-            self.pinfo = pinfo
-        if codec is not None:
-            self.codec = codec
+        self.msgHandler = msgHandler
+
+    def __repr__(self):
+        return 'chan<%s, %s>' % (
+                    self.toEntry.advertId.encode('hex'),
+                    self.fromEntry.advertId.encode('hex'),)
+    @classmethod
+    def factoryFlyweight(klass, **ns):
+        ns['__flyweight__'] = True
+        return type(klass)(klass.__name__+"_", (klass,), ns)
 
     @classmethod
     def new(klass):
@@ -34,16 +40,25 @@ class BasicChannel(object):
 
     @classmethod
     def fromPInfo(klass, pinfo, codec=None):
-        klass(pinfo['retEntry'], pinfo['advEntry'], pinfo, codec)
+        self = klass(pinfo['retEntry'], pinfo['advEntry'], codec)
+        self.pinfo = pinfo
+        return self
 
-    def sendRaw(self, dmsg, **kwpinfo):
-        self.toEntry.sendRaw(dmsg, self.fromEntry, kwpinfo)
+    #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-    def send(self, *args, **kw):
-        dmsg = self.codec.encode(*args, **kw)
+    codec = property(lambda self: self.msgHandler.codec)
+    marshal = property(lambda self: self.msgHandler.marshal)
+    msgRouter = property(lambda self: self.toEntry.msgRouter)
+
+    def sendRaw(self, dmsg, **pinfo):
+        dmsg, pinfo = self.codec.encode(dmsg, pinfo)
+        return self.toEntry.sendRaw(dmsg, self.fromEntry, pinfo)
+
+    def send(self, method, *args, **kw):
+        dmsg = self.marshal.dump([method, args, kw])
         return self.sendRaw(dmsg)
 
-    def broadcast(self, *args, **kw):
-        dmsg = self.codec.encode(*args, **kw)
+    def broadcast(self, method, *args, **kw):
+        dmsg = self.marshal.dump([method, args, kw])
         return self.sendRaw(dmsg, sendOpt=0x10)
 

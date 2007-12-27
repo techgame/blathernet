@@ -13,7 +13,7 @@
 import uuid
 
 from ..base import BlatherObject
-from .entry import AdvertRouterEntry
+from .entry import AdvertRouterEntry, ppinfo
 from .headerCodec import RouteHeaderCodec
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -51,6 +51,9 @@ class BlatherMessageRouter(BlatherObject):
                 codec=self.codec,
                 allRoutes=self.allRoutes)
 
+    def __repr__(self):
+        return '<MsgRouter on:%r>' % (self.host(),)
+
     def registerOn(self, blatherObj):
         blatherObj.registerMsgRouter(self)
     def registerRoute(self, route):
@@ -79,9 +82,7 @@ class BlatherMessageRouter(BlatherObject):
         if dmsg is None:
             return False
 
-        advEntry = self.routeTable.get(pinfo.get('sendId'))
-        if advEntry is None: 
-            return False
+        advEntry = self.routeTable[pinfo.get('sendId')]
         pinfo['advEntry'] = advEntry
 
         msgIdDup = self.isDuplicateMessageId(pinfo['msgId'])
@@ -89,10 +90,11 @@ class BlatherMessageRouter(BlatherObject):
         replyId = pinfo.get('replyId')
         if replyId is not None:
             retAdvertEntry = self.routeTable[replyId]
+            pinfo['retEntry'] = retAdvertEntry
             if not msgIdDup:
                 retAdvertEntry.recvReturnRoute(pinfo)
-            else: retAdvertEntry.recvReturnRouteDup(pinfo)
-            pinfo['retEntry'] = retAdvertEntry
+            else: 
+                retAdvertEntry.recvReturnRouteDup(pinfo)
 
         if not msgIdDup:
             return advEntry.recvPacket(packet, dmsg, pinfo)

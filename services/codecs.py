@@ -10,27 +10,32 @@
 #~ Imports 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-from .adverts import BlatherServiceAdvert
-from .baseMsgHandler import MessageHandlerBase
+import marshal
+from struct import pack
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 #~ Definitions 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-class BasicBlatherClient(MessageHandlerBase):
-    advert = BlatherServiceAdvert('advertInfo')
-    advertInfo = {'name': 'Blather Client'}
-    chan = None
+class IncrementCodec(object):
+    def __init__(self):
+        self.sequence = 0
 
-    def isBlatherClient(self): return True
+    def encode(self, dmsg, pinfo):
+        self.sequence += 1
+        msgSeq = pack('!H', self.sequence & 0xffff)
 
-    def registerOn(self, blatherObj):
-        blatherObj.registerClient(self)
+        pinfo['msgIdLen'] = len(msgSeq)
+        dmsg = msgSeq+dmsg
+        return dmsg, pinfo
 
-    def registerMsgRouter(self, msgRouter):
-        if self.advert.advertId is None:
-            raise ValueError("Client AdvertId has not been set")
-        self.advert.registerOn(msgRouter)
+    def decode(self, dmsg, pinfo):
+        msgIdLen = pinfo.get('msgIdLen', 0)
+        pinfo['msgSeq'] = dmsg[:msgIdLen]
+        dmsg = dmsg[msgIdLen:]
+        return dmsg, pinfo
 
-        self.chan = self.createChannel(self.advert.advEntry)
+class PyMarshal(object):
+    dump = staticmethod(marshal.dumps)
+    load = staticmethod(marshal.loads)
 

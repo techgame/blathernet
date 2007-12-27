@@ -10,29 +10,28 @@
 #~ Imports 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-from .basicService import BasicBlatherSession, BasicBlatherService
-from .jsonCodec import JsonMessageCodec
+import simplejson
+
+from .basicSession import BasicBlatherSession
+from .basicService import BasicBlatherService
+from .basicClient import BasicBlatherClient
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 #~ Definitions 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-class BlatherMessageSession(BasicBlatherSession):
-    _fm_ = BasicBlatherSession._fm_.branch(
-            Codec = JsonMessageCodec,)
+class JsonMarshal(object):
+    dump = staticmethod(simplejson.dumps)
+    load = staticmethod(simplejson.loads)
 
-MessageSession = BlatherMessageSession
-BlatherSession = BlatherMessageSession
-Session = BlatherSession
+class BlatherJsonClient(BasicBlatherClient):
+    marshal = JsonMarshal()
 
-#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+class BlatherJsonSession(BasicBlatherSession):
+    marshal = JsonMarshal()
 
-class BlatherMessageService(BasicBlatherService):
+class BlatherJsonService(BasicBlatherService):
     _fm_ = BasicBlatherService._fm_.branch(
-            Service = BlatherMessageSession,
-            Codec = JsonMessageCodec,)
-
-MessageService = BlatherMessageService
-BlatherService = BlatherMessageService
-Service = BlatherService
+            Session=BlatherJsonSession)
+    marshal = JsonMarshal()
 

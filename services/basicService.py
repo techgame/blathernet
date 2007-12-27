@@ -12,27 +12,15 @@
 
 from .adverts import BlatherServiceAdvert
 from .baseMsgHandler import MessageHandlerBase
+from .basicSession import BasicBlatherSession
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 #~ Definitions 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-class BasicBlatherSession(MessageHandlerBase):
-    chan = None
-
-    def isBlatherSession(self): return True
-
-    def __init__(self, service, toEntry):
-        MessageHandlerBase.__init__(self)
-
-        self.service = service
-        self.createChannel(toEntry)
-
-BasicSession = BasicBlatherSession
-
-#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
 class BasicBlatherService(MessageHandlerBase):
+    _fm_ = self._fm_.branch(
+            Session=BasicBlatherSession)
     advert = BlatherServiceAdvert('advertInfo')
     advertInfo = {'name': 'Blather Service'}
 
@@ -44,14 +32,9 @@ class BasicBlatherService(MessageHandlerBase):
         self.advert.registerOn(msgRouter)
         self.advert.addHandlerFn(self._processMessage)
 
-    def newSession(self, chan):
-        return self._fm_.Session(self, chan.toEntry)
-
     #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
     def _update_advert(self, advert):
         if advert.advertId is None:
             advert.advertUUID = uuid.uuid4()
-
-BasicService = BasicBlatherService
 

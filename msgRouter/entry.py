@@ -20,44 +20,55 @@ from ..base import BlatherObject
 #~ Definitions 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
+def ppinfo(pinfo, *filter):
+    if not filter:
+        filter = pinfo.keys()
+    filter = set(filter)
+    result = {}
+    for k in ('sendId', 'replyId', 'msgId'):
+        if k not in filter: continue
+        if k in pinfo: 
+            result[k] = pinfo[k].encode('hex')
+    return result
+
 class AdvertRouterEntry(BlatherObject):
     codec = None # flyweight shared
     msgRouter = None # flyweight shared
     fwdKindFilters = OBClassRegistry()
 
     advertId = None # assigned when created
-    routes = None # a dict() of routes to forward to
-    handlerFns = None # a list() of handler callbacks
+    sendOpt = 0
+    routes = dict() # a dict() of routes to forward to
+    handlerFns = [] # a list() of handler callbacks
 
-    pinfoSend = None
-    pinfoReturn = None
-
-    def __init__(self, advertId, sendOpt=0):
+    def __init__(self, advertId, sendOpt=None):
         BlatherObject.__init__(self, advertId)
-        self._wself = self.asWeakProxy()
-        self.routes = dict()
-        self.handlerFns = []
         self.stats = self.stats.copy()
 
         self.updateAdvertInfo(advertId, sendOpt)
+
+    def __repr__(self):
+        return "<AdvEntry %s on: %r>" % (self.advertId.encode('hex'), self.msgRouter.host())
 
     @classmethod
     def factoryFlyweight(klass, **ns):
         ns['__flyweight__'] = True
         return type(klass)(klass.__name__+"_", (klass,), ns)
 
-    def updateAdvertInfo(self, advertId, sendOpt=0):
+    def updateAdvertInfo(self, advertId=None, sendOpt=None):
         if advertId is not None:
             self.advertId = advertId
         if sendOpt is not None:
             self.sendOpt = sendOpt
-        self.pinfoSend = {'sendId': self.advertId, 'sendOpt': self.sendOpt}
-        self.pinfoReturn = {'replyId': self.advertId, 'replyOpt': self.sendOpt}
 
     def addRoute(self, route, weight=0):
+        if not self.routes:
+            self.routes = {}
         self.routes.setdefault(route, weight)
 
     def addHandlerFn(self, fn):
+        if not self.handlerFns:
+            self.handlerFns = []
         self.handlerFns.append(fn)
 
     #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -74,7 +85,7 @@ class AdvertRouterEntry(BlatherObject):
         return True
 
     def recvPacketDup(self, packet, dmsg, pinfo):
-        self._incDupStats(len(packet))
+        self._incRecvDupStats(len(packet))
         return False
 
     def recvReturnRoute(self, pinfo):
@@ -92,11 +103,10 @@ class AdvertRouterEntry(BlatherObject):
     #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
     def encodePacket(self, dmsg, retEntry, pinfo={}):
-        enc_pinfo = self.pinfoSend.copy()
+        enc_pinfo = dict(sendId=self.advertId, sendOpt=self.sendOpt)
         if retEntry is not None:
-            enc_pinfo.update(retEntry.pinfoReturn)
+            enc_pinfo.update(replyId=retEntry.advertId, replyOpt=retEntry.sendOpt)
         enc_pinfo.update(pinfo)
-
         return self.codec.encode(dmsg, enc_pinfo)
 
     def sendRaw(self, dmsg, retEntry, pinfo={}):
@@ -120,7 +130,7 @@ class AdvertRouterEntry(BlatherObject):
     def handleDelivery(self, dmsg, pinfo):
         delivered = False
         for fn in self.handlerFns:
-            if fn(dmsg, pinfo, self._wself) is not False:
+            if fn(dmsg, pinfo, self) is not False:
                 delivered = True
                 break
 
