@@ -31,6 +31,6 @@ class BlatherNetworkRoute(BasicBlatherRoute):
 
         channel.register(self.addrInbound, self.recvDispatch)
 
-    def sendDispatch(self, packet):
-        self.channel.send(packet, self.addrOutbound)
+    def sendDispatch(self, packet, onNotify=None):
+        self.channel.send(packet, self.addrOutbound, onNotify)
 

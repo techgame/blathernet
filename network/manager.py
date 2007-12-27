@@ -39,15 +39,16 @@ class BlatherNetworkMgr(BlatherObject):
         return result
     networkSelect = property(getNetworkSelect)
 
-    def addUdpChannel(self, address='127.0.0.1', port=8470):
+    def addUdpChannel(self, address='127.0.0.1', port=8470, assign=False):
         if not isinstance(address, tuple):
             address = address, port
 
         ch = self._fm_.UDPChannel(address)
         self.networkSelect.add(ch)
+        if assign: self.setUdpChannel(ch)
         return ch
 
-    def addMudpChannel(self, address='238.1.9.1', port=8469):
+    def addMudpChannel(self, address='238.1.9.1', port=8469, assign=False):
         if not isinstance(address, tuple):
             address = address, port
 
@@ -57,6 +58,7 @@ class BlatherNetworkMgr(BlatherObject):
         ch.joinGroup(ch.grpAddr)
 
         self.networkSelect.add(ch)
+        if assign: self.setMudpChannel(ch)
         return ch
 
     #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -66,12 +68,16 @@ class BlatherNetworkMgr(BlatherObject):
         if self._udpChannel is None:
             self._udpChannel = self.addUdpChannel()
         return self._udpChannel
-    udpChannel = property(getUdpChannel)
+    def setUdpChannel(self, udpChannel):
+        self._udpChannel = udpChannel
+    udpChannel = property(getUdpChannel, setUdpChannel)
 
     _mudpChannel = None
     def getMudpChannel(self):
         if self._mudpChannel is None:
             self._mudpChannel = self.addMudpChannel()
         return self._mudpChannel
-    mudpChannel = property(getMudpChannel)
+    def setMudpChannel(self, mudpChannel):
+        self._mudpChannel = mudpChannel
+    mudpChannel = property(getMudpChannel, setMudpChannel)
 

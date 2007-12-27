@@ -14,7 +14,7 @@ from TG.metaObserving.obRegistry import OBRegistry
 
 from ..base import BlatherObject
 from .channel import Channel
-from .codecs import IncrementCodec, PyMarshal
+from .codecs import BlatherCodec, BlatherMarshal, IncrementCodec, PyMarshal
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 #~ Definitions 
@@ -27,7 +27,7 @@ class MessageHandlerBase(BlatherObject):
 
     msgreg = OBRegistry()
     codec = IncrementCodec()
-    marshal = None # PyMarshal()
+    marshal = BlatherMarshal()
 
     def replyChannel(self, pinfo):
         return self._fm_.Channel.fromPInfo(pinfo, self.asWeakProxy())

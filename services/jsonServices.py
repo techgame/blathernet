@@ -12,6 +12,7 @@
 
 import simplejson
 
+from .codecs import BlatherMarshal
 from .basicSession import BasicBlatherSession
 from .basicService import BasicBlatherService
 from .basicClient import BasicBlatherClient
@@ -20,9 +21,11 @@ from .basicClient import BasicBlatherClient
 #~ Definitions 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-class JsonMarshal(object):
+class JsonMarshal(BlatherMarshal):
     dump = staticmethod(simplejson.dumps)
     load = staticmethod(simplejson.loads)
+
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 class BlatherJsonClient(BasicBlatherClient):
     marshal = JsonMarshal()
