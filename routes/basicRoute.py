@@ -22,10 +22,12 @@ from ..base import BlatherObject
 
 class BasicBlatherRoute(BlatherObject):
     def isBlatherRoute(self): return True
-    def isLoopback(self): return False
+    def isPartyLine(self): return False
+    def isInprocess(self): return False
 
     def __init__(self, msgRouter):
         BlatherObject.__init__(self)
+        self._wrSelf = self.asWeakRef()
         self.stats = self.stats.copy()
         self.msgRouter = msgRouter
         self.registerOn(msgRouter)
@@ -49,7 +51,7 @@ class BasicBlatherRoute(BlatherObject):
         self._incRecvStats(len(packet))
         self.recvPacket(packet, addr)
     def recvPacket(self, packet, addr):
-        pinfo = {'addr': addr, 'route': self}
+        pinfo = {'addr': addr, 'route': self._wrSelf}
         self.msgRouter.recvPacket(packet, pinfo)
 
     #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

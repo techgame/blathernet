@@ -20,6 +20,10 @@ class Channel(object):
     msgHandler = None
     pinfo = None
 
+    def isBlatherAdvert(self): return False
+    def isBlatherAdvertEntry(self): return False
+    def isBlatherChannel(self): return True
+
     def __init__(self, toEntry, fromEntry, msgHandler=None):
         self.toEntry = toEntry
         self.fromEntry = fromEntry
@@ -39,26 +43,26 @@ class Channel(object):
         return klass.__new__(klass)
 
     @classmethod
-    def fromPInfo(klass, pinfo, codec=None):
-        self = klass(pinfo['retEntry'], pinfo['advEntry'], codec)
+    def fromPInfo(klass, pinfo, msgHandler):
+        self = klass(pinfo['retEntry'], pinfo['advEntry'], msgHandler)
         self.pinfo = pinfo
         return self
 
     #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
+    msgRouter = property(lambda self: self.toEntry.msgRouter)
     codec = property(lambda self: self.msgHandler.codec)
     marshal = property(lambda self: self.msgHandler.marshal)
-    msgRouter = property(lambda self: self.toEntry.msgRouter)
 
-    def sendRaw(self, dmsg, **pinfo):
+    def sendBytes(self, dmsg, **pinfo):
         dmsg, pinfo = self.codec.encode(dmsg, pinfo)
-        return self.toEntry.sendRaw(dmsg, self.fromEntry, pinfo)
+        return self.toEntry.sendBytes(dmsg, self.fromEntry, pinfo)
 
     def send(self, method, *args, **kw):
         dmsg = self.marshal.dump([method, args, kw])
-        return self.sendRaw(dmsg)
+        return self.sendBytes(dmsg)
 
     def broadcast(self, method, *args, **kw):
         dmsg = self.marshal.dump([method, args, kw])
-        return self.sendRaw(dmsg, sendOpt=0x10)
+        return self.sendBytes(dmsg, sendOpt=0x10)
 

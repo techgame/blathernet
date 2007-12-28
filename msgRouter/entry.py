@@ -11,6 +11,7 @@
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 import time
+import weakref
 
 from TG.metaObserving.obRegistry import OBClassRegistry
 
@@ -41,6 +42,10 @@ class AdvertRouterEntry(BlatherObject):
     routes = dict() # a dict() of routes to forward to
     handlerFns = [] # a list() of handler callbacks
 
+    def isBlatherAdvert(self): return False
+    def isBlatherAdvertEntry(self): return True
+    def isBlatherChannel(self): return False
+
     def __init__(self, advertId, sendOpt=None):
         BlatherObject.__init__(self, advertId)
         self.stats = self.stats.copy()
@@ -55,6 +60,8 @@ class AdvertRouterEntry(BlatherObject):
         ns['__flyweight__'] = True
         return type(klass)(klass.__name__+"_", (klass,), ns)
 
+    ppinfo = staticmethod(ppinfo)
+
     def updateAdvertInfo(self, advertId=None, sendOpt=None):
         if advertId is not None:
             self.advertId = advertId
@@ -63,7 +70,7 @@ class AdvertRouterEntry(BlatherObject):
 
     def addRoute(self, route, weight=0):
         if not self.routes:
-            self.routes = {}
+            self.routes = weakref.WeakKeyDictionary()
         self.routes.setdefault(route, weight)
 
     def addHandlerFn(self, fn):
@@ -91,13 +98,13 @@ class AdvertRouterEntry(BlatherObject):
     def recvReturnRoute(self, pinfo):
         self.kvpub('@recvRoute', pinfo)
         self._incRecvStats()
-        self.addRoute(pinfo['route'], 2)
+        self.addRoute(pinfo['route'](), 2)
         return True
 
     def recvReturnRouteDup(self, pinfo):
         self.kvpub('@recvRoute', pinfo)
         self._incRecvStats()
-        self.addRoute(pinfo['route'], 1)
+        self.addRoute(pinfo['route'](), 1)
         return True
 
     #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -109,7 +116,7 @@ class AdvertRouterEntry(BlatherObject):
         enc_pinfo.update(pinfo)
         return self.codec.encode(dmsg, enc_pinfo)
 
-    def sendRaw(self, dmsg, retEntry, pinfo={}):
+    def sendBytes(self, dmsg, retEntry, pinfo):
         packet, pinfo = self.encodePacket(dmsg, retEntry, pinfo)
         return self.sendPacket(packet, dmsg, pinfo)
 
@@ -162,7 +169,9 @@ class AdvertRouterEntry(BlatherObject):
 
         # discard our route
         routes = routes.copy()
-        routes.pop(pinfo.get('route'), None)
+        fromRoute = pinfo.get('route')
+        if fromRoute is not None:
+            routes.pop(fromRoute(), None)
 
         fwdFilter = self.fwdKindFilters.get(fwdkind, None)
         if fwdFilter is not None:

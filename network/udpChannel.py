@@ -152,6 +152,8 @@ class UDPMulticastChannel(UDPChannel):
     _fm_ = UDPChannel._fm_.branch(
             ConfigUtils=MulticastConfigUtils)
 
+    def isMulticast(self): return True
+
     def setSocketAddress(self, address, interface=None, onBindError=None):
         afamily, address = self.normSockAddr(address)
 

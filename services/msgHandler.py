@@ -29,6 +29,8 @@ class MessageHandlerBase(BlatherObject):
     codec = IncrementCodec()
     marshal = BlatherMarshal()
 
+    def isBlatherMsgHandler(self): return True
+
     def replyChannel(self, pinfo):
         return self._fm_.Channel.fromPInfo(pinfo, self.asWeakProxy())
 
@@ -50,7 +52,6 @@ class MessageHandlerBase(BlatherObject):
         dmsg, pinfo = self.codec.decode(dmsg, pinfo)
         if dmsg:
             return self._dispatchMessage(dmsg, pinfo)
-        else: return self._emptyMessage(pinfo)
 
     def _dispatchMessage(self, dmsg, pinfo):
         method, args, kw = self.marshal.load(dmsg)
@@ -60,6 +61,4 @@ class MessageHandlerBase(BlatherObject):
             chan = self.replyChannel(pinfo)
             return method(self, chan, *args, **kw)
 
-    def _emptyMessage(self, chan):
-        pass
 

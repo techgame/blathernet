@@ -20,6 +20,9 @@ from .basicRoute import BasicBlatherRoute
 class BlatherNetworkRoute(BasicBlatherRoute):
     _fm_ = BasicBlatherRoute._fm_.branch()
 
+    def isPartyLine(self): 
+        return self.channel.isMulticast()
+
     def setChannel(self, channel, addrInbound, addrOutbound):
         self.channel = channel.asWeakProxy()
         if addrInbound is not None:

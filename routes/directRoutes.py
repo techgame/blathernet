@@ -20,11 +20,11 @@ from .basicRoute import BasicBlatherRoute
 class BlatherDirectRoute(BasicBlatherRoute):
     _fm_ = BasicBlatherRoute._fm_.branch()
 
-    def isLoopback(self): return False
+    def isInprocess(self): return True
 
     def __init__(self, msgRouter):
         BasicBlatherRoute.__init__(self, msgRouter)
-        self.addr = self.asWeakRef()
+        self.addr = 'direct:%x' % (id(self),)
         self._inbox = Queue.Queue()
 
     def __repr__(self):

@@ -26,6 +26,8 @@ class NetworkChannel(NetworkCommon):
     needsRead = KVProperty(False)
     needsWrite = KVProperty(False)
 
+    def isMulticast(self): return False
+
     def fileno(self):
         """Used by select.select so that we can use this class in a
         non-blocking fasion."""

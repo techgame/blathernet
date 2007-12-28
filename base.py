@@ -20,16 +20,16 @@ from TG.kvObserving import KVObject, KVProperty, OBFactoryMap
 
 class BlatherObject(KVObject):
     _fm_ = OBFactoryMap()
+    def asStrongProxy(self, cb=None): return self
+    def asStrongRef(self, cb=None): return (lambda: self)
     def asWeakProxy(self, cb=None): return weakref.proxy(self, cb)
     def asWeakRef(self, cb=None): return weakref.ref(self, cb)
 
     def isBlatherHost(self): return False
-    def isBlatherClient(self): return True
-    def isBlatherService(self): return False
-
-    def isBlatherAdvertDB(self): return False
-    def isBlatherAdvert(self): return False
-
     def isBlatherRoute(self): return False
-    def isBlatherRouter(self): return False
+    def isBlatherMsgHandler(self): return False
+
+    def isBlatherAdvert(self): return False
+    def isBlatherAdvertEntry(self): return False
+    def isBlatherChannel(self): return False
 
