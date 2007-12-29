@@ -20,6 +20,7 @@ from .msgHandler import MessageHandlerBase
 class BasicBlatherClient(MessageHandlerBase):
     advert = BlatherServiceAdvert('advertInfo')
     advertInfo = {'name': 'Blather Client'}
+
     chan = None
 
     def isBlatherClient(self): return True

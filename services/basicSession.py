@@ -18,6 +18,7 @@ from .msgHandler import MessageHandlerBase
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 class BasicBlatherSession(MessageHandlerBase):
+    codec = None
     chan = None
 
     def isBlatherSession(self): return True
@@ -26,5 +27,6 @@ class BasicBlatherSession(MessageHandlerBase):
         MessageHandlerBase.__init__(self)
 
         self.service = service
-        self.chan = self.newSessionChannel(chan)
+        self.codec = service.codec.newForSession(self)
+        self.chan = self.createChannel(chan.toEntry)
 

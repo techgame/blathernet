@@ -124,22 +124,29 @@ class AdvertRouterEntry(BlatherObject):
         self.kvpub('@sendPacket', packet, dmsg, pinfo)
         self._incSentStats(len(packet))
         self.msgRouter.addMessageId(pinfo['msgId'])
-        self.deliverPacket(packet, dmsg, pinfo)
-        return pinfo
+        return self.deliverPacket(packet, dmsg, pinfo)
 
     #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
     def deliverPacket(self, packet, dmsg, pinfo):
-        self.handleDelivery(dmsg, pinfo)
-        self.forwardPacket(packet, pinfo)
+        r = self.handleDelivery(dmsg, pinfo)
+        r = self.forwardPacket(packet, pinfo) or r
         self.kvpub('@deliverPacket', dmsg, pinfo)
+        return r, pinfo
 
     def handleDelivery(self, dmsg, pinfo):
+        sendOpt = pinfo.get('sendOpt', 0)
+        flags = sendOpt >> 4
+
+        # flags b1000 signals to forward even if delivered
+        stopOnDelivered = not (flags & 0x8)
+
         delivered = False
         for fn in self.handlerFns:
             if fn(dmsg, pinfo, self) is not False:
                 delivered = True
-                break
+                if stopOnDelivered:
+                    break
 
         pinfo['delivered'] = delivered
         return delivered
@@ -158,12 +165,12 @@ class AdvertRouterEntry(BlatherObject):
         flags = sendOpt >> 4
         fwdkind = sendOpt & 0xf
 
-        if not (flags & 0x2) and pinfo['delivered']:
-            # flags b0010 signals to forward even if delivered
+        if not (flags & 0x8) and pinfo['delivered']:
+            # flags b1000 signals to forward even if delivered
             return []
 
-        if (flags & 0x1):
-            # flags b0001 signals broadcast to all
+        if (flags & 0x4):
+            # flags b0100 signals broadcast to all
             routes = self.allRoutes
         else: routes = self.routes
 
@@ -176,14 +183,26 @@ class AdvertRouterEntry(BlatherObject):
         fwdFilter = self.fwdKindFilters.get(fwdkind, None)
         if fwdFilter is not None:
             return fwdFilter(self, routes)
-        return routes.keys()
-
-    # TODO: Implement delivery filters
-    #   best route, 
-    #   best n routes, 
+        else: return routes.keys()
 
     @fwdKindFilters.on(0)
     def fwdKindFilter_0(self, routes):
+        items = sorted(routes.items(), key=lambda x: x[1])
+        items = [e[0] for e in items[:1]]
+        return items
+
+    @fwdKindFilters.on(1)
+    def fwdKindFilter_1(self, routes):
+        items = sorted(routes.items(), key=lambda x: x[1])
+        items = [e[0] for e in items[:2]]
+        return items
+
+    @fwdKindFilters.on(2)
+    def fwdKindFilter_2(self, routes):
+        return routes.keys()
+
+    @fwdKindFilters.on(3)
+    def fwdKindFilter_3(self, routes):
         return routes.keys()
 
     #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

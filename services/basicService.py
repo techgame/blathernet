@@ -21,6 +21,7 @@ from .basicSession import BasicBlatherSession
 class BasicBlatherService(MessageHandlerBase):
     _fm_ = MessageHandlerBase._fm_.branch(
             Session=BasicBlatherSession)
+
     advert = BlatherServiceAdvert('advertInfo')
     advertInfo = {'name': 'Blather Service'}
 
@@ -30,7 +31,7 @@ class BasicBlatherService(MessageHandlerBase):
         blatherObj.registerService(self)
     def registerMsgRouter(self, msgRouter):
         self.advert.registerOn(msgRouter)
-        self.advert.addHandlerFn(self._processMessage)
+        self.advert.addHandlerFn(self._recvMessage)
 
     #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 

@@ -11,7 +11,7 @@
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 import marshal
-from struct import pack
+from struct import pack, unpack
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 #~ Definitions 
@@ -25,22 +25,42 @@ class BlatherMarshal(object):
     def load(self, dmsg):
         return dmsg
 
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
 class BlatherCodec(object):
-    def encode(self, dmsg, pinfo):
+    def setup(self, msgHandler, codec=None):
+        pass
+
+    def encode(self, dmsg, pinfo, advEntry):
+        header, pinfo = self.encodeHeader(dmsg, pinfo)
+        return header+dmsg, pinfo
+
+    def decode(self, dmsg, pinfo, advEntry):
+        dmsg, pinfo = self.decodeHeader(dmsg, pinfo)
         return dmsg, pinfo
-    def decode(self, dmsg, pinfo):
+
+    def encodeHeader(self, dmsg, pinfo):
+        return '', pinfo
+    def decodeHeader(self, dmsg, pinfo):
+        msgIdLen = pinfo.get('msgIdLen', 0)
+        dmsg = dmsg[msgIdLen:]
         return dmsg, pinfo
 
     #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
     @classmethod
-    def newForHandler(klass, msgHandler):
-        self = klass()
-        self.setupMsgHandler(msgHandler)
-        return self
+    def new(klass):
+        return klass()
 
-    def setupMsgHandler(self, msgHandler):
-        pass
+    def newForSession(self, msgHandler):
+        result = self.new()
+        result.setup(msgHandler, self)
+        return result
+
+    def newForHandler(self, msgHandler):
+        result = self.new()
+        result.setup(msgHandler, self)
+        return result
 
     def onObservableInit(self, pubName, obInst):
         setattr(obInst, pubName, self.newForHandler(obInst))
@@ -58,20 +78,14 @@ class PyMarshal(BlatherMarshal):
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 class IncrementCodec(BlatherCodec):
-    def setupMsgHandler(self, msgHandler):
-        self.sequence = 0
+    sequence = 0
+    def setup(self, msgHandler, codec=None):
+        self.sequence = codec.sequence
 
-    def encode(self, dmsg, pinfo):
+    def encodeHeader(self, dmsg, pinfo):
         self.sequence += 1
-        msgSeq = pack('!H', self.sequence & 0xffff)
+        msgHeader = pack('!H', self.sequence & 0xffff)
 
-        pinfo['msgIdLen'] = len(msgSeq)
-        dmsg = msgSeq+dmsg
-        return dmsg, pinfo
-
-    def decode(self, dmsg, pinfo):
-        msgIdLen = pinfo.get('msgIdLen', 0)
-        pinfo['msgSeq'] = dmsg[:msgIdLen]
-        dmsg = dmsg[msgIdLen:]
-        return dmsg, pinfo
+        pinfo['msgIdLen'] = len(msgHeader)
+        return msgHeader, pinfo
 

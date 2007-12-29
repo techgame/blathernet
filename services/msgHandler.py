@@ -15,6 +15,7 @@ from TG.metaObserving.obRegistry import OBRegistry
 from ..base import BlatherObject
 from .channel import Channel
 from .codecs import BlatherCodec, BlatherMarshal, IncrementCodec, PyMarshal
+#from .occodec import OrderCompleteCodec
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 #~ Definitions 
@@ -26,30 +27,36 @@ class MessageHandlerBase(BlatherObject):
             Session = None)
 
     msgreg = OBRegistry()
-    codec = IncrementCodec()
     marshal = BlatherMarshal()
+    codec = IncrementCodec()
+    #codec = OrderCompleteCodec()
 
     def isBlatherMsgHandler(self): return True
 
-    def replyChannel(self, pinfo):
+    def newSession(self, chan):
+        return self._fm_.Session(self, chan)
+
+    #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+    def createChannel(self, toEntry, fromEntry=None, sendOpt=0):
+        if fromEntry is None:
+            fromEntry = toEntry.msgRouter.newSession(sendOpt)
+        fromEntry.addHandlerFn(self._recvMessage)
+        return self._fm_.Channel(toEntry, fromEntry, self.asWeakProxy())
+
+    def createReplyChannel(self, pinfo):
         return self._fm_.Channel.fromPInfo(pinfo, self.asWeakProxy())
 
-    def newSession(self, chan):
-        return self._fm_.Session(self, chan.toEntry)
+    #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-    def newSessionChannel(self, chan, *args, **kw):
-        session = chan.msgRouter.newSession(*args, **kw)
-        return self.createChannel(chan.toEntry, session)
+    def _sendMessage(self, dmsg, pinfo, toEntry, fromEntry):
+        dmsg, pinfo = self.codec.encode(dmsg, pinfo, toEntry)
+        if dmsg:
+            return toEntry.sendBytes(dmsg, fromEntry, pinfo)[0]
+        else: return False
 
-    def createChannel(self, toEntry, fromEntry=None):
-        if fromEntry is None:
-            fromEntry = toEntry.msgRouter.newSession()
-        fromEntry.addHandlerFn(self._processMessage)
-        chan = self._fm_.Channel(toEntry, fromEntry, self.asWeakProxy())
-        return chan
-
-    def _processMessage(self, dmsg, pinfo, advEntry):
-        dmsg, pinfo = self.codec.decode(dmsg, pinfo)
+    def _recvMessage(self, dmsg, pinfo, advEntry):
+        dmsg, pinfo = self.codec.decode(dmsg, pinfo, advEntry)
         if dmsg:
             return self._dispatchMessage(dmsg, pinfo)
 
@@ -58,7 +65,7 @@ class MessageHandlerBase(BlatherObject):
 
         method = self.msgreg[method]
         if method is not None:
-            chan = self.replyChannel(pinfo)
+            chan = self.createReplyChannel(pinfo)
             return method(self, chan, *args, **kw)
 
 

@@ -30,9 +30,10 @@ class Channel(object):
         self.msgHandler = msgHandler
 
     def __repr__(self):
-        return 'chan<%s, %s>' % (
-                    self.toEntry.advertId.encode('hex'),
-                    self.fromEntry.advertId.encode('hex'),)
+        return '<%s %s => %s>' % (
+            self.__class__.__name__,
+            self.toEntry.advertId.encode('hex'),
+            self.fromEntry.advertId.encode('hex'),)
     @classmethod
     def factoryFlyweight(klass, **ns):
         ns['__flyweight__'] = True
@@ -51,12 +52,10 @@ class Channel(object):
     #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
     msgRouter = property(lambda self: self.toEntry.msgRouter)
-    codec = property(lambda self: self.msgHandler.codec)
     marshal = property(lambda self: self.msgHandler.marshal)
 
     def sendBytes(self, dmsg, **pinfo):
-        dmsg, pinfo = self.codec.encode(dmsg, pinfo)
-        return self.toEntry.sendBytes(dmsg, self.fromEntry, pinfo)
+        return self.msgHandler._sendMessage(dmsg, pinfo, self.toEntry, self.fromEntry)
 
     def send(self, method, *args, **kw):
         dmsg = self.marshal.dump([method, args, kw])
@@ -64,5 +63,5 @@ class Channel(object):
 
     def broadcast(self, method, *args, **kw):
         dmsg = self.marshal.dump([method, args, kw])
-        return self.sendBytes(dmsg, sendOpt=0x10)
+        return self.sendBytes(dmsg, sendOpt=0x40)
 
