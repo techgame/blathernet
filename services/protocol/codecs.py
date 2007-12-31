@@ -17,20 +17,12 @@ from struct import pack, unpack
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 class BlatherCodec(object):
-    def setup(self, msgHandler, codec=None):
+    def setup(self, protocol, codec=None):
         pass
 
-    def encode(self, dmsg, pinfo, advEntry):
-        header, pinfo = self.encodeHeader(dmsg, pinfo)
-        return header+dmsg, pinfo
-
-    def decode(self, dmsg, pinfo, advEntry):
-        dmsg, pinfo = self.decodeHeader(dmsg, pinfo)
+    def encode(self, dmsg, pinfo):
         return dmsg, pinfo
-
-    def encodeHeader(self, dmsg, pinfo):
-        return '', pinfo
-    def decodeHeader(self, dmsg, pinfo):
+    def decode(self, dmsg, pinfo):
         msgIdLen = pinfo.get('msgIdLen', 0)
         dmsg = dmsg[msgIdLen:]
         return dmsg, pinfo
@@ -41,18 +33,19 @@ class BlatherCodec(object):
     def new(klass):
         return klass()
 
-    def newForSession(self, msgHandler):
+    def newForSession(self, protocol):
         result = self.new()
-        result.setup(msgHandler, self)
+        result.setup(protocol, self)
         return result
 
-    def newForHandler(self, msgHandler):
+    def newForProtocol(self, protocol):
         result = self.new()
-        result.setup(msgHandler, self)
+        result.setup(protocol, self)
         return result
 
     def onObservableInit(self, pubName, obInst):
-        setattr(obInst, pubName, self.newForHandler(obInst))
+        if obInst.isBlatherProtocol():
+            setattr(obInst, pubName, self.newForProtocol(obInst))
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 #~ Simple incrementing codec
@@ -60,13 +53,13 @@ class BlatherCodec(object):
 
 class IncrementCodec(BlatherCodec):
     sequence = 0
-    def setup(self, msgHandler, codec=None):
+    def setup(self, protocol, codec=None):
         self.sequence = codec.sequence
 
-    def encodeHeader(self, dmsg, pinfo):
+    def encode(self, dmsg, pinfo):
         self.sequence += 1
         msgHeader = pack('!H', self.sequence & 0xffff)
 
         pinfo['msgIdLen'] = len(msgHeader)
-        return msgHeader, pinfo
+        return msgHeader+dmsg, pinfo
 

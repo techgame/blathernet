@@ -13,10 +13,13 @@
 from TG.metaObserving.obRegistry import OBRegistry
 
 from ..base import BlatherObject
-from .protocol import BlatherProtocol
-from .codecs import BlatherCodec, IncrementCodec
+
+from .protocol import BlatherProtocol, codecs
+from .protocol.codecs import IncrementCodec
+
 from .marshalers import BlatherMarshal, PyMarshal
-#from .occodec import OrderCompleteCodec
+
+#from .protocol.orderComplete import OrderCompleteCodec
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 #~ Definitions 
@@ -29,7 +32,7 @@ class MessageHandlerBase(BlatherObject):
     msgreg = OBRegistry()
 
     protocol = BlatherProtocol()
-    protocol.codec = IncrementCodec()
+    protocol.codec = codecs.IncrementCodec()
     #protocol.codec = OrderCompleteCodec()
     marshal = BlatherMarshal()
 

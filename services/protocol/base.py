@@ -10,7 +10,7 @@
 #~ Imports 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-from ..base import BlatherObject
+from ...base import BlatherObject
 from .channel import Channel
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -19,13 +19,17 @@ from .channel import Channel
 
 class BlatherProtocol(BlatherObject):
     Channel = Channel
-    host = None
-    codec = None
+    host = None # set from onObservableInit
+    codec = None # setup at call site
+
+    def isBlatherProtocol(self): return True
 
     def onObservableInit(self, pubName, obInst):
+        if not obInst.isBlatherMsgHandler():
+            return 
+
         self = self.copy()
-        self.host = obInst
-        self.Channel = self.Channel.newFlyweightForHost(obInst, self)
+        self.updateHost(obInst)
         setattr(obInst, pubName, self)
     onObservableInit.priority = -5
 
@@ -36,6 +40,10 @@ class BlatherProtocol(BlatherObject):
         newSelf = self.new()
         vars(newSelf).update(vars(self))
         return newSelf
+
+    def updateHost(self, host):
+        self.host = host
+        self.Channel = self.Channel.newFlyweightForHost(host, self)
 
     #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -56,12 +64,12 @@ class BlatherProtocol(BlatherObject):
     #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
     def send(self, dmsg, pinfo, toEntry):
-        dmsg, pinfo = self.codec.encode(dmsg, pinfo, toEntry)
+        dmsg, pinfo = self.codec.encode(dmsg, pinfo)
         if dmsg:
             return toEntry.sendBytes(dmsg, pinfo)
 
     def recv(self, dmsg, pinfo, advEntry):
-        dmsg, pinfo = self.codec.decode(dmsg, pinfo, advEntry)
+        dmsg, pinfo = self.codec.decode(dmsg, pinfo)
         if dmsg:
             chan = self.replyChannel(pinfo)
             return self.dispatch(dmsg, chan)

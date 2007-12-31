@@ -31,6 +31,7 @@ class BlatherObject(KVObject):
     def isBlatherAdvert(self): return False
     def isBlatherAdvertEntry(self): return False
     def isBlatherChannel(self): return False
+    def isBlatherProtocol(self): return True
 
     def isBlatherMsgHandler(self): return False
     def isBlatherSession(self): return False

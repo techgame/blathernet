@@ -29,7 +29,7 @@ def ppinfo(pinfo, *filter):
     for k in ('sendId', 'replyId', 'msgId'):
         if k not in filter: continue
         if k in pinfo: 
-            result[k] = pinfo[k].encode('base64')
+            result[k] = pinfo[k].encode('base64')[:-3]
     return result
 
 class AdvertRouterEntry(BlatherObject):
@@ -53,10 +53,10 @@ class AdvertRouterEntry(BlatherObject):
         self.updateAdvertInfo(advertId, sendOpt)
 
     def __repr__(self):
-        return "<AdvEntry %s on: %r>" % (self.advertId.encode('base64'), self.msgRouter.host())
+        return "<AdvEntry %s on: %r>" % (self, self.msgRouter.host())
 
     def __str__(self):
-        return self.advertId.encode('base64')
+        return self.advertId.encode('base64')[:-3]
 
     @classmethod
     def newFlyweight(klass, **ns):
