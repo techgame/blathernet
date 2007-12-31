@@ -47,9 +47,9 @@ class Channel(object):
         return type(bklass)("%s_%s"%(bklass.__name__, id(ns)), (bklass,), ns)
 
     @classmethod
-    def newFlyweightForHost(klass, host, protocol, **ns):
+    def newFlyweightForMsgHandler(klass, msgHandler, protocol, **ns):
         return klass.newFlyweight(
-                        marshal = host.marshal,
+                        marshal = msgHandler.marshal,
                         protocol = protocol.asWeakProxy())
 
     #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

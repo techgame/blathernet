@@ -11,16 +11,16 @@
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 from ...base import BlatherObject
-from .channel import Channel
+from . import channel, codecs
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 #~ Definitions 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 class BlatherProtocol(BlatherObject):
-    Channel = Channel
-    host = None # set from onObservableInit
-    codec = None # setup at call site
+    msgHandler = None # set from onObservableInit
+    codec = codecs.IncrementCodec()
+    Channel = channel.Channel
 
     def isBlatherProtocol(self): return True
 
@@ -29,7 +29,7 @@ class BlatherProtocol(BlatherObject):
             return 
 
         self = self.copy()
-        self.updateHost(obInst)
+        self.updateMsgHandler(obInst)
         setattr(obInst, pubName, self)
     onObservableInit.priority = -5
 
@@ -41,9 +41,9 @@ class BlatherProtocol(BlatherObject):
         vars(newSelf).update(vars(self))
         return newSelf
 
-    def updateHost(self, host):
-        self.host = host
-        self.Channel = self.Channel.newFlyweightForHost(host, self)
+    def updateMsgHandler(self, msgHandler):
+        self.msgHandler = msgHandler
+        self.Channel = self.Channel.newFlyweightForMsgHandler(msgHandler, self)
 
     #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -75,5 +75,5 @@ class BlatherProtocol(BlatherObject):
             return self.dispatch(dmsg, chan)
     
     def dispatch(self, dmsg, chan):
-        self.host._dispatchMessage(dmsg, chan)
+        self.msgHandler._dispatchMessage(dmsg, chan)
 

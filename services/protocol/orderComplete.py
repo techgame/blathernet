@@ -10,6 +10,7 @@
 #~ Imports 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
+from .base import BlatherProtocol
 from .codecs import BlatherCodec
 from struct import pack, unpack
 
@@ -58,4 +59,11 @@ class OrderCompleteCodec(BlatherCodec):
         self.seqAck = seqAck
 
         return dmsg, pinfo
+OCCodec = OrderCompleteCodec
+
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+class OrderCompleteProtocol(BlatherProtocol):
+    codec = OrderCompleteCodec()
+OCProtocol = OrderCompleteProtocol
 
