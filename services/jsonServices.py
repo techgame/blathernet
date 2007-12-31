@@ -12,7 +12,7 @@
 
 import simplejson
 
-from .codecs import BlatherMarshal
+from .marshalers import BlatherMarshal
 from .basicSession import BasicBlatherSession
 from .basicService import BasicBlatherService
 from .basicClient import BasicBlatherClient

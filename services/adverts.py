@@ -34,6 +34,9 @@ class BlatherAdvert(BlatherObject):
     def __repr__(self):
         return '<%s %s name:"%s">' % (self.__class__.__name__, self.advertUUID, self.info.get('name'))
 
+    def __str__(self):
+        return self.advertId.encode('base64')
+
     #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
     def registerOn(self, blatherObj):

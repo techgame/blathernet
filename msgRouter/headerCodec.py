@@ -108,6 +108,7 @@ class RouteHeaderCodecV1(RouteHeaderCodecBase):
             pinfo['replyId'] = packet[20:36]
             dataOffset += 16
             msgIdLen += 16
+        else: pinfo['replyId'] = None
 
         pinfo['msgId'] = packet[20:20+msgIdLen]
         dmsg = packet[dataOffset:]
@@ -127,6 +128,7 @@ class RouteHeaderCodecV1(RouteHeaderCodecBase):
         if replyId:
             part[3] = chr(pinfo.setdefault('replyOpt', 0)) + replyId
             msgInfo |= 1
+        else: part[3] = chr(0)
 
         msgIdLen = pinfo.setdefault('msgIdLen', 0)
         part[2] = chr((msgInfo << 4) | ((msgIdLen >> 1) & 0x0f))

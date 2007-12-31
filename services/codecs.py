@@ -10,21 +10,10 @@
 #~ Imports 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-import marshal
 from struct import pack, unpack
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 #~ Definitions 
-#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-class BlatherMarshal(object):
-    def dump(self, obj):
-        if not isinstance(obj, str):
-            raise ValueError('Basic marshal only supports strings')
-        return obj
-    def load(self, dmsg):
-        return dmsg
-
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 class BlatherCodec(object):
@@ -64,14 +53,6 @@ class BlatherCodec(object):
 
     def onObservableInit(self, pubName, obInst):
         setattr(obInst, pubName, self.newForHandler(obInst))
-
-#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-#~ Python marshaler
-#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-class PyMarshal(BlatherMarshal):
-    dump = staticmethod(marshal.dumps)
-    load = staticmethod(marshal.loads)
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 #~ Simple incrementing codec

@@ -10,28 +10,30 @@
 #~ Imports 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-from .adverts import BlatherServiceAdvert
-from .msgHandler import MessageHandlerBase
+import marshal
+import pickle
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 #~ Definitions 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-class BasicBlatherClient(MessageHandlerBase):
-    advert = BlatherServiceAdvert('advertInfo')
-    advertInfo = {'name': 'Blather Client'}
+class BlatherMarshal(object):
+    def dump(self, obj):
+        if not isinstance(obj, str):
+            raise ValueError('Basic marshal only supports strings')
+        return obj
+    def load(self, dmsg):
+        return dmsg
 
-    chan = None
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+#~ Python marshaler
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-    def isBlatherClient(self): return True
+class PyMarshal(BlatherMarshal):
+    dump = staticmethod(marshal.dumps)
+    load = staticmethod(marshal.loads)
 
-    def registerOn(self, blatherObj):
-        blatherObj.registerClient(self)
-
-    def registerMsgRouter(self, msgRouter):
-        if self.advert.advertId is None:
-            raise ValueError("Client AdvertId has not been set")
-        self.advert.registerOn(msgRouter)
-
-        self.chan = self.protocol.newChannel(self.advert.advEntry)
+class PickleMarshal(BlatherMarshal):
+    dump = staticmethod(pickle.dumps)
+    load = staticmethod(pickle.loads)
 

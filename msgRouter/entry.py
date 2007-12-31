@@ -29,7 +29,7 @@ def ppinfo(pinfo, *filter):
     for k in ('sendId', 'replyId', 'msgId'):
         if k not in filter: continue
         if k in pinfo: 
-            result[k] = pinfo[k].encode('hex')
+            result[k] = pinfo[k].encode('base64')
     return result
 
 class AdvertRouterEntry(BlatherObject):
@@ -53,12 +53,16 @@ class AdvertRouterEntry(BlatherObject):
         self.updateAdvertInfo(advertId, sendOpt)
 
     def __repr__(self):
-        return "<AdvEntry %s on: %r>" % (self.advertId.encode('hex'), self.msgRouter.host())
+        return "<AdvEntry %s on: %r>" % (self.advertId.encode('base64'), self.msgRouter.host())
+
+    def __str__(self):
+        return self.advertId.encode('base64')
 
     @classmethod
-    def factoryFlyweight(klass, **ns):
-        ns['__flyweight__'] = True
-        return type(klass)(klass.__name__+"_", (klass,), ns)
+    def newFlyweight(klass, **ns):
+        bklass = getattr(klass, '__flyweight__', klass)
+        ns['__flyweight__'] = bklass
+        return type(bklass)(bklass.__name__+"_", (bklass,), ns)
 
     ppinfo = staticmethod(ppinfo)
 
@@ -109,15 +113,16 @@ class AdvertRouterEntry(BlatherObject):
 
     #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-    def encodePacket(self, dmsg, retEntry, pinfo={}):
+    def encodePacket(self, dmsg, pinfo={}):
         enc_pinfo = dict(sendId=self.advertId, sendOpt=self.sendOpt)
+        retEntry = pinfo.pop('retEntry', None)
         if retEntry is not None:
             enc_pinfo.update(replyId=retEntry.advertId, replyOpt=retEntry.sendOpt)
         enc_pinfo.update(pinfo)
         return self.codec.encode(dmsg, enc_pinfo)
 
-    def sendBytes(self, dmsg, retEntry, pinfo):
-        packet, pinfo = self.encodePacket(dmsg, retEntry, pinfo)
+    def sendBytes(self, dmsg, pinfo):
+        packet, pinfo = self.encodePacket(dmsg, pinfo)
         return self.sendPacket(packet, dmsg, pinfo)
 
     def sendPacket(self, packet, dmsg, pinfo):

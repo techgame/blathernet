@@ -30,7 +30,7 @@ class AdvertRouterTable(dict):
         return entry
     
     def setupEntryFlyweight(self, **ns):
-        self.EntryFactory = self.EntryBasic.factoryFlyweight(**ns)
+        self.EntryFactory = self.EntryBasic.newFlyweight(**ns)
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -95,6 +95,7 @@ class BlatherMessageRouter(BlatherObject):
                 retAdvertEntry.recvReturnRoute(pinfo)
             else: 
                 retAdvertEntry.recvReturnRouteDup(pinfo)
+        else: pinfo['retEntry'] = None
 
         if not msgIdDup:
             return advEntry.recvPacket(packet, dmsg, pinfo)
