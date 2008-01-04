@@ -10,6 +10,8 @@
 #~ Imports 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
+import traceback
+
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 #~ Definitions 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -50,19 +52,32 @@ class Channel(object):
     def newFlyweightForMsgHandler(klass, msgHandler, protocol, **ns):
         return klass.newFlyweight(
                         marshal = msgHandler.marshal,
-                        protocol = protocol.asWeakProxy())
+                        msgHandler = msgHandler.asWeakRef(),
+                        protocol = protocol.asWeakRef())
 
     #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
     def send(self, method, *args, **kw):
         dmsg = self.marshal.dump([method, args, kw])
-        return self._sendDmsg(dmsg)
+        return self.sendDmsg(dmsg)
 
     def broadcast(self, method, *args, **kw):
         dmsg = self.marshal.dump([method, args, kw])
-        return self._sendDmsg(dmsg, sendOpt=0x40)
+        return self.sendDmsg(dmsg, sendOpt=0x40)
 
-    def _sendDmsg(self, dmsg, **pinfo):
+    def sendDmsg(self, dmsg, **pinfo):
         pinfo['retEntry'] = self.fromEntry
-        return self.protocol.send(dmsg, pinfo, self.toEntry)
+        return self.protocol().send(self.toEntry, dmsg, pinfo)
+
+    def recvDmsg(self, dmsg):
+        method, args, kw = self.marshal.load(dmsg)
+
+        msgHandler = self.msgHandler()
+        method = msgHandler.msgreg[method]
+        if method is None: 
+            return NotImplemented
+        try:
+            return method(msgHandler, self, *args, **kw)
+        except Exception:
+            traceback.print_exc()
 

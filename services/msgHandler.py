@@ -14,7 +14,7 @@ from TG.metaObserving.obRegistry import OBRegistry
 
 from ..base import BlatherObject
 
-from .protocol import BlatherProtocol, OrderCompleteProtocol
+from .protocol import IncBlatherProtocol, OrderCompleteProtocol
 from .marshalers import BlatherMarshal
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -25,7 +25,7 @@ from .marshalers import BlatherMarshal
 class MessageHandlerBase(BlatherObject):
     _fm_ = BlatherObject._fm_.branch(Session = None)
 
-    #protocol = BlatherProtocol()
+    #protocol = IncBlatherProtocol()
     protocol = OrderCompleteProtocol()
 
     msgreg = OBRegistry()
@@ -35,13 +35,4 @@ class MessageHandlerBase(BlatherObject):
 
     def newSession(self, chan):
         return self._fm_.Session(self, chan)
-
-    def _dispatchMessage(self, dmsg, chan):
-        method, args, kw = self.marshal.load(dmsg)
-        method = self.msgreg[method]
-
-        if method is None: 
-            return NotImplemented
-
-        return method(self, chan, *args, **kw)
 

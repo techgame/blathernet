@@ -26,5 +26,5 @@ class BasicBlatherSession(MessageHandlerBase):
         MessageHandlerBase.__init__(self)
 
         self.service = service.asWeakRef()
-        self.chan = self.protocol.newSession(chan)
+        self.chan = self.protocol.newChannel(chan.toEntry)
 

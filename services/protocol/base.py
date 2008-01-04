@@ -11,18 +11,45 @@
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 from ...base import BlatherObject
-from . import channel, codecs
+from . import channel
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 #~ Definitions 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-class BlatherProtocol(BlatherObject):
+def circularDiff(v0, v1, mask=0xff):
+    d = (v1-v0) & mask
+    if d > (mask >> 1):
+        d -= mask + 1
+    return d
+
+def circularRange(v0, v1, mask=0xff):
+    d = circularDiff(v0, v1, mask)
+    return (i&mask for i in xrange(v0, v0+d))
+
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+class BasicBlatherProtocol(BlatherObject):
     msgHandler = None # set from onObservableInit
-    codec = codecs.IncrementCodec()
     Channel = channel.Channel
 
+    def __init__(self):
+        BlatherObject.__init__(self)
+        self.initCodec()
+
     def isBlatherProtocol(self): return True
+
+    #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    #~ Construction
+    #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+    @classmethod
+    def new(klass):
+        return klass()
+    def copy(self):
+        newSelf = self.new()
+        vars(newSelf).update(vars(self))
+        return newSelf
 
     def onObservableInit(self, pubName, obInst):
         if not obInst.isBlatherMsgHandler():
@@ -33,47 +60,46 @@ class BlatherProtocol(BlatherObject):
         setattr(obInst, pubName, self)
     onObservableInit.priority = -5
 
-    @classmethod
-    def new(klass):
-        return klass()
-    def copy(self):
-        newSelf = self.new()
-        vars(newSelf).update(vars(self))
-        return newSelf
-
     def updateMsgHandler(self, msgHandler):
         self.msgHandler = msgHandler
         self.Channel = self.Channel.newFlyweightForMsgHandler(msgHandler, self)
 
     #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-    def newSession(self, chan):
-        self.codec = chan.protocol.codec.newForSession(self)
-        return self.newChannel(chan.toEntry)
+    #~ Channel creation and handling
+    #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
     def newChannel(self, toEntry, fromEntry=None, sendOpt=None):
         if fromEntry is None:
             fromEntry = toEntry.msgRouter.newSession(sendOpt)
 
-        fromEntry.addHandlerFn(self.recv)
+        fromEntry.registerOn(self)
         return self.Channel(toEntry, fromEntry)
 
-    def replyChannel(self, pinfo):
-        return self.Channel(pinfo['retEntry'], pinfo['advEntry'])
-
+    #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    #~ Registration on advert entry
     #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-    def send(self, dmsg, pinfo, toEntry):
-        dmsg, pinfo = self.codec.encode(dmsg, pinfo)
-        if dmsg:
-            return toEntry.sendBytes(dmsg, pinfo)
+    def registerOn(self, blatherObj):
+        blatherObj.registerOn(self)
+    def registerAdvert(self, advert):
+        advert.advEntry.registerOn(self)
+    def registerAdvertEntry(self, advert):
+        advert.addHandlerFn(self.recvEncoded)
 
-    def recv(self, dmsg, pinfo, advEntry):
-        dmsg, pinfo = self.codec.decode(dmsg, pinfo)
-        if dmsg:
-            chan = self.replyChannel(pinfo)
-            return self.dispatch(dmsg, chan)
+    #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    #~ Message send and recv
+    #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+    def initCodec(self):
+        pass
+
+    def send(self, toEntry, dmsg, pinfo):
+        raise NotImplementedError('Subclass Responsibility: %r' % (self,))
+
+    def recvEncoded(self, advEntry, dmsg, pinfo):
+        raise NotImplementedError('Subclass Responsibility: %r' % (self,))
+
+    def recvDecoded(self, dmsg, pinfo):
+        chan = self.Channel(pinfo['retEntry'], pinfo['advEntry'])
+        return chan.recvDmsg(dmsg)
     
-    def dispatch(self, dmsg, chan):
-        self.msgHandler._dispatchMessage(dmsg, chan)
-

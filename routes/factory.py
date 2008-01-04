@@ -10,6 +10,7 @@
 #~ Imports 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
+import itertools
 from TG.kvObserving import KVSet
 
 from ..base import BlatherObject
@@ -19,6 +20,8 @@ from ..base import BlatherObject
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 class BlatherRouteFactory(BlatherObject):
+    nextRandomSeed = itertools.count(1942).next
+
     def __init__(self, host):
         BlatherObject.__init__(self)
         self.networkMgr = host.networkMgr.asWeakProxy()
@@ -27,11 +30,23 @@ class BlatherRouteFactory(BlatherObject):
     #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
     def newDirectRoute(self):
-        route = BlatherDirectRoute(self.msgRouter())
-        return route
+        return BlatherDirectRoute(self.msgRouter())
     def connectDirect(self, otherHost):
         route = self.newDirectRoute()
         peer = otherHost.routeFactory.newDirectRoute()
+        route.setPeer(peer)
+        peer.setPeer(route)
+        return route
+
+    def newTestingRoute(self, cbIsPacketLost):
+        return BlatherTestingRoute(self.msgRouter(), cbIsPacketLost, self.nextRandomSeed())
+    def connectTesting(self, otherHost, cbIsPacketLost, cbIsPacketLostOther=None):
+        if cbIsPacketLostOther is None:
+            cbIsPacketLostOther = cbIsPacketLost
+
+        route = self.newTestingRoute(cbIsPacketLost)
+        peer = otherHost.routeFactory.newTestingRoute(cbIsPacketLostOther)
+
         route.setPeer(peer)
         peer.setPeer(route)
         return route
@@ -57,6 +72,6 @@ class BlatherRouteFactory(BlatherObject):
 #~ Imports 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-from .directRoutes import BlatherDirectRoute
+from .directRoutes import BlatherDirectRoute, BlatherTestingRoute
 from .networkRoutes import BlatherNetworkRoute
 

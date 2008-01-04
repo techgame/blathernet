@@ -29,7 +29,7 @@ def ppinfo(pinfo, *filter):
     for k in ('sendId', 'replyId', 'msgId'):
         if k not in filter: continue
         if k in pinfo: 
-            result[k] = pinfo[k].encode('base64')[:-3]
+            result[k] = pinfo[k].encode('hex')
     return result
 
 class AdvertRouterEntry(BlatherObject):
@@ -56,7 +56,7 @@ class AdvertRouterEntry(BlatherObject):
         return "<AdvEntry %s on: %r>" % (self, self.msgRouter.host())
 
     def __str__(self):
-        return self.advertId.encode('base64')[:-3]
+        return self.advertId.encode('hex')
 
     @classmethod
     def newFlyweight(klass, **ns):
@@ -91,23 +91,23 @@ class AdvertRouterEntry(BlatherObject):
 
     def recvPacket(self, packet, dmsg, pinfo):
         self.kvpub('@recvPacket', packet, dmsg, pinfo)
-        self._incRecvStats(len(packet))
+        self._incRecvStats(pinfo, len(packet))
         self.deliverPacket(packet, dmsg, pinfo)
         return True
 
     def recvPacketDup(self, packet, dmsg, pinfo):
-        self._incRecvDupStats(len(packet))
+        self._incRecvDupStats(pinfo, len(packet))
         return False
 
     def recvReturnRoute(self, pinfo):
         self.kvpub('@recvRoute', pinfo)
-        self._incRecvStats()
+        self._incRecvStats(pinfo)
         self.addRoute(pinfo['route'](), 2)
         return True
 
     def recvReturnRouteDup(self, pinfo):
         self.kvpub('@recvRoute', pinfo)
-        self._incRecvStats()
+        self._incRecvStats(pinfo)
         self.addRoute(pinfo['route'](), 1)
         return True
 
@@ -127,7 +127,7 @@ class AdvertRouterEntry(BlatherObject):
 
     def sendPacket(self, packet, dmsg, pinfo):
         self.kvpub('@sendPacket', packet, dmsg, pinfo)
-        self._incSentStats(len(packet))
+        self._incSentStats(pinfo, len(packet))
         self.msgRouter.addMessageId(pinfo['msgId'])
         return self.deliverPacket(packet, dmsg, pinfo)
 
@@ -148,7 +148,7 @@ class AdvertRouterEntry(BlatherObject):
 
         delivered = False
         for fn in self.handlerFns:
-            if fn(dmsg, pinfo, self) is not False:
+            if fn(self, dmsg, pinfo) is not False:
                 delivered = True
                 if stopOnDelivered:
                     break
@@ -221,21 +221,30 @@ class AdvertRouterEntry(BlatherObject):
         }
     timestamp = time.time
 
-    def _incSentStats(self, bytes=None):
-        self.stats['sent_time'] = self.timestamp()
+    def _incSentStats(self, pinfo, bytes=None):
+        ts = self.timestamp()
+        pinfo['ts'] = ts
+        self.stats['sent_time'] = ts
         if bytes is not None:
             self.stats['sent_count'] += 1
             self.stats['sent_bytes'] += bytes
+        return ts
 
-    def _incRecvStats(self, bytes=None):
-        self.stats['recv_time'] = self.timestamp()
+    def _incRecvStats(self, pinfo, bytes=None):
+        ts = self.timestamp()
+        pinfo['ts'] = ts
+        self.stats['recv_time'] = ts
         if bytes is not None:
             self.stats['recv_count'] += 1
             self.stats['recv_bytes'] += bytes
+        return ts
 
-    def _incRecvDupStats(self, bytes=None):
-        self.stats['dup_time'] = self.timestamp()
+    def _incRecvDupStats(self, pinfo, bytes=None):
+        ts = self.timestamp()
+        pinfo['ts'] = ts
+        self.stats['dup_time'] = ts 
         if bytes is not None:
             self.stats['dup_count'] += 1
             self.stats['dup_bytes'] += bytes
+        return ts
 

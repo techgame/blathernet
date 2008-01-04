@@ -134,16 +134,6 @@ class BlatherAdvert(BlatherObject):
         self.info['opt'] = int(opt) & 0xff
     opt = property(getOpt, setOpt)
 
-    #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-    #~ Convinence methods
-    #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-    def addHandlerFn(self, fn):
-        self.advEntry.addHandlerFn(fn)
-
-    def sendRaw(self, dmsg, retEntry=None, **kwpinfo):
-        return self.advEntry.sendRaw(dmsg, pinfo)
-
 Advert = BlatherAdvert
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

@@ -31,7 +31,7 @@ class BasicBlatherService(MessageHandlerBase):
         blatherObj.registerService(self)
     def registerMsgRouter(self, msgRouter):
         self.advert.registerOn(msgRouter)
-        self.advert.addHandlerFn(self.protocol.recv)
+        self.advert.registerOn(self.protocol)
 
     #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 

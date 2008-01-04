@@ -10,6 +10,7 @@
 #~ Imports 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
+import random
 import Queue
 from .basicRoute import BasicBlatherRoute
 
@@ -65,4 +66,26 @@ class BlatherLoopbackRoute(BlatherDirectRoute):
     peer = property(lambda self: self)
 
     def isLoopback(self): return True
+
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+class BlatherTestingRoute(BlatherDirectRoute):
+    def __init__(self, msgRouter, cbIsPacketLost, randomSeed=1942):
+        self.ri = random.Random(randomSeed)
+
+        BlatherDirectRoute.__init__(self, msgRouter)
+        self.setPacketLostCb(cbIsPacketLost)
+
+    def setPacketLostCb(self, cbIsPacketLost):
+        if isinstance(cbIsPacketLost, float):
+            def isPacketLost(route, ri, t=cbIsPacketLost):
+                return t > ri.random()
+            cbIsPacketLost = isPacketLost
+        self.isPacketLost = cbIsPacketLost
+
+    def transferDispatch(self, packet, addr):
+        if self.isPacketLost(self, self.ri):
+            print '!!! lost packet'
+            return
+        BlatherDirectRoute.transferDispatch(self, packet, addr)
 

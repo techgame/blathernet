@@ -48,10 +48,10 @@ class BasicBlatherRoute(BlatherObject):
         raise NotImplementedError('Subclass Responsibility: %r' % (self,))
 
     def recvDispatch(self, packet, addr):
-        self._incRecvStats(len(packet))
-        self.recvPacket(packet, addr)
-    def recvPacket(self, packet, addr):
+        ts = self._incRecvStats(len(packet))
         pinfo = {'addr': addr, 'route': self._wrSelf}
+        self.recvPacket(packet, pinfo)
+    def recvPacket(self, packet, pinfo):
         self.msgRouter.recvPacket(packet, pinfo)
 
     #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -65,15 +65,19 @@ class BasicBlatherRoute(BlatherObject):
     timestamp = time.time
 
     def _incSentStats(self, bytes=None):
-        self.stats['sent_time'] = self.timestamp()
+        ts = self.timestamp()
+        self.stats['sent_time'] = ts
         if bytes is not None:
             self.stats['sent_count'] += 1
             self.stats['sent_bytes'] += bytes
+        return ts
 
     def _incRecvStats(self, bytes=None):
-        self.stats['recv_time'] = self.timestamp()
+        ts = self.timestamp()
+        self.stats['recv_time'] = ts
         if bytes is not None:
             self.stats['recv_count'] += 1
             self.stats['recv_bytes'] += bytes
 
+        return ts
 
