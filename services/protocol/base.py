@@ -17,13 +17,15 @@ from . import channel
 #~ Definitions 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-def circularDiff(v0, v1, mask=0xff):
+def circularDiff(v0, v1, mask):
+    ## mask = 0xff or 0xffff
     d = (v1-v0) & mask
     if d > (mask >> 1):
         d -= mask + 1
     return d
 
-def circularRange(v0, v1, mask=0xff):
+def circularRange(v0, v1, mask):
+    ## mask = 0xff or 0xffff or 0xffffffff
     d = circularDiff(v0, v1, mask)
     return (i&mask for i in xrange(v0, v0+d))
 

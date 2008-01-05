@@ -46,7 +46,7 @@ class IncBlatherProtocol(BasicBlatherProtocol):
         dmsg = bytes[4:]
 
         recvSeq, sentSeqAck = unpack('!HH', msgHeader)
-        if circularDiff(self.recvSeq, recvSeq) > 0:
+        if circularDiff(self.recvSeq, recvSeq, 0xffff) > 0:
             self.recvSeq = recvSeq
 
         return (dmsg, pinfo)

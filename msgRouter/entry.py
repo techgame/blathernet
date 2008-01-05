@@ -115,7 +115,7 @@ class AdvertRouterEntry(BlatherObject):
 
     def encodePacket(self, dmsg, pinfo={}):
         enc_pinfo = dict(sendId=self.advertId, sendOpt=self.sendOpt)
-        retEntry = pinfo.pop('retEntry', None)
+        retEntry = pinfo.get('retEntry')
         if retEntry is not None:
             enc_pinfo.update(replyId=retEntry.advertId, replyOpt=retEntry.sendOpt)
         enc_pinfo.update(pinfo)

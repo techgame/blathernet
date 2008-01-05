@@ -26,18 +26,20 @@ class OrderCompleteProtocol(BasicBlatherProtocol):
         self.nextDmsgId = 1
         self.recvDmsgId = 0
         self.outbound = {}
-        self.missingMsgs = None
+        self.missingMsgs = array('B', [])
 
         self.sendSeq = 0
         self.recvSeq = 0
 
-    _peer = None
-    def resetOnNewPeer(self, peer):
-        if self._peer is peer:
-            return False
-        self._peer = peer
+    peerEntry = None
+    def resetOnNewPeer(self, peerEntry, hostEntry):
+        if peerEntry is None or self.peerEntry is peerEntry:
+            return self.peerEntry
+        self.peerEntry = peerEntry
+        self.hostEntry = hostEntry
+
         self.initCodec()
-        return True
+        return peerEntry
 
     def nextDmsgIdFor(self, dmsg, pinfo):
         if dmsg:
@@ -52,14 +54,18 @@ class OrderCompleteProtocol(BasicBlatherProtocol):
     #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
     def send(self, toEntry, dmsg, pinfo):
-        self.resetOnNewPeer(toEntry)
+        self.resetOnNewPeer(toEntry, pinfo['retEntry'])
 
         dmsgId = self.nextDmsgIdFor(dmsg, pinfo)
+
+        #print 'send:', (dmsgId, dmsg, pinfo)
         return toEntry.sendBytes(*self.encode(dmsgId, dmsg, pinfo, self.missingMsgs))
 
+    def requestMissing(self, **pinfo):
+        return self.peerEntry.sendBytes(*self.encode(None, None, pinfo, self.missingMsgs))
+
     def recvEncoded(self, advEntry, bytes, pinfo):
-        retEntry = pinfo['retEntry']
-        self.resetOnNewPeer(retEntry)
+        retEntry = self.resetOnNewPeer(pinfo['retEntry'], advEntry)
 
         dmsgInfo, requestedMsgs = self.decode(bytes, pinfo)
         if dmsgInfo is not None:
@@ -70,37 +76,45 @@ class OrderCompleteProtocol(BasicBlatherProtocol):
     #~ TODO: Start from here ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
     def recvInbound(self, dmsgInfo):
+        # TODO: track message decoding, missing messages, etc
         dmsgId, dmsg, pinfo = dmsgInfo
-        if circularDiff(self.recvDmsgId, dmsgId) == 1:
-            self.recvDmsgId = dmsgId
+        idDiff = circularDiff(self.recvDmsgId, dmsgId, 0xff)
+        if idDiff == 1:
+            print 'recv norm:', dmsgId, dmsg
             self.recvDecoded(dmsg, pinfo)
-        else:
-            print 'out of order:', (self.recvDmsgId, dmsgId)
 
-    def recvRequestMsgs(self, requestedMsgs, retEntry):
-        print 'recvRequestMsgs:'
+        else:
+            if dmsgId in self.missingMsgs:
+                self.missingMsgs.remove(dmsgId)
+
+                print 'recv req:', dmsgId, dmsg
+                self.recvDecoded(dmsg, pinfo)
+
+            else:
+                for i in circularRange(self.recvDmsgId+1, dmsgId, 0xff):
+                    print (self.recvDmsgId, i, dmsgId)
+                    self.missingMsgs.append(i)
+
+                self.requestMissing()
+
+                print 'recv post:', dmsgId, dmsg
+                self.recvDecoded(dmsg, pinfo)
+
+        if idDiff >= 0:
+            self.recvDmsgId = dmsgId
+
+    def recvRequestedMsgs(self, requestedMsgs, retEntry):
+        # TODO: update min ack dmsg, and empty outgoing
+        if not requestedMsgs: return
+
         for dmsgId in requestedMsgs:
             entry = self.outbound.get(dmsgId, None)
             if entry is not None:
-                print '  dmsgId:', dmsgId, 'dmsg:', entry[0]
                 retEntry.sendBytes(*self.encode(dmsgId, *entry))
 
     #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-    _missingMsgs = None
-    def getMissingMsgs(self):
-        result = self._missingMsgs
-        if result is None:
-            result = None
-            self._missingMsgs = result
-        return result
-    def setMissingMsgs(self, missingMsgs): self._missingMsgs = missingMsgs
-    def delMissingMsgs(self): self._missingMsgs = None
-    missingMsgs = property(getMissingMsgs, setMissingMsgs, delMissingMsgs)
-
-    #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-    def encode(self, dmsgId, dmsg, pinfo, missingMsgs):
+    def encode(self, dmsgId, dmsg, pinfo, missingMsgs=None):
         parts = [None, '', '']
         flags = 0
 
@@ -122,10 +136,11 @@ class OrderCompleteProtocol(BasicBlatherProtocol):
         bytes = bytes[5:]
 
         # check for packet ordering...
-        recvSeqDelta = circularDiff(self.recvSeq, recvSeq)
+        recvSeqDelta = circularDiff(self.recvSeq, recvSeq, 0xffff)
         if recvSeqDelta > 0:
             self.recvSeq = recvSeq
-        #sendSeqDelta = circularDiff(sendAck, self.sendSeq)
+        else: return None, None
+        #sendSeqDelta = circularDiff(sendAck, self.sendSeq, 0xffff)
         #if sendSeqDelta > 1:
         #    we are ahead of their ack
 
