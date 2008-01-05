@@ -57,6 +57,16 @@ class Channel(object):
 
     #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
+    def sendDmsg(self, dmsg, **pinfo):
+        pinfo['retEntry'] = self.fromEntry
+        return self.protocol().send(self.toEntry, dmsg, pinfo)
+
+    def recvDmsg(self, dmsg):
+        call = self.marshal.load(dmsg)
+        self.msgHandler().recvDispatch(self, call)
+
+    #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
     def send(self, method, *args, **kw):
         dmsg = self.marshal.dump([method, args, kw])
         return self.sendDmsg(dmsg)
@@ -64,20 +74,4 @@ class Channel(object):
     def broadcast(self, method, *args, **kw):
         dmsg = self.marshal.dump([method, args, kw])
         return self.sendDmsg(dmsg, sendOpt=0x40)
-
-    def sendDmsg(self, dmsg, **pinfo):
-        pinfo['retEntry'] = self.fromEntry
-        return self.protocol().send(self.toEntry, dmsg, pinfo)
-
-    def recvDmsg(self, dmsg):
-        method, args, kw = self.marshal.load(dmsg)
-
-        msgHandler = self.msgHandler()
-        method = msgHandler.msgreg[method]
-        if method is None: 
-            return NotImplemented
-        try:
-            return method(msgHandler, self, *args, **kw)
-        except Exception:
-            traceback.print_exc()
 

@@ -36,3 +36,18 @@ class MessageHandlerBase(BlatherObject):
     def newSession(self, chan):
         return self._fm_.Session(self, chan)
 
+    def recvDispatch(self, chan, call):
+        try:
+            method, args, kw = call
+        except Exception, e:
+            raise
+
+        method = self.msgreg[method]
+        if method is None: 
+            return NotImplemented('Method not registered')
+
+        try:
+            return method(self, chan, *args, **kw)
+        except Exception, e:
+            traceback.print_exc()
+
