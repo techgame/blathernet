@@ -77,10 +77,14 @@ class AdvertRouterEntry(BlatherObject):
             self.routes = weakref.WeakKeyDictionary()
         self.routes.setdefault(route, weight)
 
-    def addHandlerFn(self, fn):
-        if not self.handlerFns:
-            self.handlerFns = []
-        self.handlerFns.append(fn)
+    def addHandlerFn(self, fn, pfn=None):
+        if fn is not None:
+            if not self.handlerFns:
+                self.handlerFns = []
+            self.handlerFns.append(fn)
+
+        if pfn:
+            self.msgRouter.host().addTask(lambda tc=None: pfn(self, tc))
 
     #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 

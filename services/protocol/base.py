@@ -37,7 +37,7 @@ class BasicBlatherProtocol(BlatherObject):
 
     def __init__(self):
         BlatherObject.__init__(self)
-        self.initCodec()
+        self.reset()
 
     def isBlatherProtocol(self): return True
 
@@ -64,6 +64,7 @@ class BasicBlatherProtocol(BlatherObject):
 
     def updateMsgHandler(self, msgHandler):
         self.msgHandler = msgHandler
+        self.kind = msgHandler.kind
         self.Channel = self.Channel.newFlyweightForMsgHandler(msgHandler, self)
 
     #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -85,14 +86,15 @@ class BasicBlatherProtocol(BlatherObject):
         blatherObj.registerOn(self)
     def registerAdvert(self, advert):
         advert.advEntry.registerOn(self)
-    def registerAdvertEntry(self, advert):
-        advert.addHandlerFn(self.recvEncoded)
+    def registerAdvertEntry(self, advEntry):
+        self.hostEntry = advEntry
+        advEntry.addHandlerFn(self.recvEncoded, self.recvPeriodic)
 
     #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     #~ Message send and recv
     #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-    def initCodec(self):
+    def reset(self):
         pass
 
     def send(self, toEntry, dmsg, pinfo):
@@ -105,3 +107,6 @@ class BasicBlatherProtocol(BlatherObject):
         chan = self.Channel(pinfo['retEntry'], pinfo['advEntry'])
         return chan.recvDmsg(dmsg)
     
+    def recvPeriodic(self, advEntry, tc):
+        pass
+

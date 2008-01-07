@@ -10,6 +10,8 @@
 #~ Imports 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
+import traceback
+
 from TG.metaObserving.obRegistry import OBRegistry
 
 from ..base import BlatherObject
@@ -24,6 +26,7 @@ from .marshalers import BlatherMarshal
 
 class MessageHandlerBase(BlatherObject):
     _fm_ = BlatherObject._fm_.branch(Session = None)
+    kind = None
 
     #protocol = IncBlatherProtocol()
     protocol = OrderCompleteProtocol()

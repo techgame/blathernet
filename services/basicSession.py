@@ -18,6 +18,7 @@ from .msgHandler import MessageHandlerBase
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 class BasicBlatherSession(MessageHandlerBase):
+    kind = 'session'
     chan = None
 
     def isBlatherSession(self): return True

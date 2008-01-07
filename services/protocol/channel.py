@@ -65,10 +65,17 @@ class Channel(object):
         call = self.marshal.load(dmsg)
         self.msgHandler().recvDispatch(self, call)
 
+    def reset(self):
+        return self.protocol().reset()
+    def lock(self, lock=True):
+        return self.protocol().lock(lock)
+
     #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
     def send(self, method, *args, **kw):
-        dmsg = self.marshal.dump([method, args, kw])
+        if method is not None:
+            dmsg = self.marshal.dump([method, args, kw])
+        else: dmsg = method
         return self.sendDmsg(dmsg)
 
     def broadcast(self, method, *args, **kw):

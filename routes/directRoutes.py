@@ -10,6 +10,7 @@
 #~ Imports 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
+import sys
 import random
 import Queue
 from .basicRoute import BasicBlatherRoute
@@ -69,6 +70,16 @@ class BlatherLoopbackRoute(BlatherDirectRoute):
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
+if sys.platform == 'win32':
+    ansiNormal = ansiLtRed = ansiDkRed = ansiLtGreen = ansiLtCyan = ansiDkCyan = ''
+else: 
+    ansiNormal = '\033[39;49;00m'
+    ansiLtGreen = '\033[0;32m'
+    ansiLtRed = '\033[0;31m'
+    ansiDkRed = '\033[1;31m'
+    ansiLtCyan = '\033[0;36m'
+    ansiDkCyan = '\033[1;36m'
+
 class BlatherTestingRoute(BlatherDirectRoute):
     def __init__(self, msgRouter, cbIsPacketLost, randomSeed=1942):
         self.ri = random.Random(randomSeed)
@@ -83,9 +94,23 @@ class BlatherTestingRoute(BlatherDirectRoute):
             cbIsPacketLost = isPacketLost
         self.isPacketLost = cbIsPacketLost
 
-    def transferDispatch(self, packet, addr):
+    countTotal = 0
+    countLost = 0
+    def recvDispatch(self, packet, addr):
+        countTotal = self.countTotal + 1
+        countLost = self.countLost
+        self.countTotal = countTotal
+
+        if countTotal & 0xf == 0:
+            print ('%s>>> %s%s - packet loss: %2.1f%% (%d/%d)%s') % (ansiDkCyan, self.addr, ansiLtRed, 100.0*countLost/countTotal, countLost, countTotal, ansiNormal)
+
         if self.isPacketLost(self, self.ri):
-            print '!!! lost packet'
+            countLost += 1
+            self.countLost = countLost
+            #print ('%s>>> %s%s - packet loss: %2.1f%% (%d/%d)%s') % (ansiDkCyan, self.addr, ansiDkRed, 100.0*countLost/countTotal, countLost, countTotal, ansiNormal)
             return
-        BlatherDirectRoute.transferDispatch(self, packet, addr)
+
+        else:
+            #print ('%s>>> %s%s - packet loss: %2.1f%% (%d/%d)%s') % (ansiDkCyan, self.addr, ansiLtGreen, 100.0*countLost/countTotal, countLost, countTotal, ansiNormal)
+            BlatherDirectRoute.recvDispatch(self, packet, addr)
 

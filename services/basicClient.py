@@ -21,6 +21,7 @@ class BasicBlatherClient(MessageHandlerBase):
     advert = BlatherServiceAdvert('advertInfo')
     advertInfo = {'name': 'Blather Client'}
 
+    kind = 'client'
     chan = None
 
     def isBlatherClient(self): return True

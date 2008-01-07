@@ -25,6 +25,8 @@ class BasicBlatherService(MessageHandlerBase):
     advert = BlatherServiceAdvert('advertInfo')
     advertInfo = {'name': 'Blather Service'}
 
+    kind = 'service'
+
     def isBlatherService(self): return True
 
     def registerOn(self, blatherObj):
