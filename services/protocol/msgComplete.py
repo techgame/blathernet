@@ -18,48 +18,13 @@ import struct
 from struct import pack, unpack
 from array import array
 
-from .base import BasicBlatherProtocol, circularDiff, circularRange
-
-#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-#~ Constants / Variiables / Etc. 
-#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-if sys.platform == 'win32':
-    pass
-else:
-    normal = '\033[39;49;00m'
-
-    ltBlack = '\033[0;30m'
-    dkBlack = '\033[1;30m'
-
-    ltRed = '\033[0;31m'
-    dkRed = '\033[1;31m'
-
-    ltGreen = '\033[0;32m'
-    dkGreen = '\033[1;32m'
-
-    ltYellow = '\033[0;33m'
-    dkYellow = '\033[1;33m'
-
-    ltBlue = '\033[0;34m'
-    dkBlue = '\033[1;34m'
-
-    ltPurple = '\033[0;35m'
-    dkPurple = '\033[1;35m'
-
-    ltCyan = '\033[0;36m'
-    dkCyan = '\033[1;36m'
-
-    ltWhite = '\033[0;37m'
-    dkWhite = '\033[1;37m'
-
+from .base import BasicBlatherProtocol, circularDiff, circularAdjust, circularRange
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 #~ Definitions 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-class OrderCompleteProtocol(BasicBlatherProtocol):
-    kind = None
+class MessageCompleteProtocol(BasicBlatherProtocol):
     def reset(self):
         self.peerEntry = None
 
@@ -70,7 +35,7 @@ class OrderCompleteProtocol(BasicBlatherProtocol):
         self.requestedMsgs = array('B', [])
 
         self.sendSeq = 0
-        self.recvAck = 0
+        self.sendAck = 0
 
         self.recvSeq = 0
         self.recvAck = 0
@@ -83,7 +48,6 @@ class OrderCompleteProtocol(BasicBlatherProtocol):
         if self.locked:
             return None
 
-        print dkRed+'%s New Peer:', (self.kind.upper(), peerEntry, self.peerEntry)
         self.reset()
         self.peerEntry = peerEntry
         self.lock()
@@ -130,14 +94,18 @@ class OrderCompleteProtocol(BasicBlatherProtocol):
 
     def sendEncoded(self, toEntry, dmsgId, dmsg, pinfo, missingMsgs):
         bytes, pinfo = self.encode(dmsgId, dmsg, pinfo or {}, missingMsgs)
+
+        if missingMsgs is not None:
+            self.tsLastMessage = time.time()
         return toEntry.sendBytes(bytes, pinfo)
 
     def recvEncoded(self, advEntry, bytes, pinfo):
         retEntry = self.resetOnNewPeer(pinfo['retEntry'])
         if retEntry is None:
             # the protocol would not be reset... refuse to handle
-            print dkRed + '%s locked: %s %s' % (self.kind.upper(), repr(bytes), pinfo['sendOpt'])
             return 
+
+        self.tsLastMessage = pinfo['ts']
 
         dmsgId, dmsg, requestedMsgs = self.decode(bytes, pinfo)
         if dmsgId is not None:
@@ -150,70 +118,60 @@ class OrderCompleteProtocol(BasicBlatherProtocol):
             self.recvRequestedMsgs(retEntry, requestedMsgs)
 
     def recvPing(self, advEntry, dmsgId, pinfo):
-        idDiff = circularDiff(self.recvDmsgId, dmsgId, 0xff)
+        recvDmsgId = self.recvDmsgId
+        idDiff = circularDiff(recvDmsgId, dmsgId, 0xff)
+        dmsgId = self.recvDmsgId + idDiff
+
         if idDiff > 0:
-            missingMsgs = circularRange(self.recvDmsgId+1, dmsgId+1, 0xff)
+            missingMsgs = circularRange(recvDmsgId+1, dmsgId+1, 0xff)
             self.recvDmsgId = dmsgId
             self.addMissingRequest(missingMsgs)
 
     def recvInbound(self, dmsgId, dmsg, pinfo):
-        idDiff = circularDiff(self.recvDmsgId, dmsgId, 0xff)
+        recvDmsgId = self.recvDmsgId
+        idDiff = circularDiff(recvDmsgId, dmsgId, 0xff)
+        dmsgId = self.recvDmsgId + idDiff
+
         if idDiff == 1:
             self.recvDmsgId = dmsgId
-            self.recvDecodedWithId(dmsgId, dmsg, pinfo)
+            self.recvDecoded(dmsgId, dmsg, pinfo)
             return True
 
         elif idDiff > 1:
-            missingMsgs = circularRange(self.recvDmsgId+1, dmsgId, 0xff)
+            missingMsgs = circularRange(recvDmsgId+1, dmsgId, 0xff)
             self.recvDmsgId = dmsgId
             self.addMissingRequest(missingMsgs)
-            self.recvDecodedWithId(dmsgId, dmsg, pinfo)
+            self.recvDecoded(dmsgId, dmsg, pinfo)
             return True
 
         else: #elif idDiff <= 0:
             if dmsgId in self.missingMsgs:
                 # recieved a requested resend of dmsgId
                 self.missingMsgs.remove(dmsgId)
-                self.recvDecodedWithId(dmsgId, dmsg, pinfo)
+                self.recvDecoded(dmsgId, dmsg, pinfo)
                 return True
 
             else: # recieved a repeated resend of dmsgId, just exit
                 return False
 
-    lastRecvSeq = 0
-    def recvDecodedWithId(self, dmsgId, dmsg, pinfo):
-        ts = pinfo['ts']
-        n = self.recvSeq - self.lastRecvSeq
-        if n > 0:
-            td = (ts - self.tsLastMessage) / n
-            td = min(0.250, max(td, 0.001))
-            self.tsDeltaSeconds = (self.tsDeltaSeconds+td)*0.5
-
-        self.tsLastMessage = ts
-        self.tsNextPoll = ts
-        self.lastRecvSeq = self.recvSeq
-
-        print dkBlue + '%s recv: %s' % (self.kind.upper(), (dmsgId, dmsg)), td
-        self.recvDecoded(dmsg, pinfo)
-
     #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-    tsDeltaSeconds = 0.001
-    tsLastMessage = time.time() - tsDeltaSeconds
-    tsNextPoll = tsLastMessage + 3*tsDeltaSeconds
+    tsDeltaSeconds = 0.015
+    tsLastMessage = 0
     def recvPeriodic(self, advEntry, tc):
         ts = advEntry.timestamp()
-        tsd = ts - self.tsNextPoll
-        if tsd > self.tsDeltaSeconds:
-            self.sendPing()
-            self.tsNextPoll = ts
+        tsDelta = ts - self.tsLastMessage
+        if tsDelta > self.tsDeltaSeconds:
+            if len(self.outbound):
+                self.sendPing()
+            self.tsLastMessage = ts
         return True
 
     #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     #~ Missing message requests
     #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-    def addMissingRequest(self, missingMsgs=None):
+    def addMissingRequest(self, missingMsgs):
         self.missingMsgs.extend(missingMsgs)
 
     dmsgIdAck = 0
@@ -237,6 +195,7 @@ class OrderCompleteProtocol(BasicBlatherProtocol):
         for dmsgId in requestedMsgs:
             entry = outbound.get(dmsgId, None)
             if entry is not None:
+                # resend dmsgId
                 dmsg, pinfo = entry
                 self.sendEncoded(retEntry, dmsgId, dmsg, pinfo, None)
             else: assert False, 'Message not acknowledged yet'
@@ -247,40 +206,58 @@ class OrderCompleteProtocol(BasicBlatherProtocol):
     #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
     def encode(self, dmsgId, dmsg, pinfo, missingMsgs=None):
-        parts = [None, '', '']
         flags = 0
+        sendSeq = self.sendSeq + 1
+        sendAck = self.recvSeq
+        parts = [None, None, '', '']
+
+        # ushort - send sequence
+        # ushort - ack sequence
+        parts[0] = pack('!HH', sendSeq & 0xffff, sendAck & 0xffff)
+        pinfo['msgIdLen'] = 4
 
         if missingMsgs is not None:
-            flags |= 0x40
-            parts[1] = chr(len(missingMsgs)) + chr(self.recvDmsgId) + missingMsgs.tostring()
+            flags |= 0x20
+            # byte - number of missing messages request, 
+            # byte - highest dmsgId recieved 
+            # bytes[] - array of missing dmsgIds
+            parts[2] = chr(len(missingMsgs)) + chr(self.recvDmsgId & 0xff) + missingMsgs.tostring()
 
-        if dmsg is not None:
+        if dmsg is None:
             flags |= 0x80
-            parts[2] = chr(dmsgId & 0xff)+dmsg
-        else: parts[2] = chr(self.sentDmsgId & 0xff)
+            # byte - highest dmsgId sent
+            parts[3] = chr(self.sentDmsgId & 0xff)
+        else: 
+            # byte - dmsgId
+            # bytes[] - dmsg body
+            flags |= 0x40
+            parts[3] = chr(dmsgId & 0xff)+dmsg
 
-        self.sendSeq += 1
-        self.sendAck = self.recvSeq
-        parts[0] = pack('!HHB', self.sendSeq & 0xffff, self.sendAck, flags)
-        pinfo['msgIdLen'] = 4
+        # byte - flags
+        parts[1] = chr(flags)
+
+        self.sendSeq = sendSeq
+        self.sendAck = sendAck
         return ''.join(parts), pinfo
 
     def decode(self, bytes, pinfo):
         nbytes = 5
-        recvSeq, self.recvAck, flags = unpack('!HHB', bytes[:nbytes])
+        recvSeq, recvAck, flags = unpack('!HHB', bytes[:nbytes])
         bytes = bytes[nbytes:]
 
         # check for packet ordering...
         recvSeqDelta = circularDiff(self.recvSeq, recvSeq, 0xffff)
-        if recvSeqDelta > 0:
-            self.recvSeq = recvSeq
-        elif recvSeqDelta <= 0:
-        ##elif recvSeqDelta <= -8:
+
+        if recvSeqDelta <= 0:
             # Ignore the out of order packet
-            print dkRed + 'Non sequential:', recvSeqDelta, (self.recvSeq, recvSeq)
             return None, None, None
 
-        if flags & 0x40: 
+        self.recvSeq += recvSeqDelta
+
+        recvAck = circularAdjust(self.recvAck, recvAck, 0xffff)
+        self.recvAck = max(self.recvAck, recvAck)
+
+        if flags & 0x20: 
             # missing list is included
             nbytes = ord(bytes[0])+2
             requestedMsgs = array('B', bytes[1:nbytes])
@@ -288,15 +265,14 @@ class OrderCompleteProtocol(BasicBlatherProtocol):
         else: requestedMsgs = None
 
         if flags & 0x80: 
-            # dmsgId and dmsg is included
-            dmsgId = ord(bytes[0])
-            dmsg = bytes[1:]
-        else: 
             # dmsgId is the last valid dmsgId read
             dmsgId = ord(bytes[0])
             dmsg = None
+        elif flags & 0x40: 
+            # dmsgId and dmsg is included
+            dmsgId = ord(bytes[0])
+            dmsg = bytes[1:]
+        else: dmsgId = dmsg = None
 
         return dmsgId, dmsg, requestedMsgs
-
-OCProtocol = OrderCompleteProtocol
 

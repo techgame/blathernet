@@ -13,6 +13,6 @@
 from .base import BasicBlatherProtocol
 from .channel import Channel
 
-from .incProtocol import IncBlatherProtocol
-from .orderComplete import OrderCompleteProtocol
+from .incProtocol import IncrementProtocol
+from .msgComplete import MessageCompleteProtocol
 

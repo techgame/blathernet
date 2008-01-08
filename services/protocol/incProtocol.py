@@ -17,7 +17,7 @@ from .base import BasicBlatherProtocol, circularDiff
 #~ Definitions 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-class IncBlatherProtocol(BasicBlatherProtocol):
+class IncrementProtocol(BasicBlatherProtocol):
     def initCodec(self):
         self.sendSeq = 0
         self.recvSeq = 0
@@ -28,9 +28,9 @@ class IncBlatherProtocol(BasicBlatherProtocol):
             return toEntry.sendBytes(bytes, pinfo)
 
     def recvEncoded(self, advEntry, bytes, pinfo):
-        dmsg, pinfo = self.decode(bytes, pinfo)
+        seq, dmsg, pinfo = self.decode(bytes, pinfo)
         if dmsg:
-            return self.recvDecoded(dmsg, pinfo)
+            return self.recvDecoded(seq, dmsg, pinfo)
 
     def encode(self, dmsg, pinfo):
         self.sendSeq += 1
@@ -46,8 +46,11 @@ class IncBlatherProtocol(BasicBlatherProtocol):
         dmsg = bytes[4:]
 
         recvSeq, sentSeqAck = unpack('!HH', msgHeader)
-        if circularDiff(self.recvSeq, recvSeq, 0xffff) > 0:
+        diffSeq = circularAdjust(self.recvSeq, recvSeq, 0xffff)
+        recvSeq += diffSeq
+
+        if diffSeq > 0:
             self.recvSeq = recvSeq
 
-        return (dmsg, pinfo)
+        return (recvSeq, dmsg, pinfo)
 

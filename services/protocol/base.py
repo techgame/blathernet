@@ -24,6 +24,14 @@ def circularDiff(v0, v1, mask):
         d -= mask + 1
     return d
 
+def circularAdjust(v0, v1, mask):
+    """v1' = v0 + circularDiff(v0, v1)"""
+    ## mask = 0xff or 0xffff
+    d = (v1-v0) & mask
+    if d > (mask >> 1):
+        d -= mask + 1
+    return v0 + d
+
 def circularRange(v0, v1, mask):
     ## mask = 0xff or 0xffff or 0xffffffff
     d = circularDiff(v0, v1, mask)
@@ -35,11 +43,15 @@ class BasicBlatherProtocol(BlatherObject):
     msgHandler = None # set from onObservableInit
     Channel = channel.Channel
 
+    def isBlatherProtocol(self): return True
+
     def __init__(self):
         BlatherObject.__init__(self)
         self.reset()
 
-    def isBlatherProtocol(self): return True
+    def getKind(self):
+        return self.msgHandler.kind
+    kind = property(getKind)
 
     #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     #~ Construction
@@ -64,8 +76,9 @@ class BasicBlatherProtocol(BlatherObject):
 
     def updateMsgHandler(self, msgHandler):
         self.msgHandler = msgHandler
-        self.kind = msgHandler.kind
-        self.Channel = self.Channel.newFlyweightForMsgHandler(msgHandler, self)
+        if msgHandler is not None:
+            self.Channel = self.Channel.newFlyweightForMsgHandler(msgHandler, self)
+        else: del self.Channel
 
     #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     #~ Channel creation and handling
@@ -97,13 +110,17 @@ class BasicBlatherProtocol(BlatherObject):
     def reset(self):
         pass
 
+    def shutdown(self):
+        self.reset()
+        self.updateMsgHandler(None)
+
     def send(self, toEntry, dmsg, pinfo):
         raise NotImplementedError('Subclass Responsibility: %r' % (self,))
 
     def recvEncoded(self, advEntry, dmsg, pinfo):
         raise NotImplementedError('Subclass Responsibility: %r' % (self,))
 
-    def recvDecoded(self, dmsg, pinfo):
+    def recvDecoded(self, msgSeq, dmsg, pinfo):
         chan = self.Channel(pinfo['retEntry'], pinfo['advEntry'])
         return chan.recvDmsg(dmsg)
     

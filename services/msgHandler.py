@@ -16,7 +16,7 @@ from TG.metaObserving.obRegistry import OBRegistry
 
 from ..base import BlatherObject
 
-from .protocol import IncBlatherProtocol, OrderCompleteProtocol
+from .protocol import IncrementProtocol, MessageCompleteProtocol
 from .marshalers import BlatherMarshal
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -28,8 +28,8 @@ class MessageHandlerBase(BlatherObject):
     _fm_ = BlatherObject._fm_.branch(Session = None)
     kind = None
 
-    #protocol = IncBlatherProtocol()
-    protocol = OrderCompleteProtocol()
+    #protocol = InIncrementProtocol()
+    protocol = MessageCompleteProtocol()
 
     msgreg = OBRegistry()
     marshal = BlatherMarshal()
