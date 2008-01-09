@@ -25,19 +25,16 @@ from .marshalers import BlatherMarshal
 
 
 class MessageHandlerBase(BlatherObject):
-    _fm_ = BlatherObject._fm_.branch(Session = None)
+    _fm_ = BlatherObject._fm_.branch()
     kind = None
 
-    #protocol = InIncrementProtocol()
+    #protocol = IncrementProtocol()
     protocol = MessageCompleteProtocol()
 
     msgreg = OBRegistry()
     marshal = BlatherMarshal()
 
     def isBlatherMsgHandler(self): return True
-
-    def newSession(self, chan):
-        return self._fm_.Session(self, chan)
 
     def recvDispatch(self, chan, call):
         try:

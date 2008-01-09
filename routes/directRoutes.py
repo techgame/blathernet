@@ -12,6 +12,7 @@
 
 import sys
 import random
+from itertools import count
 import Queue
 from .basicRoute import BasicBlatherRoute
 
@@ -21,12 +22,13 @@ from .basicRoute import BasicBlatherRoute
 
 class BlatherDirectRoute(BasicBlatherRoute):
     _fm_ = BasicBlatherRoute._fm_.branch()
+    nextId = count(0).next
 
     def isInprocess(self): return True
 
     def __init__(self, msgRouter):
         BasicBlatherRoute.__init__(self, msgRouter)
-        self.addr = 'direct:%x' % (id(self),)
+        self.addr = 'direct:%s' % (self.nextId(),)
         self._inbox = Queue.Queue()
 
     def __repr__(self):
@@ -69,16 +71,8 @@ class BlatherLoopbackRoute(BlatherDirectRoute):
     def isLoopback(self): return True
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-if sys.platform == 'win32':
-    ansiNormal = ansiLtRed = ansiDkRed = ansiLtGreen = ansiLtCyan = ansiDkCyan = ''
-else: 
-    ansiNormal = '\033[39;49;00m'
-    ansiLtGreen = '\033[0;32m'
-    ansiLtRed = '\033[0;31m'
-    ansiDkRed = '\033[1;31m'
-    ansiLtCyan = '\033[0;36m'
-    ansiDkCyan = '\033[1;36m'
+#~ Testing route for lossy-ness
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 class BlatherTestingRoute(BlatherDirectRoute):
     def __init__(self, msgRouter, cbIsPacketLost, randomSeed=1942):
@@ -90,27 +84,47 @@ class BlatherTestingRoute(BlatherDirectRoute):
     def setPacketLostCb(self, cbIsPacketLost):
         if isinstance(cbIsPacketLost, float):
             def isPacketLost(route, ri, t=cbIsPacketLost):
-                return t > ri.random()
+                return t < ri.random()
             cbIsPacketLost = isPacketLost
         self.isPacketLost = cbIsPacketLost
 
+
+    printSummaryCount = 100
+    printLost = False
+    printPassed = False
+
     countTotal = 0
-    countLost = 0
-    def recvDispatch(self, packet, addr):
+    countPassed = 0
+    def transferDispatch(self, packet, addr):
+        lost = self.isPacketLost(self, self.ri)
         countTotal = self.countTotal + 1
-        countLost = self.countLost
+        countPassed = self.countPassed + lost and 1 or 0
         self.countTotal = countTotal
+        self.countPassed = countPassed
 
-        if countTotal & 0xf == 0:
-            print ('%s>>> %s%s - packet loss: %2.1f%% (%d/%d)%s') % (ansiDkCyan, self.addr, ansiLtRed, 100.0*countLost/countTotal, countLost, countTotal, ansiNormal)
-
-        if self.isPacketLost(self, self.ri):
-            countLost += 1
-            self.countLost = countLost
-            #print ('%s>>> %s%s - packet loss: %2.1f%% (%d/%d)%s') % (ansiDkCyan, self.addr, ansiDkRed, 100.0*countLost/countTotal, countLost, countTotal, ansiNormal)
+        count = self.printSummaryCount
+        if count and 0 == (countTotal % count):
+            print ('%s>>> %s%s - packets delivered: %2.1f%% (%d/%d)%s') % (ansiDkRed, self.addr, ansiLtCyan, 100.0*countPassed/countTotal, countPassed, countTotal, ansiNormal)
+        if lost:
+            if self.printLost:
+                print ('%s>>> %s%s - packet delivered: %2.1f%% (%d/%d)%s') % (ansiDkRed, self.addr, ansiDkRed, 100.0*countPassed/countTotal, countPassed, countTotal, ansiNormal)
             return
+        elif self.printPassed:
+            print ('%s>>> %s%s - packet delivered: %2.1f%% (%d/%d)%s') % (ansiDkRed, self.addr, ansiLtGreen, 100.0*countPassed/countTotal, countPassed, countTotal, ansiNormal)
 
-        else:
-            #print ('%s>>> %s%s - packet loss: %2.1f%% (%d/%d)%s') % (ansiDkCyan, self.addr, ansiLtGreen, 100.0*countLost/countTotal, countLost, countTotal, ansiNormal)
-            BlatherDirectRoute.recvDispatch(self, packet, addr)
+        return BlatherDirectRoute.transferDispatch(self, packet, addr)
+
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+#~ Debug Color definitions
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+if sys.platform == 'win32':
+    ansiNormal = ansiLtRed = ansiDkRed = ansiLtGreen = ansiLtCyan = ansiDkCyan = ''
+else: 
+    ansiNormal = '\033[39;49;00m'
+    ansiLtGreen = '\033[0;32m'
+    ansiLtRed = '\033[0;31m'
+    ansiDkRed = '\033[1;31m'
+    ansiLtCyan = '\033[0;36m'
+    ansiDkCyan = '\033[1;36m'
 

@@ -17,36 +17,16 @@ from . import channel
 #~ Definitions 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-def circularDiff(v0, v1, mask):
-    ## mask = 0xff or 0xffff
-    d = (v1-v0) & mask
-    if d > (mask >> 1):
-        d -= mask + 1
-    return d
-
-def circularAdjust(v0, v1, mask):
-    """v1' = v0 + circularDiff(v0, v1)"""
-    ## mask = 0xff or 0xffff
-    d = (v1-v0) & mask
-    if d > (mask >> 1):
-        d -= mask + 1
-    return v0 + d
-
-def circularRange(v0, v1, mask):
-    ## mask = 0xff or 0xffff or 0xffffffff
-    d = circularDiff(v0, v1, mask)
-    return (i&mask for i in xrange(v0, v0+d))
-
-#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
 class BasicBlatherProtocol(BlatherObject):
     msgHandler = None # set from onObservableInit
     Channel = channel.Channel
 
     def isBlatherProtocol(self): return True
 
-    def __init__(self):
+    def __init__(self, Channel=None):
         BlatherObject.__init__(self)
+        if Channel is not None:
+            self.Channel = Channel
         self.reset()
 
     def getKind(self):
@@ -120,9 +100,8 @@ class BasicBlatherProtocol(BlatherObject):
     def recvEncoded(self, advEntry, dmsg, pinfo):
         raise NotImplementedError('Subclass Responsibility: %r' % (self,))
 
-    def recvDecoded(self, msgSeq, dmsg, pinfo):
-        chan = self.Channel(pinfo['retEntry'], pinfo['advEntry'])
-        return chan.recvDmsg(dmsg)
+    def recvDecoded(self, chan, seq, dmsg):
+        return chan.recvDmsg(seq, dmsg)
     
     def recvPeriodic(self, advEntry, tc):
         pass

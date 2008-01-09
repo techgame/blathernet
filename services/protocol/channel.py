@@ -16,7 +16,7 @@ import traceback
 #~ Definitions 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-class Channel(object):
+class BasicChannel(object):
     marshal = None # flyweight shared
     protocol = None # flyweight shared
 
@@ -56,14 +56,28 @@ class Channel(object):
                         protocol = protocol.asWeakRef())
 
     #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    #~ Dmsg recv and send
+    #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+    def recvDmsg(self, seq, dmsg):
+        raise NotImplementedError('Subclass Responsibility: %r' % (self,))
 
     def sendDmsg(self, dmsg, **pinfo):
         pinfo['retEntry'] = self.fromEntry
         return self.protocol().send(self.toEntry, dmsg, pinfo)
 
-    def recvDmsg(self, dmsg):
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+#~ Channel
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+class Channel(BasicChannel):
+    def recvDmsg(self, seq, dmsg):
         call = self.marshal.load(dmsg)
-        self.msgHandler().recvDispatch(self, call)
+        return self.recvDispatch(call)
+    def recvDispatch(self, call):
+        return self.msgHandler().recvDispatch(self, call)
+
+    #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
     def reset(self):
         return self.protocol().reset()
@@ -72,10 +86,14 @@ class Channel(object):
 
     #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
+    def ping(self):
+        return self.sendDmsg(None)
+
     def send(self, method, *args, **kw):
-        if method is not None:
-            dmsg = self.marshal.dump([method, args, kw])
-        else: dmsg = method
+        if method is None:
+            return self.ping()
+
+        dmsg = self.marshal.dump([method, args, kw])
         return self.sendDmsg(dmsg)
 
     def broadcast(self, method, *args, **kw):

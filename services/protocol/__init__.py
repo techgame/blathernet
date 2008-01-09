@@ -11,7 +11,7 @@
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 from .base import BasicBlatherProtocol
-from .channel import Channel
+from .channel import BasicChannel, Channel
 
 from .incProtocol import IncrementProtocol
 from .msgComplete import MessageCompleteProtocol
