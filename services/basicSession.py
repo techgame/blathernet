@@ -11,6 +11,7 @@
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 from .adverts import BlatherServiceAdvert
+from .protocol import MessageCompleteProtocol
 from .msgHandler import MessageHandlerBase
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -21,11 +22,13 @@ class BasicBlatherSession(MessageHandlerBase):
     kind = 'session'
     chan = None
 
+    sessionProtocol = MessageCompleteProtocol()
+
     def isBlatherSession(self): return True
 
     def __init__(self, service, chan):
         MessageHandlerBase.__init__(self)
 
         self.service = service.asWeakRef()
-        self.chan = self.protocol.newChannel(chan.toEntry)
+        self.chan = self.sessionProtocol.newChannel(chan.toEntry)
 

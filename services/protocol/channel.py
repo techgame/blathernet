@@ -40,6 +40,10 @@ class BasicChannel(object):
         return '<%s to:%s from: %s>' % (
             self.__class__.__name__, self.toEntry, self.fromEntry)
 
+    def getAdvertId(self):
+        return self.toEntry.advertId
+    id = advertId = property(getAdvertId)
+
     #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
     @classmethod
@@ -81,8 +85,8 @@ class Channel(BasicChannel):
 
     def reset(self):
         return self.protocol().reset()
-    def lock(self, lock=True):
-        return self.protocol().lock(lock)
+    def shutdown(self):
+        return self.protocol().shutdown()
 
     #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 

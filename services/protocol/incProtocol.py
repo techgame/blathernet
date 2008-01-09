@@ -23,9 +23,6 @@ class IncrementProtocol(BasicBlatherProtocol):
         self.sendSeq = 0
         self.recvSeq = 0
 
-    def lock(self, lock=True):
-        pass
-
     def send(self, toEntry, dmsg, pinfo):
         if dmsg:
             bytes, pinfo = self.encode(dmsg, pinfo)

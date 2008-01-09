@@ -11,7 +11,9 @@
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 from .adverts import BlatherServiceAdvert
+from .protocol import IncrementProtocol
 from .msgHandler import MessageHandlerBase
+
 from .basicSession import BasicBlatherSession
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -19,24 +21,37 @@ from .basicSession import BasicBlatherSession
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 class BasicBlatherService(MessageHandlerBase):
-    _fm_ = MessageHandlerBase._fm_.branch(
-            Session=BasicBlatherSession)
+    Session = BasicBlatherSession
 
     advert = BlatherServiceAdvert('advertInfo')
     advertInfo = {'name': 'Blather Service'}
 
     kind = 'service'
+    serviceProtocol = IncrementProtocol()
 
     def isBlatherService(self): return True
 
+    _sessionIdMap = None
+    def getSessionIdMap(self):
+        sessionIdMap = self._sessionIdMap
+        if sessionIdMap is None:
+            sessionIdMap = {}
+            self._sessionIdMap = sessionIdMap
+        return sessionIdMap
+    sessionIdMap = property(getSessionIdMap)
+
     def newSession(self, chan):
-        return self._fm_.Session(self, chan)
+        session = self.sessionIdMap.get(chan.id)
+        if session is None:
+            session = self.Session(self, chan)
+            self.sessionIdMap[chan.id] = True
+        return session
 
     def registerOn(self, blatherObj):
         blatherObj.registerService(self)
     def registerMsgRouter(self, msgRouter):
         self.advert.registerOn(msgRouter)
-        self.advert.registerOn(self.protocol)
+        self.advert.registerOn(self.serviceProtocol)
 
     def _update_advert(self, advert):
         if advert.advertId is None:

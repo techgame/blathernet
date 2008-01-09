@@ -48,12 +48,11 @@ class MessageCompleteProtocol(BasicBlatherProtocol):
         if peerEntry is None or self.peerEntry is peerEntry:
             return self.peerEntry
 
-        if self.locked:
+        if self.peerEntry is not None:
             return None
 
         self.reset()
         self.peerEntry = peerEntry
-        self.lock()
         return self.peerEntry
 
     def nextDmsgIdFor(self, dmsg, pinfo):
@@ -66,11 +65,6 @@ class MessageCompleteProtocol(BasicBlatherProtocol):
                 raise RuntimeError("DmsgId never acknowledged: %r, key: %s" % (dmsgId, key))
             self.outbound[key] = (dmsg, pinfo)
             return dmsgId
-
-    locked = False
-    def lock(self, lock=True):
-        self.locked = bool(lock)
-        return self.locked
 
     #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 

@@ -11,6 +11,8 @@
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 from .adverts import BlatherServiceAdvert
+from .protocol import IncrementProtocol
+from .protocol import MessageCompleteProtocol
 from .msgHandler import MessageHandlerBase
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -24,6 +26,9 @@ class BasicBlatherClient(MessageHandlerBase):
     kind = 'client'
     chan = None
 
+    serviceProtocol = IncrementProtocol()
+    sessionProtocol = MessageCompleteProtocol()
+
     def isBlatherClient(self): return True
 
     def registerOn(self, blatherObj):
@@ -34,5 +39,8 @@ class BasicBlatherClient(MessageHandlerBase):
             raise ValueError("Client AdvertId has not been set")
         self.advert.registerOn(msgRouter)
 
-        self.chan = self.protocol.newChannel(self.advert.advEntry)
+        clientEntry = msgRouter.newSession()
+        clientEntry.registerOn(self.sessionProtocol)
+
+        self.chan = self.serviceProtocol.newChannel(self.advert.advEntry, clientEntry)
 
