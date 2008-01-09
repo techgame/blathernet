@@ -151,14 +151,13 @@ class MessageCompleteProtocol(BasicBlatherProtocol):
 
     #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-    #tsDeltaSeconds = 0.251
-    tsDeltaSeconds = 0.0015
+    tsDeltaSeconds = 0.01
     tsLastMessage = 0
     def recvPeriodic(self, advEntry, tc):
         ts = advEntry.timestamp()
         tsDelta = ts - self.tsLastMessage
         if tsDelta > self.tsDeltaSeconds:
-            if len(self.outbound) or len(self.missingMsgs) or len(self.requestedMsgs):
+            if len(self.outbound) or len(self.missingMsgs):
                 self.sendPing()
             self.tsLastMessage = ts
         return True

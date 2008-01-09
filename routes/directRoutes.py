@@ -98,7 +98,7 @@ class BlatherTestingRoute(BlatherDirectRoute):
     def transferDispatch(self, packet, addr):
         lost = self.isPacketLost(self, self.ri)
         countTotal = self.countTotal + 1
-        countPassed = self.countPassed + lost and 1 or 0
+        countPassed = self.countPassed + (0 if lost else 1)
         self.countTotal = countTotal
         self.countPassed = countPassed
 
@@ -109,7 +109,7 @@ class BlatherTestingRoute(BlatherDirectRoute):
             if self.printLost:
                 print ('%s>>> %s%s - packet delivered: %2.1f%% (%d/%d)%s') % (ansiDkRed, self.addr, ansiDkRed, 100.0*countPassed/countTotal, countPassed, countTotal, ansiNormal)
             return
-        elif self.printPassed:
+        if self.printPassed:
             print ('%s>>> %s%s - packet delivered: %2.1f%% (%d/%d)%s') % (ansiDkRed, self.addr, ansiLtGreen, 100.0*countPassed/countTotal, countPassed, countTotal, ansiNormal)
 
         return BlatherDirectRoute.transferDispatch(self, packet, addr)
