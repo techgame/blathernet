@@ -76,7 +76,7 @@ class BasicChannel(object):
 
 class Channel(BasicChannel):
     def recvDmsg(self, seq, dmsg):
-        call = self.marshal.load(dmsg)
+        call = self.marshal.unpack(dmsg)
         return self.recvDispatch(call)
     def recvDispatch(self, call):
         return self.msgHandler().recvDispatch(self, call)
@@ -93,14 +93,18 @@ class Channel(BasicChannel):
     def ping(self):
         return self.sendDmsg(None)
 
+    def sendBytes(self, method, bytes):
+        dmsg = self.marshal.packBytes(method, bytes)
+        return self.sendDmsg(dmsg)
+
     def send(self, method, *args, **kw):
         if method is None:
             return self.ping()
 
-        dmsg = self.marshal.dump([method, args, kw])
+        dmsg = self.marshal.packCall(method, args, kw)
         return self.sendDmsg(dmsg)
 
     def broadcast(self, method, *args, **kw):
-        dmsg = self.marshal.dump([method, args, kw])
+        dmsg = self.marshal.packCall(method, args, kw)
         return self.sendDmsg(dmsg, sendOpt=0x40)
 

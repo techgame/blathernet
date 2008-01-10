@@ -22,8 +22,8 @@ from .basicClient import BasicBlatherClient
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 class JsonMarshal(BlatherMarshal):
-    dump = staticmethod(simplejson.dumps)
-    load = staticmethod(simplejson.loads)
+    _dumps = staticmethod(simplejson.dumps)
+    _loads = staticmethod(simplejson.loads)
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 

@@ -31,6 +31,20 @@ class BasicBlatherService(MessageHandlerBase):
 
     def isBlatherService(self): return True
 
+    def registerOn(self, blatherObj):
+        blatherObj.registerService(self)
+    def registerMsgRouter(self, msgRouter):
+        self.advert.registerOn(msgRouter)
+        self.advert.registerOn(self.serviceProtocol)
+
+    def _update_advert(self, advert):
+        if advert.advertId is None:
+            advert.advertUUID = uuid.uuid4()
+
+    #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    #~ Session management
+    #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
     _sessionIdMap = None
     def getSessionIdMap(self):
         sessionIdMap = self._sessionIdMap
@@ -46,14 +60,4 @@ class BasicBlatherService(MessageHandlerBase):
             session = self.Session(self, chan)
             self.sessionIdMap[chan.id] = True
         return session
-
-    def registerOn(self, blatherObj):
-        blatherObj.registerService(self)
-    def registerMsgRouter(self, msgRouter):
-        self.advert.registerOn(msgRouter)
-        self.advert.registerOn(self.serviceProtocol)
-
-    def _update_advert(self, advert):
-        if advert.advertId is None:
-            advert.advertUUID = uuid.uuid4()
 
