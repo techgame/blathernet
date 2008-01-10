@@ -12,6 +12,7 @@
 
 import time
 import weakref
+from random import Random
 
 from TG.metaObserving.obRegistry import OBClassRegistry
 
@@ -41,6 +42,7 @@ class AdvertRouterEntry(BlatherObject):
     sendOpt = 0
     routes = dict() # a dict() of routes to forward to
     handlerFns = [] # a list() of handler callbacks
+    ri = Random()
 
     def isBlatherAdvert(self): return False
     def isBlatherAdvertEntry(self): return True
@@ -179,9 +181,11 @@ class AdvertRouterEntry(BlatherObject):
             return []
 
         if (flags & 0x4):
-            # flags b0100 signals broadcast to all
+            # flags b0100 signals to use allRoutes to start from
             routes = self.allRoutes
-        else: routes = self.routes
+        else: 
+            # otherwise, use the entry's routes
+            routes = self.routes
 
         # discard our route
         routes = routes.copy()
@@ -194,24 +198,33 @@ class AdvertRouterEntry(BlatherObject):
             return fwdFilter(self, routes)
         else: return routes.keys()
 
-    @fwdKindFilters.on(0)
-    def fwdKindFilter_0(self, routes):
+    @fwdKindFilters.on(0x0)
+    def fwdKindFilter_0x0(self, routes):
+        """First route, sorted by weighting"""
         items = sorted(routes.items(), key=lambda x: x[1])
         items = [e[0] for e in items[:1]]
         return items
 
-    @fwdKindFilters.on(1)
-    def fwdKindFilter_1(self, routes):
+    @fwdKindFilters.on(0x1)
+    def fwdKindFilter_0x1(self, routes):
+        """First two routes, sorted by weighting"""
         items = sorted(routes.items(), key=lambda x: x[1])
         items = [e[0] for e in items[:2]]
         return items
 
-    @fwdKindFilters.on(2)
-    def fwdKindFilter_2(self, routes):
-        return routes.keys()
+    @fwdKindFilters.on(0x2)
+    def fwdKindFilter_0x2(self, routes):
+        """Send to random sample of 1 route"""
+        return self.ri.sample(routes.keys(), min(1, len(routes)))
 
-    @fwdKindFilters.on(3)
-    def fwdKindFilter_3(self, routes):
+    @fwdKindFilters.on(0x3)
+    def fwdKindFilter_0x3(self, routes):
+        """Send to random sample of 2 routes"""
+        return self.ri.sample(routes.keys(), min(2, len(routes)))
+
+    @fwdKindFilters.on(0xf)
+    def fwdKindFilter_0xf(self, routes):
+        """Broadcast to all routes"""
         return routes.keys()
 
     #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -219,11 +232,18 @@ class AdvertRouterEntry(BlatherObject):
     #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
     stats = {
-        'sent_time': None, 'sent_count': 0, 'sent_bytes': 0,
-        'recv_time': None, 'recv_count': 0, 'recv_bytes': 0, 
-        'dup_time': None, 'dup_count': 0, 'dup_bytes': 0, 
+        'sent_time': 0, 'sent_count': 0, 'sent_bytes': 0,
+        'recv_time': 0, 'recv_count': 0, 'recv_bytes': 0, 
+        'dup_time': 0, 'dup_count': 0, 'dup_bytes': 0, 
         }
     timestamp = time.time
+
+    def tsSent(self): return self.stats['sent_time']
+    def tsSentDelta(self): return self.timestamp() - self.stats['sent_time']
+    def tsRecv(self): return self.stats['recv_time']
+    def tsRecvDelta(self): return self.timestamp() - self.stats['recv_time']
+    def tsActivity(self): return max(map(self.stats.get, ('sent_time', 'recv_time')))
+    def tsActivityDelta(self): return self.timestamp() - self.tsActivity()
 
     def _incSentStats(self, pinfo, bytes=None):
         ts = self.timestamp()

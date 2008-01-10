@@ -106,5 +106,5 @@ class Channel(BasicChannel):
 
     def broadcast(self, method, *args, **kw):
         dmsg = self.marshal.packCall(method, args, kw)
-        return self.sendDmsg(dmsg, sendOpt=0x40)
+        return self.sendDmsg(dmsg, sendOpt=0x4f)
 
