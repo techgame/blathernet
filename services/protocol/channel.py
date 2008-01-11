@@ -44,6 +44,10 @@ class BasicChannel(object):
         return self.toEntry.advertId
     id = advertId = property(getAdvertId)
 
+    def getMsgRouter(self):
+        return self.toEntry.msgRouter
+    msgRouter = property(getMsgRouter)
+
     #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
     @classmethod

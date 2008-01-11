@@ -20,15 +20,28 @@ from .msgHandler import MessageHandlerBase
 
 class BasicBlatherSession(MessageHandlerBase):
     kind = 'session'
-    chan = None
-
     sessionProtocol = MessageCompleteProtocol()
 
     def isBlatherSession(self): return True
+
+    def registerOn(self, blatherObj):
+        blatherObj.registerSession(self)
 
     def __init__(self, service, chan):
         MessageHandlerBase.__init__(self)
 
         self.service = service.asWeakRef()
-        self.chan = self.sessionProtocol.newChannel(chan.toEntry)
+
+        sessionEntry = chan.msgRouter.newSession()
+        sessionEntry.registerOn(self.sessionProtocol)
+        sessionEntry.addTimer(0, self.recvPeriodic)
+
+        chan = self.sessionProtocol.newChannel(chan.toEntry, sessionEntry)
+        self.sessionStart(chan)
+
+    def recvPeriodic(self, advEntry, ts):
+        return None
+
+    def sessionStart(self, chan):
+        self.chan = chan
 

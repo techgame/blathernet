@@ -104,5 +104,5 @@ class BasicBlatherProtocol(BlatherObject):
         return chan.recvDmsg(seq, dmsg)
     
     def recvPeriodic(self, advEntry, tc):
-        pass
+        return None
 

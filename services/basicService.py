@@ -55,9 +55,14 @@ class BasicBlatherService(MessageHandlerBase):
     sessionIdMap = property(getSessionIdMap)
 
     def newSession(self, chan):
-        session = self.sessionIdMap.get(chan.id)
+        sessionId = chan.id
+        session = self.sessionIdMap.get(sessionId)
         if session is None:
             session = self.Session(self, chan)
-            self.sessionIdMap[chan.id] = True
+            session.sessionId = sessionId
+            self.sessionIdMap[sessionId] = True
         return session
+
+    def removeSession(self, session):
+        del self.sessionIdMap[session.sessionId]
 
