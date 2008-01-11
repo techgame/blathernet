@@ -86,7 +86,15 @@ class AdvertRouterEntry(BlatherObject):
             self.handlerFns.append(fn)
 
         if pfn:
-            self.msgRouter.host().addTask(lambda tc=None: pfn(self, tc))
+            self.addTimer(0, pfn)
+
+    def addTask(self, task):
+        host = self.msgRouter.host()
+        host.addTask(task)
+
+    def addTimer(self, tsStart, task):
+        host = self.msgRouter.host()
+        host.addTimer(tsStart, lambda ts: task(self, ts))
 
     #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 

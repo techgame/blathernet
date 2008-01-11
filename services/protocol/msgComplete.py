@@ -124,7 +124,6 @@ class MessageCompleteProtocol(BasicBlatherProtocol):
     
         if newMissing and ts == self.tsLastMessage:
             # we didn't send a message after recving this one... let's send our new missing
-            print '\x1b[1;31mYO', (dmsgId, dmsg)
             self.sendPing(False)
 
     def detectMissing(self, maxDmsgId):
@@ -152,16 +151,15 @@ class MessageCompleteProtocol(BasicBlatherProtocol):
 
     #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-    tsDeltaSeconds = .050 # 50 miliseconds...
+    tsDeltaSeconds = .020 # 20 miliseconds...
     tsLastMessage = 0
-    def recvPeriodic(self, advEntry, tc):
-        ts = advEntry.timestamp()
+    def recvPeriodic(self, advEntry, ts):
         tsDelta = ts - self.tsLastMessage
         if tsDelta > self.tsDeltaSeconds:
             if len(self.outbound) or len(self.missingMsgs):
                 self.sendPing()
             self.tsLastMessage = ts
-        return True
+        return self.tsDeltaSeconds
 
     #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     #~ Missing message requests

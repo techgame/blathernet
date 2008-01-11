@@ -10,7 +10,6 @@
 #~ Imports 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-from __future__ import with_statement
 import time
 import errno
 import weakref
