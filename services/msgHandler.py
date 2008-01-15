@@ -33,13 +33,13 @@ class MessageHandlerBase(BlatherObject):
 
     def recvDispatch(self, chan, call):
         try:
-            method, args, kw = call
+            methodKey, args, kw = call
         except Exception, e:
             raise
 
-        method = self.msgreg[method]
+        method = self.msgreg[methodKey]
         if method is None: 
-            return NotImplemented('Method not registered')
+            raise NotImplementedError('Method not registered: %r' % (methodKey, ))
 
         try:
             return method(self, chan, *args, **kw)
