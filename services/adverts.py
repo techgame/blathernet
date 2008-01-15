@@ -23,7 +23,7 @@ from ..base import BlatherObject
 class BlatherAdvert(BlatherObject):
     infoSetter = OBClassRegistry()
     info = None
-    advEntry = None
+    entry = None
 
     def isBlatherAdvert(self): return True
 
@@ -42,17 +42,17 @@ class BlatherAdvert(BlatherObject):
     def registerOn(self, blatherObj):
         blatherObj.registerAdvert(self)
     def registerMsgRouter(self, msgRouter):
-        advEntry = msgRouter.entryForId(self.advertId)
-        advEntry.registerOn(self)
+        entry = msgRouter.entryForId(self.advertId)
+        entry.registerOn(self)
     def registerAdvertEntry(self, advEntry):
-        self.advEntry = advEntry
+        self.entry = advEntry
     def registerClient(self, client):
         self.msgRouter.registerOn(client)
     def registerService(self, service):
         self.msgRouter.registerOn(service)
 
     def getMsgRouter(self):
-        return self.advEntry.msgRouter
+        return self.entry.msgRouter
     msgRouter = property(getMsgRouter)
 
     #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -99,8 +99,8 @@ class BlatherAdvert(BlatherObject):
     def asReplyTo(self, pinfo):
         if self.advertId is None:
             raise RuntimeError("Advert's advertID is already set")
-        if self.advEntry is None:
-            raise RuntimeError("Advert's advEntry is already registered")
+        if self.entry is None:
+            raise RuntimeError("Advert's entry is already registered")
 
         self.id = pinfo['replyId']
         self.opt = pinfo['replyOpt']

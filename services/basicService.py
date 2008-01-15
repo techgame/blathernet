@@ -34,12 +34,18 @@ class BasicBlatherService(MessageHandlerBase):
     def registerOn(self, blatherObj):
         blatherObj.registerService(self)
     def registerMsgRouter(self, msgRouter):
-        self.advert.registerOn(msgRouter)
-        self.advert.registerOn(self.serviceProtocol)
+        advert = self.advert
+        advert.registerOn(msgRouter)
+        advert.registerOn(self.serviceProtocol)
+        advert.entry.addTimer(0, self.onPeriodic)
 
     def _update_advert(self, advert):
         if advert.advertId is None:
             advert.advertUUID = uuid.uuid4()
+
+    def onPeriodic(self, advEntry, ts):
+        return None
+    onPeriodic = None # default is hidden
 
     #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     #~ Session management

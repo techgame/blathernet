@@ -41,10 +41,15 @@ class BasicBlatherClient(MessageHandlerBase):
 
         clientEntry = msgRouter.newSession()
         clientEntry.registerOn(self.sessionProtocol)
-        clientEntry.addTimer(0, self.recvPeriodic)
+        clientEntry.addTimer(0, self.onPeriodic)
 
-        self.chan = self.serviceProtocol.newChannel(self.advert.advEntry, clientEntry)
+        self.chanService = self.serviceProtocol.newChannel(self.advert.entry, clientEntry)
+        self.sessionInitiate(self.chanService)
 
-    def recvPeriodic(self, advEntry, ts):
+    def onPeriodic(self, advEntry, ts):
+        # default calls sessionInitiate
+        return self.sessionInitiate(self.chanService) or None
+
+    def sessionInitiate(self, chanService):
         return None
 
