@@ -52,9 +52,14 @@ class BlatherTaskMgr(object):
     def asWeakRef(self, cb=None): return weakref.ref(self, cb)
 
     def add(self, task):
+        if task is None:
+            return None
+
         self.tasks.add(task)
         self.etasks.set()
         return task
+    def addTask(self, task):
+        return self.add(task)
 
     def __len__(self):
         return len(self.tasks)
@@ -110,6 +115,9 @@ class BlatherTaskMgr(object):
         self.extendTimers(timerEvents, ts)
 
     def addTimer(self, tsStart, task):
+        if task is None:
+            return None
+
         if tsStart <= 4000:
             tsStart += self.timestamp()
 
