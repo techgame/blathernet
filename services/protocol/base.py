@@ -17,6 +17,10 @@ from . import channel
 #~ Definitions 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
+class BlatherProtocolError(StandardError):
+    pass
+ProtocolError = BlatherProtocolError 
+
 class BasicBlatherProtocol(BlatherObject):
     msgHandler = None # set from onObservableInit
     Channel = channel.Channel
