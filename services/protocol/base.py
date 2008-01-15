@@ -78,10 +78,18 @@ class BasicBlatherProtocol(BlatherObject):
     def registerOn(self, blatherObj):
         blatherObj.registerOn(self)
     def registerAdvert(self, advert):
-        advert.advEntry.registerOn(self)
+        advert.entry.registerOn(self)
     def registerAdvertEntry(self, advEntry):
         self.hostEntry = advEntry
-        advEntry.addHandlerFn(self.recvEncoded, self.recvPeriodic)
+        advEntry.addHandlerFn(self.recvEncoded)
+        advEntry.addTimer(0, self.recvPeriodic)
+
+    def unregisterAdvertEntry(self):
+        advEntry = self.hostEntry
+        if advEntry is None: return
+
+        advEntry.removeHandlerFn(self.recvEncoded)
+        self.hostEntry = None
 
     #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     #~ Message send and recv
@@ -90,9 +98,10 @@ class BasicBlatherProtocol(BlatherObject):
     def reset(self):
         pass
 
-    def shutdown(self):
-        self.reset()
+    def terminate(self):
+        self.unregisterAdvertEntry()
         self.updateMsgHandler(None)
+        self.reset()
 
     def send(self, toEntry, dmsg, pinfo):
         raise NotImplementedError('Subclass Responsibility: %r' % (self,))
@@ -105,4 +114,5 @@ class BasicBlatherProtocol(BlatherObject):
     
     def recvPeriodic(self, advEntry, tc):
         return None
+    recvPeriodic = None # default is hidden
 

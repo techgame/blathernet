@@ -12,7 +12,7 @@
 
 from struct import pack, unpack
 from .base import BasicBlatherProtocol
-from .circularUtils import circularAdjust
+from .circularUtils import circularSplit
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 #~ Definitions 
@@ -48,7 +48,7 @@ class IncrementProtocol(BasicBlatherProtocol):
         dmsg = bytes[4:]
 
         recvSeq, sentSeqAck = unpack('!HH', msgHeader)
-        recvSeq, seqDiff = circularAdjust(self.recvSeq, recvSeq, 0xffff)
+        recvSeq, seqDiff = circularSplit(self.recvSeq, recvSeq, 0xffff)
 
         if seqDiff > 0:
             self.recvSeq = recvSeq

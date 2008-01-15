@@ -20,7 +20,7 @@ from struct import pack, unpack
 from array import array
 
 from .base import BasicBlatherProtocol
-from .circularUtils import circularDiff, circularAdjust, circularRange
+from .circularUtils import circularDiff, circularAdjust, circularMaskedRange
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 #~ Definitions 
@@ -47,16 +47,19 @@ class MessageCompleteProtocol(BasicBlatherProtocol):
         self.resendRecvSeq = 0
     
     peerEntry = None
-    def resetOnNewPeer(self, peerEntry):
-        if peerEntry is None or self.peerEntry is peerEntry:
-            return self.peerEntry
+    chan = None
+    def resetOnNewPeer(self, retEntry):
+        if self.peerEntry is retEntry:
+            return retEntry, self.chan
+        elif retEntry is None:
+            return self.peerEntry, self.chan
 
-        if self.peerEntry is not None:
-            return None
-
-        self.reset()
-        self.peerEntry = peerEntry
-        return self.peerEntry
+        if self.peerEntry is None:
+            self.reset()
+            self.peerEntry = retEntry
+            self.chan = self.Channel(retEntry, self.hostEntry)
+            return retEntry, self.chan
+        else: return None, self.chan
 
     def nextDmsgIdFor(self, dmsg, pinfo):
         if dmsg:
@@ -90,6 +93,8 @@ class MessageCompleteProtocol(BasicBlatherProtocol):
 
         return self.sendEncoded(toEntry, dmsgId, dmsg, pinfo or {}, self.missingMsgs, fullPing)
 
+    #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
     def sendEncoded(self, toEntry, dmsgId, dmsg, pinfo=None, missingMsgs=None, fullPing=None):
         if missingMsgs is not None:
             self.tsLastMessage = toEntry.timestamp()
@@ -98,9 +103,9 @@ class MessageCompleteProtocol(BasicBlatherProtocol):
         return toEntry.sendBytes(bytes, pinfo)
 
     def recvEncoded(self, advEntry, bytes, pinfo):
-        retEntry = self.resetOnNewPeer(pinfo['retEntry'])
+        retEntry, chan = self.resetOnNewPeer(pinfo['retEntry'])
         if retEntry is None:
-            # the protocol would not be reset... refuse to handle
+            # the protocol is already engaged with another entry -- simply ignore
             return 
 
         ts = pinfo['ts']
@@ -112,14 +117,13 @@ class MessageCompleteProtocol(BasicBlatherProtocol):
         newMissing, lastRecvDmsgId = self.detectMissing(maxDmsgId)
 
         if request is not None:
-            self.recvRequestedMsgs(retEntry, request)
+            self.recvMsgRequests(retEntry, request)
 
         if dmsgId is not None:
             if dmsgId in newMissing:
                 newMissing.remove(dmsgId)
 
-            chan = self.Channel(retEntry, advEntry)
-            dmsgId = circularAdjust(lastRecvDmsgId, dmsgId, 0xff)[0]
+            dmsgId = circularAdjust(lastRecvDmsgId, dmsgId, 0xff)
             self.recvInbound(chan, dmsgId, dmsg)
     
         if newMissing and ts == self.tsLastMessage:
@@ -131,8 +135,8 @@ class MessageCompleteProtocol(BasicBlatherProtocol):
         if maxDmsgId is None:
             return [], recvDmsgId
 
-        maxDmsgId = circularAdjust(recvDmsgId, maxDmsgId, 0xff)[0]
-        missingMsgs = list(circularRange(recvDmsgId+1, maxDmsgId+1, 0xff))
+        maxDmsgId = circularAdjust(recvDmsgId, maxDmsgId, 0xff)
+        missingMsgs = list(circularMaskedRange(recvDmsgId+1, maxDmsgId+1, 0xff))
         if missingMsgs:
             self.missingMsgs.extend(missingMsgs)
             self.recvDmsgId = maxDmsgId
@@ -165,7 +169,7 @@ class MessageCompleteProtocol(BasicBlatherProtocol):
     #~ Missing message requests
     #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-    def recvRequestedMsgs(self, retEntry, request):
+    def recvMsgRequests(self, retEntry, request):
         fullPing, dmsgIdAckHigh, requestedMsgs = request
         requestedMsgs = frozenset(requestedMsgs)
 
@@ -173,7 +177,6 @@ class MessageCompleteProtocol(BasicBlatherProtocol):
 
         if requestedMsgs:
             recvSeq = self.recvSeq
-            #print 'requestedMsgs:', fullPing, self.recvDmsgId, (self.resendRecvSeq, recvSeq), list(requestedMsgs)
             if fullPing or (4 < recvSeq - self.resendRecvSeq):
                 self.resend(retEntry, requestedMsgs) 
                 self.resendRecvSeq = recvSeq
@@ -185,7 +188,7 @@ class MessageCompleteProtocol(BasicBlatherProtocol):
 
     def updateAckOutbound(self, dmsgIdAckHigh, requestedMsgs):
         outbound = self.outbound
-        ack = set(circularRange(self.ackDmsgId+1, dmsgIdAckHigh+1, 0xff))
+        ack = set(circularMaskedRange(self.ackDmsgId+1, dmsgIdAckHigh+1, 0xff))
         ack &= frozenset(outbound.keys())
 
         if requestedMsgs:
@@ -194,7 +197,7 @@ class MessageCompleteProtocol(BasicBlatherProtocol):
         else: ackDmsgId = dmsgIdAckHigh
 
         # adjust the ackDmsgId
-        self.ackDmsgId = circularAdjust(self.ackDmsgId, ackDmsgId, 0xff)[0]
+        self.ackDmsgId = circularAdjust(self.ackDmsgId, ackDmsgId, 0xff)
 
         # remove the acknowledged dmsgIds
         for dmsgId in ack: 
@@ -231,8 +234,8 @@ class MessageCompleteProtocol(BasicBlatherProtocol):
             # bytes[] - array of missing dmsgIds
             parts.append(chr(len(missingMsgs)) + chr(self.recvDmsgId & 0xff) + missingMsgs.tostring())
 
-        if fullPing:
-            flags |= 0x40
+            if fullPing:
+                flags |= 0x40
 
         if dmsgId is None or circularDiff(self.sentDmsgId, dmsgId, 0xff) < 0:
             flags |= 0x20
@@ -266,7 +269,7 @@ class MessageCompleteProtocol(BasicBlatherProtocol):
 
         self.recvSeq += recvSeqDelta
 
-        recvAck = circularAdjust(self.recvAck, recvAck, 0xffff)[0]
+        recvAck = circularAdjust(self.recvAck, recvAck, 0xffff)
         self.recvAck = max(self.recvAck, recvAck)
 
         if flags & 0x80: 

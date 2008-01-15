@@ -60,8 +60,8 @@ class BasicChannel(object):
     def newFlyweightForMsgHandler(klass, msgHandler, protocol, **ns):
         return klass.newFlyweight(
                         marshal = msgHandler.marshal,
-                        msgHandler = msgHandler.asWeakRef(),
-                        protocol = protocol.asWeakRef())
+                        msgHandler = msgHandler.asWeakProxy(),
+                        protocol = protocol.asWeakProxy())
 
     #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     #~ Dmsg recv and send
@@ -72,7 +72,10 @@ class BasicChannel(object):
 
     def sendDmsg(self, dmsg, **pinfo):
         pinfo['retEntry'] = self.fromEntry
-        return self.protocol().send(self.toEntry, dmsg, pinfo)
+        return self.protocol.send(self.toEntry, dmsg, pinfo)
+
+    def sendPing(self):
+        return self.protocol.sendPing()
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 #~ Channel
@@ -83,19 +86,9 @@ class Channel(BasicChannel):
         call = self.marshal.unpack(dmsg)
         return self.recvDispatch(call)
     def recvDispatch(self, call):
-        return self.msgHandler().recvDispatch(self, call)
+        return self.msgHandler.recvDispatch(self, call)
 
     #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-    def reset(self):
-        return self.protocol().reset()
-    def shutdown(self):
-        return self.protocol().shutdown()
-
-    #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-    def ping(self):
-        return self.sendDmsg(None)
 
     def sendBytes(self, method, bytes):
         dmsg = self.marshal.packBytes(method, bytes)
