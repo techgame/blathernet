@@ -100,7 +100,7 @@ class MessageCompleteProtocol(BasicBlatherProtocol):
             return False
 
         if delay is None: 
-            delay = 2*self.rateSlow
+            delay = 2*self.rateIdle
 
         if onShutdown is not None:
             self.kvpub.add('@shutdown', lambda p,k: onShutdown())
@@ -227,18 +227,29 @@ class MessageCompleteProtocol(BasicBlatherProtocol):
     #~ Periodic status tracking
     #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-    rateFast = .020 #  20 miliseconds...
-    rateSlow = .200 # 200 miliseconds
-    rate = rateSlow
+    rateBusy = .020 #  20 miliseconds...
+    rateIdle = 10*rateBusy
+    rate = rateIdle
+
+    def getPeriodicRates(self):
+        return (self.rateBusy, self.rateIdle)
+    def setPeriodicRates(self, rateBusy=None, rateIdle=None):
+        if rateBusy is None:
+            rateBusy = self.__class__.rateBusy
+        if rateIdle is None:
+            rateIdle = 10*rateBusy
+
+        self.rateBusy = rateBusy
+        self.rateIdle = rateIdle
 
     def onPeriodic(self, advEntry, ts):
         tsDelta = ts-self.tsRecvAck
         if tsDelta > self.rate:
             if self.isIdle():
-                self.rate = self.rateSlow
+                self.rate = self.rateIdle
                 self.kvpub('@idle', tsDelta)
             else:
-                self.rate = self.rateFast
+                self.rate = self.rateBusy
                 self.kvpub('@busy', tsDelta)
                 self.sendPing()
 

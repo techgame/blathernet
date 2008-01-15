@@ -108,3 +108,8 @@ class Channel(BasicChannel):
     def shutdown(self, onShutdown=None, delay=None):
         return self.protocol.shutdown(onShutdown, delay)
 
+    def getPeriodicRates(self):
+        return self.protocol.getPeriodicRates()
+    def setPeriodicRates(self, rateBusy, rateIdle=None):
+        return self.protocol.setPeriodicRates(rateBusy, rateIdle)
+
