@@ -10,6 +10,8 @@
 #~ Imports 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
+import time
+
 from ...base import BlatherObject
 from . import channel
 
@@ -22,7 +24,9 @@ class BlatherProtocolError(StandardError):
 ProtocolError = BlatherProtocolError 
 
 class BasicBlatherProtocol(BlatherObject):
+    hostEntry = None
     msgHandler = None # set from onObservableInit
+    timestamp = time.time
     Channel = channel.Channel
 
     def isBlatherProtocol(self): return True
@@ -44,25 +48,26 @@ class BasicBlatherProtocol(BlatherObject):
     @classmethod
     def new(klass):
         return klass()
-    def copy(self):
-        newSelf = self.new()
-        vars(newSelf).update(vars(self))
-        return newSelf
 
     def onObservableInit(self, pubName, obInst):
         if not obInst.isBlatherMsgHandler():
             return 
 
-        self = self.copy()
-        self.updateMsgHandler(obInst)
-        setattr(obInst, pubName, self)
+        self = self.newForInst(obInst)
+        if self is not None:
+            setattr(obInst, pubName, self)
     onObservableInit.priority = -5
+
+    def newForInst(self, msgHandler):
+        self = self.new()
+        self.updateMsgHandler(msgHandler)
+        return self
 
     def updateMsgHandler(self, msgHandler):
         self.msgHandler = msgHandler
         if msgHandler is not None:
             self.Channel = self.Channel.newFlyweightForMsgHandler(msgHandler, self)
-        else: del self.Channel
+        else: self.Channel = None
 
     #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     #~ Channel creation and handling
@@ -85,8 +90,11 @@ class BasicBlatherProtocol(BlatherObject):
         advert.entry.registerOn(self)
     def registerAdvertEntry(self, advEntry):
         self.hostEntry = advEntry
+        if self.timestamp != advEntry.timestamp:
+            self.timestamp = advEntry.timestamp
+
         advEntry.addHandlerFn(self.recvEncoded)
-        advEntry.addTimer(0, self.recvPeriodic)
+        advEntry.addTimer(0, self.onPeriodic)
 
     def unregisterAdvertEntry(self):
         advEntry = self.hostEntry
@@ -104,8 +112,8 @@ class BasicBlatherProtocol(BlatherObject):
 
     def terminate(self):
         self.unregisterAdvertEntry()
-        self.updateMsgHandler(None)
         self.reset()
+        self.updateMsgHandler(None)
 
     def send(self, toEntry, dmsg, pinfo):
         raise NotImplementedError('Subclass Responsibility: %r' % (self,))
@@ -116,7 +124,7 @@ class BasicBlatherProtocol(BlatherObject):
     def recvDecoded(self, chan, seq, dmsg):
         return chan.recvDmsg(seq, dmsg)
     
-    def recvPeriodic(self, advEntry, tc):
+    def onPeriodic(self, advEntry, tc):
         return None
-    recvPeriodic = None # default is hidden
+    onPeriodic = None # default is hidden
 
