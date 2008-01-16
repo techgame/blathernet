@@ -67,7 +67,7 @@ class BasicBlatherProtocol(BlatherObject):
         self.msgHandler = msgHandler
         if msgHandler is not None:
             self.Channel = self.Channel.newFlyweightForMsgHandler(msgHandler, self)
-        else: self.Channel = None
+        else: self.Channel = (lambda toEntry, fromEntry: None)
 
     #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     #~ Channel creation and handling

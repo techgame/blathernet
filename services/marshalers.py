@@ -27,23 +27,29 @@ class BlatherMarshal(object):
         elif mkind == 2: # MARSHAL_BYTES
             return self.loadBytes(bytes)
         else:
-            return (NotImplemented, bytes, {})
-        return bytes
+            return (NotImplemented, bytes)
 
     def loadCall(self, bytes):
-        return self._loads(bytes)
+        dmsg, sep, data = bytes.rpartition('\0')
+        call = self._loads(dmsg)
+        if data:
+            call[-1]['bytes'] = bytes
+        return 'call', call
     def loadBytes(self, bytes):
-        method, sep, data = bytes.rpartition('\x00')
-        return (method, (data,), {})
+        methodKey, sep, data = bytes.rpartition('\0')
+        return 'bytes', (methodKey, (data,), {})
 
     #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-    def packCall(self, method, args, kw):
+    def packCall(self, methodKey, args, kw):
         # MARSHAL_CALL
-        return chr(1) + self._dumps([method, args, kw])
-    def packBytes(self, method, data):
+        data = kw.pop('bytes', '')
+        #if data:
+        #    data = '-'
+        return chr(1) + self._dumps([methodKey, args, kw]) + '\0' + data
+    def packBytes(self, methodKey, data=''):
         # MARSHAL_BYTES
-        return chr(2) + method + '\x00' + data
+        return chr(2) + methodKey + '\0' + data
 
     #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 

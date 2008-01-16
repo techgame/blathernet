@@ -83,10 +83,8 @@ class BasicChannel(object):
 
 class Channel(BasicChannel):
     def recvDmsg(self, seq, dmsg):
-        call = self.marshal.unpack(dmsg)
-        return self.recvDispatch(call)
-    def recvDispatch(self, call):
-        return self.msgHandler.recvDispatch(self, call)
+        kind, call = self.marshal.unpack(dmsg)
+        return self.msgHandler.recvDispatch(self, kind, call)
 
     #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -95,9 +93,6 @@ class Channel(BasicChannel):
         return self.sendDmsg(dmsg)
 
     def send(self, method, *args, **kw):
-        if method is None:
-            return self.ping()
-
         dmsg = self.marshal.packCall(method, args, kw)
         return self.sendDmsg(dmsg)
 

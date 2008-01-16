@@ -28,6 +28,7 @@ from .circularUtils import circularDiff, circularAdjust, circularMaskedRange
 
 class SendBufferFull(BlatherProtocolError):
     def __init__(self, sentDmsgId, recvAckDmsgId):
+        BlatherProtocolError.__init__(self, sentDmsgId, recvAckDmsgId)
         self.sentDmsgId = sentDmsgId
         self.recvAckDmsgId = recvAckDmsgId
 
@@ -57,7 +58,8 @@ class MessageCompleteProtocol(BasicBlatherProtocol):
     
     def nextDmsgIdFor(self, dmsg, pinfo):
         if dmsg:
-            if self.sentDmsgIdDelta() >= 0x7f:
+            d = self.sentDmsgIdDelta()
+            if d < -112:
                 raise SendBufferFull(self.sentDmsgId, self.recvAckDmsgId)
 
             dmsgId = self.sentDmsgId + 1
@@ -105,12 +107,13 @@ class MessageCompleteProtocol(BasicBlatherProtocol):
         if onShutdown is not None:
             self.kvpub.add('@shutdown', lambda p,k: onShutdown())
 
-        @self.kvpub.on('@idle')
-        def onIdleShutdownTimer(self, key, idleTime):
+        @self.kvpub.on('@periodic')
+        def onIdleShutdownTimer(self, key, idleTime, rate):
             if idleTime > delay:
                 self.kvpub.remove(key, self._shutdownTimer)
                 del self._shutdownTimer
                 self.onShutdown()
+                self.rate = None
         self._shutdownTimer = onIdleShutdownTimer
         return True
 
@@ -152,11 +155,11 @@ class MessageCompleteProtocol(BasicBlatherProtocol):
     #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
     def sentDmsgIdDelta(self):
-        return self.sentDmsgId - min(self.requestedMsgs or [self.recvAckDmsgId])
+        return circularDiff(self.sentDmsgId, min(self.requestedMsgs or [self.recvAckDmsgId]), 0xff)
     def sentAckDmsgIdDelta(self):
         return self.sentDmsgId - self.recvAckDmsgId
     def recvDmsgIdDelta(self):
-        return self.recvDmsgId - min(self.missingMsgs or [self.sentAckDmsgId])
+        return circularDiff(self.recvDmsgId, min(self.missingMsgs or [self.sentAckDmsgId]), 0xff)
     def recvAckDmsgIdDelta(self):
         return self.recvDmsgId - self.sentAckDmsgId
     def sendSeqDelta(self):
@@ -243,14 +246,14 @@ class MessageCompleteProtocol(BasicBlatherProtocol):
         self.rateIdle = rateIdle
 
     def onPeriodic(self, advEntry, ts):
+        rate = self.rate
         tsDelta = ts-self.tsRecvAck
-        if tsDelta > self.rate:
+        self.kvpub('@periodic', tsDelta, rate)
+        if rate and tsDelta > rate:
             if self.isIdle():
                 self.rate = self.rateIdle
-                self.kvpub('@idle', tsDelta)
             else:
                 self.rate = self.rateBusy
-                self.kvpub('@busy', tsDelta)
                 self.sendPing()
 
         return self.rate

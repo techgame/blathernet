@@ -31,11 +31,8 @@ class MessageHandlerBase(BlatherObject):
 
     def isBlatherMsgHandler(self): return True
 
-    def recvDispatch(self, chan, call):
-        try:
-            methodKey, args, kw = call
-        except Exception, e:
-            raise
+    def recvDispatch(self, chan, kind, call):
+        methodKey, args, kw = call
 
         method = self.msgreg[methodKey]
         if method is None: 
