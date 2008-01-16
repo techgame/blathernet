@@ -21,6 +21,8 @@ from ..base import BlatherObject
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 class BasicBlatherRoute(BlatherObject):
+    rating = 0
+
     def isBlatherRoute(self): return True
     def isPartyLine(self): return False
     def isInprocess(self): return False
@@ -28,7 +30,9 @@ class BasicBlatherRoute(BlatherObject):
     def __init__(self, msgRouter):
         BlatherObject.__init__(self)
         self._wrSelf = self.asWeakRef()
-        self.stats = self.stats.copy()
+
+        self._initStats()
+
         self.msgRouter = msgRouter
         self.registerOn(msgRouter)
 
@@ -59,10 +63,24 @@ class BasicBlatherRoute(BlatherObject):
     #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
     stats = {
-        'sent_time': None, 'sent_count': 0, 'sent_bytes': 0,
-        'recv_time': None, 'recv_count': 0, 'recv_bytes': 0, 
+        'start_time': 0,
+        'sent_time': 0, 'sent_count': 0, 'sent_bytes': 0,
+        'recv_time': 0, 'recv_count': 0, 'recv_bytes': 0, 
         }
     timestamp = time.time
+
+    def tsSent(self): return self.stats['sent_time']
+    def tsSentDelta(self): return self.timestamp() - self.stats['sent_time']
+    def tsRecv(self): return self.stats['recv_time']
+    def tsRecvDelta(self): return self.timestamp() - self.stats['recv_time']
+    def tsActivity(self): return max(map(self.stats.get, ('sent_time', 'recv_time')))
+    def tsActivityDelta(self): return self.timestamp() - self.tsActivity()
+
+    def _initStats(self):
+        ts = self.timestamp()
+        stats = self.stats.copy()
+        stats['start_time'] = ts
+        self.stats = stats
 
     def _incSentStats(self, bytes=None):
         ts = self.timestamp()

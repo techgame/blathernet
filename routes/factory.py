@@ -20,12 +20,15 @@ from ..base import BlatherObject
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 class BlatherRouteFactory(BlatherObject):
-    nextRandomSeed = itertools.count(1942).next
-
-    def __init__(self, host):
+    def __init__(self, host, networkMgr=None, msgRouter=None):
         BlatherObject.__init__(self)
-        self.networkMgr = host.networkMgr.asWeakProxy()
-        self.msgRouter = host.msgRouter.asWeakRef()
+        if networkMgr is None:
+            networkMgr = host.networkMgr
+        self.networkMgr = networkMgr.asWeakProxy()
+
+        if msgRouter is None:
+            msgRouter = host.msgRouter
+        self.msgRouter = msgRouter.asWeakRef()
 
     #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -39,7 +42,7 @@ class BlatherRouteFactory(BlatherObject):
         return route
 
     def newTestingRoute(self, cbIsPacketLost):
-        return BlatherTestingRoute(self.msgRouter(), cbIsPacketLost, self.nextRandomSeed())
+        return BlatherTestingRoute(self.msgRouter(), cbIsPacketLost)
     def connectTesting(self, otherHost, cbIsPacketLost, cbIsPacketLostOther=None):
         if cbIsPacketLostOther is None:
             cbIsPacketLostOther = cbIsPacketLost

@@ -75,9 +75,8 @@ class BlatherLoopbackRoute(BlatherDirectRoute):
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 class BlatherTestingRoute(BlatherDirectRoute):
-    def __init__(self, msgRouter, cbIsPacketLost, randomSeed=1942):
-        self.ri = random.Random(randomSeed)
-
+    ri = random.Random()
+    def __init__(self, msgRouter, cbIsPacketLost):
         BlatherDirectRoute.__init__(self, msgRouter)
         self.setPacketLostCb(cbIsPacketLost)
 
