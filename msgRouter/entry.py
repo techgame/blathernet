@@ -12,7 +12,7 @@
 
 import time
 import weakref
-from random import Random
+import random
 
 from TG.metaObserving.obRegistry import OBClassRegistry
 
@@ -22,43 +22,42 @@ from ..base import BlatherObject
 #~ Definitions 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-def ppinfo(pinfo, *filter):
-    if not filter:
-        filter = pinfo.keys()
-    filter = set(filter)
-    result = {}
-    for k in ('sendId', 'replyId', 'msgId'):
-        if k not in filter: continue
-        if k in pinfo: 
-            result[k] = pinfo[k].encode('hex')
-    return result
-
 class AdvertRouterEntry(BlatherObject):
-    codec = None # flyweight shared
-    msgRouter = None # flyweight shared
-    fwdKindFilters = OBClassRegistry()
+    ri = random.Random()                    # class 
+    fwdKindFilters = OBClassRegistry()      # class
 
-    advertId = None # assigned when created
-    sendOpt = 0
-    routes = dict() # a dict() of routes to forward to
-    handlerFns = [] # a list() of handler callbacks
-    ri = Random()
+    codec = None                            # flyweight 
+    msgRouter = None                        # flyweight
+
+    advertId = None                         # instance
+    entryRoutes = dict()                    # instance
+    handlerFns = []                         # instance
 
     def isBlatherAdvert(self): return False
     def isBlatherAdvertEntry(self): return True
     def isBlatherChannel(self): return False
 
-    def __init__(self, advertId, sendOpt=None):
+    def __init__(self, advertId):
         BlatherObject.__init__(self, advertId)
+        self.advertId = advertId
         self.stats = self.stats.copy()
-
-        self.updateAdvertInfo(advertId, sendOpt)
+        #self.ri = random.Random()
 
     def __repr__(self):
         return "<AdvEntry %s on: %r>" % (self, self.msgRouter.host())
 
     def __str__(self):
-        return self.advertId.encode('hex')
+        advertId = self.advertId
+        if advertId:
+            return advertId.encode('hex')
+        else: return str(None)
+
+    def registerOn(self, blatherObj):
+        blatherObj.registerAdvertEntry(self)
+
+    #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    #~ Flyweighting
+    #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
     @classmethod
     def newFlyweight(klass, **ns):
@@ -66,18 +65,15 @@ class AdvertRouterEntry(BlatherObject):
         ns['__flyweight__'] = bklass
         return type(bklass)(bklass.__name__+"_", (bklass,), ns)
 
-    ppinfo = staticmethod(ppinfo)
-
-    def updateAdvertInfo(self, advertId=None, sendOpt=None):
-        if advertId is not None:
-            self.advertId = advertId
-        if sendOpt is not None:
-            self.sendOpt = sendOpt
+    #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    #~ Routes, handlers, and tasks
+    #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
     def addRoute(self, route, weight=0):
-        if not self.routes:
-            self.routes = weakref.WeakKeyDictionary()
-        self.routes.setdefault(route, weight)
+        entryRoutes = self.entryRoutes
+        if not entryRoutes:
+            self.entryRoutes = entryRoutes = weakref.WeakKeyDictionary()
+        entryRoutes[route] = max(weight, entryRoutes.get(route, weight))
 
     def addHandlerFn(self, fn):
         if not self.handlerFns:
@@ -104,10 +100,7 @@ class AdvertRouterEntry(BlatherObject):
         return host.addTimer(tsStart, lambda ts: task(self, ts))
 
     #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-    def registerOn(self, blatherObj):
-        blatherObj.registerAdvertEntry(self)
-
+    #~ Recv Packets and Routes
     #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
     def recvPacket(self, packet, dmsg, pinfo):
@@ -122,23 +115,25 @@ class AdvertRouterEntry(BlatherObject):
 
     def recvReturnRoute(self, pinfo):
         self.kvpub('@recvRoute', pinfo)
-        self._incRecvStats(pinfo)
-        self.addRoute(pinfo['route'](), 2)
+        self._incRecvStats(pinfo, None)
+        self.addRoute(pinfo['route'](), 0)
         return True
 
     def recvReturnRouteDup(self, pinfo):
         self.kvpub('@recvRoute', pinfo)
-        self._incRecvStats(pinfo)
-        self.addRoute(pinfo['route'](), 1)
+        self._incRecvStats(pinfo, None)
+        self.addRoute(pinfo['route'](), 0)
         return True
 
     #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    #~ Send and Encoded Packets
+    #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
     def encodePacket(self, dmsg, pinfo={}):
-        enc_pinfo = dict(sendId=self.advertId, sendOpt=self.sendOpt)
+        enc_pinfo = dict(sendId=self.advertId)
         retEntry = pinfo.get('retEntry')
         if retEntry is not None:
-            enc_pinfo.update(replyId=retEntry.advertId, replyOpt=retEntry.sendOpt)
+            enc_pinfo.update(replyId=retEntry.advertId)
         enc_pinfo.update(pinfo)
         return self.codec.encode(dmsg, enc_pinfo)
 
@@ -152,6 +147,8 @@ class AdvertRouterEntry(BlatherObject):
         self.msgRouter.addMessageId(pinfo['msgId'])
         return self.deliverPacket(packet, dmsg, pinfo)
 
+    #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    #~ Delivery and Forwarding of Packets
     #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
     def deliverPacket(self, packet, dmsg, pinfo):
@@ -186,6 +183,8 @@ class AdvertRouterEntry(BlatherObject):
         pinfo['forwarded'] = forwarded
         return forwarded
 
+    #~ Forward route selection ~~~~~~~~~~~~~~~~~~~~~~~~~~
+
     def forwardRoutesFor(self, pinfo):
         sendOpt = pinfo.get('sendOpt', 0)
         flags = sendOpt >> 4
@@ -200,7 +199,7 @@ class AdvertRouterEntry(BlatherObject):
             routes = self.allRoutes
         else: 
             # otherwise, use the entry's routes
-            routes = self.routes
+            routes = self.entryRoutes
 
         # discard our route
         routes = routes.copy()
@@ -213,17 +212,19 @@ class AdvertRouterEntry(BlatherObject):
             return fwdFilter(self, routes)
         else: return routes.keys()
 
+    #~ Forward Kind Filters ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
     @fwdKindFilters.on(0x0)
     def fwdKindFilter_0x0(self, routes):
         """First route, sorted by weighting"""
-        items = sorted(routes.items(), key=lambda x: x[1])
+        items = sorted(routes.items(), key=lambda(r,w): (w,r))
         items = [e[0] for e in items[:1]]
         return items
 
     @fwdKindFilters.on(0x1)
     def fwdKindFilter_0x1(self, routes):
         """First two routes, sorted by weighting"""
-        items = sorted(routes.items(), key=lambda x: x[1])
+        items = sorted(routes.items(), key=lambda(r,w): (w,r))
         items = [e[0] for e in items[:2]]
         return items
 
@@ -263,27 +264,30 @@ class AdvertRouterEntry(BlatherObject):
     def _incSentStats(self, pinfo, bytes=None):
         ts = self.timestamp()
         pinfo['ts'] = ts
-        self.stats['sent_time'] = ts
+        stats = self.stats
+        stats['sent_time'] = ts
         if bytes is not None:
-            self.stats['sent_count'] += 1
-            self.stats['sent_bytes'] += bytes
+            stats['sent_count'] += 1
+            stats['sent_bytes'] += bytes
         return ts
 
     def _incRecvStats(self, pinfo, bytes=None):
         ts = self.timestamp()
         pinfo['ts'] = ts
-        self.stats['recv_time'] = ts
+        stats = self.stats
+        stats['recv_time'] = ts
         if bytes is not None:
-            self.stats['recv_count'] += 1
-            self.stats['recv_bytes'] += bytes
+            stats['recv_count'] += 1
+            stats['recv_bytes'] += bytes
         return ts
 
     def _incRecvDupStats(self, pinfo, bytes=None):
         ts = self.timestamp()
         pinfo['ts'] = ts
-        self.stats['dup_time'] = ts 
+        stats = self.stats
+        stats['dup_time'] = ts 
         if bytes is not None:
-            self.stats['dup_count'] += 1
-            self.stats['dup_bytes'] += bytes
+            stats['dup_count'] += 1
+            stats['dup_bytes'] += bytes
         return ts
 
