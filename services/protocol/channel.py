@@ -100,8 +100,8 @@ class Channel(BasicChannel):
         dmsg = self.marshal.packCall(method, args, kw)
         return self.sendDmsg(dmsg, sendOpt=0x4f)
 
-    def shutdown(self, onShutdown=None, delay=None):
-        return self.protocol.shutdown(onShutdown, delay)
+    def shutdown(self, kind, *args, **kw):
+        return self.protocol.shutdown(kind, *args, **kw)
 
     def getPeriodicRates(self):
         return self.protocol.getPeriodicRates()

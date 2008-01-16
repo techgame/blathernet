@@ -33,8 +33,9 @@ class SendBufferFull(BlatherProtocolError):
         self.recvAckDmsgId = recvAckDmsgId
 
 class MessageCompleteProtocol(BasicBlatherProtocol):
+    ri = random.Random()
+
     def reset(self):
-        self.ri = random.Random(0)
         self.chan = None
 
         self.sentDmsgId = 0
@@ -97,33 +98,69 @@ class MessageCompleteProtocol(BasicBlatherProtocol):
 
     #~ Shutdown API ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-    def shutdown(self, onShutdown=None, delay=None):
-        if self.isShuttingDown():
+    def shutdown(self, kind, *args, **kw):
+        if kind == 'default' or kind==True:
+            return self.shutdownDefault(*args, **kw)
+        elif kind == 'timer':
+            return self.shutdownTimer(*args, **kw)
+        elif kind == 'now':
+            return self.shutdownNow(*args, **kw)
+        elif kind == 'abort' or kind==False:
+            return self.shutdownAbort(*args, **kw)
+        elif kind == 'on':
+            return self.addShutdownEvent(*args, **kw)
+        else:
+            raise ValueError("Unknown shutdown kind: %r" % (kind,))
+
+    def shutdownDefault(self, n, event=None):
+        delay = (1 if n else 3) * self.rateShutdown
+        if self.shutdownTimer(True, delay):
+            self.addShutdownEvent(event)
+            yield n+1
+        else: 
+            if n<3: 
+                yield n+1
+            self.shutdownNow('confirmed')
+
+    _shutdownTimer = None
+    def shutdownTimer(self, start=True, delay=None):
+        if not start:
+            # remove timer
+            self.kvpub.discard('@periodic', self._shutdownTimer)
+            self._shutdownTimer = None
+            if start is not None:
+                self.kvpub('@shutdown-timer', False)
+            return False
+        elif self._shutdownTimer is not None:
             return False
 
         if delay is None: 
-            delay = 2*self.rateIdle
+            delay = self.rateShutdown
 
-        if onShutdown is not None:
-            self.kvpub.add('@shutdown', lambda p,k: onShutdown())
-
-        @self.kvpub.on('@periodic')
-        def onIdleShutdownTimer(self, key, idleTime, rate):
+        def onShutdownTimer(self, key, idleTime, rate):
             if idleTime > delay:
-                self.kvpub.remove(key, self._shutdownTimer)
-                del self._shutdownTimer
-                self.onShutdown()
-                self.rate = None
-        self._shutdownTimer = onIdleShutdownTimer
+                self.shutdownNow('timer')
+
+        self._shutdownTimer = onShutdownTimer
+        self.kvpub.add('@periodic', self._shutdownTimer)
+        self.kvpub('@shutdown-timer', True)
         return True
 
-    _shutdownTimer = None
-    def isShuttingDown(self):
-        return self._shutdownTimer is not None
+    def shutdownAbort(self):
+        return self.shutdownTimer(False)
 
-    def onShutdown(self):
-        self.kvpub('@shutdown')
+    def shutdownNow(self, reason='direct'):
+        self.rate = None
+        self.shutdownTimer(None)
+        self.kvpub('@shutdown', reason)
+
         self.terminate()
+
+    def addShutdownEvent(self, event):
+        if event is None:
+            return False
+        self.kvpub.add('@shutdown', lambda s,k,reason: event(reason))
+        return True
 
     #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     #~ Implementation
@@ -232,6 +269,7 @@ class MessageCompleteProtocol(BasicBlatherProtocol):
 
     rateBusy = .020 #  20 miliseconds...
     rateIdle = 10*rateBusy
+    rateShutdown = 4*rateIdle
     rate = rateIdle
 
     def getPeriodicRates(self):
