@@ -40,8 +40,7 @@ class AdvertRouterEntry(BlatherObject):
     def __init__(self, advertId):
         BlatherObject.__init__(self, advertId)
         self.advertId = advertId
-        self.stats = self.stats.copy()
-        #self.ri = random.Random()
+        self._initStats()
 
     def __repr__(self):
         return "<AdvEntry %s on: %r>" % (self, self.msgRouter.host())
@@ -104,7 +103,6 @@ class AdvertRouterEntry(BlatherObject):
     #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
     def recvPacket(self, packet, dmsg, pinfo):
-        self.kvpub('@recvPacket', packet, dmsg, pinfo)
         self._incRecvStats(pinfo, len(packet))
         self.deliverPacket(packet, dmsg, pinfo)
         return True
@@ -114,15 +112,13 @@ class AdvertRouterEntry(BlatherObject):
         return False
 
     def recvReturnRoute(self, pinfo):
-        self.kvpub('@recvRoute', pinfo)
         self._incRecvStats(pinfo, None)
-        self.addRoute(pinfo['route'](), 0)
+        self.addRoute(pinfo['route']())
         return True
 
     def recvReturnRouteDup(self, pinfo):
-        self.kvpub('@recvRoute', pinfo)
         self._incRecvStats(pinfo, None)
-        self.addRoute(pinfo['route'](), 0)
+        self.addRoute(pinfo['route']())
         return True
 
     #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -142,7 +138,6 @@ class AdvertRouterEntry(BlatherObject):
         return self.sendPacket(packet, dmsg, pinfo)
 
     def sendPacket(self, packet, dmsg, pinfo):
-        self.kvpub('@sendPacket', packet, dmsg, pinfo)
         self._incSentStats(pinfo, len(packet))
         self.msgRouter.addMessageId(pinfo['msgId'])
         return self.deliverPacket(packet, dmsg, pinfo)
@@ -154,7 +149,6 @@ class AdvertRouterEntry(BlatherObject):
     def deliverPacket(self, packet, dmsg, pinfo):
         r = self.handleDelivery(dmsg, pinfo)
         r = self.forwardPacket(packet, pinfo) or r
-        self.kvpub('@deliverPacket', dmsg, pinfo)
         return r, pinfo
 
     def handleDelivery(self, dmsg, pinfo):
@@ -216,16 +210,16 @@ class AdvertRouterEntry(BlatherObject):
 
     @fwdKindFilters.on(0x0)
     def fwdKindFilter_0x0(self, routes):
-        """First route, sorted by weighting"""
-        items = sorted(routes.items(), key=lambda(r,w): (w,r))
-        items = [e[0] for e in items[:1]]
+        """Greatest route, sorted by weight and rating"""
+        items = sorted(routes.items(), key=lambda(r,w): (w, r.rating))
+        items = [e[0] for e in items[-1:]]
         return items
 
     @fwdKindFilters.on(0x1)
     def fwdKindFilter_0x1(self, routes):
-        """First two routes, sorted by weighting"""
-        items = sorted(routes.items(), key=lambda(r,w): (w,r))
-        items = [e[0] for e in items[:2]]
+        """Greatest two routes, sorted by weight and rating"""
+        items = sorted(routes.items(), key=lambda(r,w): (w, r.rating))
+        items = [e[0] for e in items[-2:]]
         return items
 
     @fwdKindFilters.on(0x2)
@@ -248,6 +242,7 @@ class AdvertRouterEntry(BlatherObject):
     #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
     stats = {
+        'start_time': 0,
         'sent_time': 0, 'sent_count': 0, 'sent_bytes': 0,
         'recv_time': 0, 'recv_count': 0, 'recv_bytes': 0, 
         'dup_time': 0, 'dup_count': 0, 'dup_bytes': 0, 
@@ -260,6 +255,12 @@ class AdvertRouterEntry(BlatherObject):
     def tsRecvDelta(self): return self.timestamp() - self.stats['recv_time']
     def tsActivity(self): return max(map(self.stats.get, ('sent_time', 'recv_time')))
     def tsActivityDelta(self): return self.timestamp() - self.tsActivity()
+
+    def _initStats(self):
+        ts = self.timestamp()
+        stats = self.stats.copy()
+        stats['start_time'] = ts
+        self.stats = stats
 
     def _incSentStats(self, pinfo, bytes=None):
         ts = self.timestamp()
