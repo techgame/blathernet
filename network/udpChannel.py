@@ -39,16 +39,26 @@ class UDPChannel(SocketChannel):
         SocketChannel.__init__(self)
         self.registry = {}
         self.sendQueue = Queue.Queue()
-        self.recvQueue = Queue.Queue()
         if address:
             self.setSocketAddress(address, interface, onBindError)
 
     #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-    def register(self, addr, recv):
-        self.registry[addr] = recv
+    def register(self, address, recv):
+        self.registry[address] = recv
 
     def send(self, packet, address, onNotify=None):
+        try:
+            # send it directly, if we can
+            self.sock.sendto(packet, address)
+            return 
+        except SocketError, err:
+            if onNotify is None:
+                reraise = self.reraiseSocketError(err, err.args[0])
+            else: reraise = onNotify('error', packet, address, err)
+            if reraise: 
+                traceback.print_exc()
+
         self.sendQueue.put((packet, address, onNotify))
         self.needsWrite = True
 
@@ -73,7 +83,9 @@ class UDPChannel(SocketChannel):
     def _socketConfig(self, sock, cfgUtils):
         SocketChannel._socketConfig(self, sock, cfgUtils)
         cfgUtils.disallowMixed()
-        cfgUtils.setBufferSize(65536)
+
+        nSlots = self.sendThrottle+self.recvThrottle
+        cfgUtils.setBufferSize(nSlots*self.bufferSize)
 
     def onBindError(self, address, err):
         r = list(address)
@@ -82,38 +94,29 @@ class UDPChannel(SocketChannel):
 
     #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-    def processRecvQueue(self):
+    def processRecvQueue(self, recvQueue):
         registry = self.registry
         default = registry.get(None, self.recvDefault)
-        recvQueue = self.recvQueue
-        try:
-            while 1:
-                packet, address = recvQueue.get(False)
-                recv = registry.get(address, default)
-                recv(packet, address)
 
-        except Queue.Empty:
-            pass
+        for packet, address in recvQueue:
+            recv = registry.get(address, default)
+            recv(packet, address)
 
     def performRead(self, tasks):
-        recvQueue = self.recvQueue
-
         bufferSize = self.bufferSize
         sock = self.sock
+        iterThrottle = xrange(self.recvThrottle)
 
-        while 1:
-            try:
-                for n in xrange(self.recvThrottle):
-                    packet, address = sock.recvfrom(bufferSize)
-                    recvQueue.put((packet, address))
+        recvQueue = []
+        try:
+            for n in iterThrottle:
+                recvQueue.append(sock.recvfrom(bufferSize))
+        except SocketError, err:
+            if self.reraiseSocketError(err, err.args[0]):
+                traceback.print_exc()
 
-            except SocketError, err:
-                if self.reraiseSocketError(err, err.args[0]):
-                    traceback.print_exc()
-            break
-
-        if not recvQueue.empty():
-            tasks.append(self.processRecvQueue)
+        if recvQueue:
+            tasks.append((self.processRecvQueue, recvQueue))
         return n
 
     def performWrite(self, tasks):
@@ -123,24 +126,25 @@ class UDPChannel(SocketChannel):
             return
 
         sock = self.sock
-        while 1:
-            try:
-                for n in xrange(self.sendThrottle):
-                    packet, address, onNotify = sendQueue.get(False, 0.1)
-                    sock.sendto(packet, address)
+        iterThrottle = xrange(self.sendThrottle)
+        try:
+            for n in iterThrottle:
+                packet, address, onNotify = sendQueue.get(False, 0.1)
+                sock.sendto(packet, address)
 
-                    if onNotify is not None:
-                        onNotify('sent', packet, address, None)
-            except Queue.Empty:
-                self.needsWrite = False
-            except SocketError, err:
-                if onNotify is None:
-                    reraise = self.reraiseSocketError(err, err.args[0])
-                else: 
-                    reraise = onNotify('error', packet, address, err)
-                if reraise:
-                    traceback.print_exc()
-            break
+                if onNotify is not None:
+                    onNotify('sent', packet, address, None)
+        except Queue.Empty:
+            self.needsWrite = False
+        except SocketError, err:
+            if onNotify is None:
+                reraise = self.reraiseSocketError(err, err.args[0])
+            else: 
+                reraise = onNotify('error', packet, address, err)
+            if reraise:
+                traceback.print_exc()
+            else:
+                sendQueue.put((packet, address, onNotify))
 
         return n
 

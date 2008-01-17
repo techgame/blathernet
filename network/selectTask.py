@@ -156,8 +156,9 @@ class NetworkSelect(NetworkCommon):
         tasks = []
         for r in readers:
             r.performRead(tasks)
-        for cb in tasks:
-            cb()
+
+        for fn, items in tasks:
+            fn(items)
 
     def processWrites(self, timeout=0):
         self._e_writables.wait()
@@ -168,8 +169,9 @@ class NetworkSelect(NetworkCommon):
         tasks = []
         for w in writers:
             w.performWrite(tasks)
-        for cb in tasks:
-            cb()
+
+        for fn, items in tasks:
+            fn(items)
 
     #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
