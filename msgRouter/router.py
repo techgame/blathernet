@@ -10,6 +10,7 @@
 #~ Imports 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
+import weakref
 import uuid
 
 from ..base import BlatherObject
@@ -63,7 +64,10 @@ class BlatherMessageRouter(BlatherObject):
 
     def addRoute(self, route, weight=0):
         allRoutes = self.allRoutes
-        allRoutes[route] = max(weight, allRoutes.get(route, weight))
+        if isinstance(route, weakref.ref):
+            route = route()
+        if route is not None:
+            allRoutes[route] = max(weight, allRoutes.get(route, weight))
 
     def entryForAdvert(self, advert):
         return self.entryForId(advert.advertId)

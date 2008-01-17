@@ -53,7 +53,7 @@ class BasicBlatherRoute(BlatherObject):
 
     def recvDispatch(self, packet, addr):
         ts = self._incRecvStats(len(packet))
-        pinfo = {'addr': addr, 'route': self._wrSelf}
+        pinfo = {'addr': addr, 'recvRoute': self._wrSelf}
         self.recvPacket(packet, pinfo)
     def recvPacket(self, packet, pinfo):
         self.msgRouter.recvPacket(packet, pinfo)

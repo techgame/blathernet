@@ -32,6 +32,7 @@ class IncrementProtocol(BasicBlatherProtocol):
         seq, dmsg, pinfo = self.decode(bytes, pinfo)
         if dmsg:
             chan = self.Channel(pinfo['retEntry'], advEntry)
+            chan.pinfo = pinfo
             return self.recvDecoded(chan, seq, dmsg)
 
     def encode(self, dmsg, pinfo):

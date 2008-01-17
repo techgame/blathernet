@@ -72,7 +72,10 @@ class AdvertRouterEntry(BlatherObject):
         entryRoutes = self.entryRoutes
         if not entryRoutes:
             self.entryRoutes = entryRoutes = weakref.WeakKeyDictionary()
-        entryRoutes[route] = max(weight, entryRoutes.get(route, weight))
+        if isinstance(route, weakref.ref):
+            route = route()
+        if route is not None:
+            entryRoutes[route] = max(weight, entryRoutes.get(route, weight))
 
     def addHandlerFn(self, fn):
         if not self.handlerFns:
@@ -113,12 +116,12 @@ class AdvertRouterEntry(BlatherObject):
 
     def recvReturnRoute(self, pinfo):
         self._incRecvStats(pinfo, None)
-        self.addRoute(pinfo['route']())
+        self.addRoute(pinfo.get('recvRoute'))
         return True
 
     def recvReturnRouteDup(self, pinfo):
         self._incRecvStats(pinfo, None)
-        self.addRoute(pinfo['route']())
+        self.addRoute(pinfo.get('recvRoute'))
         return True
 
     #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -180,6 +183,10 @@ class AdvertRouterEntry(BlatherObject):
     #~ Forward route selection ~~~~~~~~~~~~~~~~~~~~~~~~~~
 
     def forwardRoutesFor(self, pinfo):
+        sendRoute = pinfo.get('sendRoute')
+        if sendRoute is not None:
+            return [sendRoute()]
+
         sendOpt = pinfo.get('sendOpt', 0)
         flags = sendOpt >> 4
         fwdkind = sendOpt & 0xf
@@ -197,9 +204,9 @@ class AdvertRouterEntry(BlatherObject):
 
         # discard our route
         routes = routes.copy()
-        fromRoute = pinfo.get('route')
-        if fromRoute is not None:
-            routes.pop(fromRoute(), None)
+        recvRoute = pinfo.get('recvRoute')
+        if recvRoute is not None:
+            routes.pop(recvRoute(), None)
 
         fwdFilter = self.fwdKindFilters.get(fwdkind, None)
         if fwdFilter is not None:
