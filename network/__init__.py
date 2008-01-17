@@ -11,6 +11,5 @@
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 from .manager import BlatherNetworkMgr
-from .selectTask import NetworkSelect
 from .udpChannel import UDPChannel, UDPMulticastChannel, MUDPChannel
 

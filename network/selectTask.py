@@ -58,14 +58,13 @@ class NetworkCommon(KVObject):
 #~ Network Select Task
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-class NetworkSelect(NetworkCommon):
+class NetworkSelector(NetworkCommon):
     selectables = KVSet.property()
 
     def __init__(self):
         NetworkCommon.__init__(self)
         self.readables = set()
         self.writeables = set()
-        self._e_writables = threading.Event()
 
     def add(self, selectable):
         self.verifySelectable(selectable, True)
@@ -91,7 +90,6 @@ class NetworkSelect(NetworkCommon):
                 self.writeables.add(selectable.yourself)
             else: 
                 self.writeables.discard(selectable.yourself)
-            self._signalWritables()
 
     #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     #~ Selectables verification
@@ -102,13 +100,7 @@ class NetworkSelect(NetworkCommon):
         return self.readables
     def filterWriteables(self, selectables):
         self.writeables = set(s for s in selectables if s.needsWrite)
-        self._signalWritables()
         return self.writeables
-
-    def _signalWritables(self):
-        if self.writeables:
-            self._e_writables.set()
-        else: self._e_writables.clear()
 
     def filterSelectables(self):
         selectables = self.selectables
@@ -150,23 +142,13 @@ class NetworkSelect(NetworkCommon):
 
         return readers, writers
 
-    def processReads(self, timeout=0):
-        readers = self.findSelected(self.readables, [], timeout)[0]
+    def processSelectable(self, timeout=0):
+        readers, writers = self.findSelected(self.readables, self.writeables, timeout)
 
         tasks = []
         for r in readers:
             r.performRead(tasks)
 
-        for fn, items in tasks:
-            fn(items)
-
-    def processWrites(self, timeout=0):
-        self._e_writables.wait()
-        writeables = self.writeables
-
-        writers = self.findSelected([], writeables, timeout)[1]
-
-        tasks = []
         for w in writers:
             w.performWrite(tasks)
 
@@ -178,17 +160,10 @@ class NetworkSelect(NetworkCommon):
     done = False
 
     def run(self, timeout=1):
-        self.timeout = timeout
-        self.threadProcessReads(timeout)
-        self.threadProcessWrites(timeout)
+        self.threadProcessSelectable(timeout)
 
     @threadcall
-    def threadProcessReads(self, timeout):
+    def threadProcessSelectable(self, timeout):
         while not self.done:
-            self.processReads(timeout)
-
-    @threadcall
-    def threadProcessWrites(self, timeout):
-        while not self.done:
-            self.processWrites(timeout)
+            self.processSelectable(timeout)
 

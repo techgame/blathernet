@@ -12,7 +12,7 @@
 
 from ..base import BlatherObject
 
-from .selectTask import NetworkSelect
+from .selectTask import NetworkSelector
 from .udpChannel import UDPChannel, UDPMulticastChannel
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -21,7 +21,7 @@ from .udpChannel import UDPChannel, UDPMulticastChannel
 
 class BlatherNetworkMgr(BlatherObject):
     _fm_ = BlatherObject._fm_.branch(
-            NetworkSelect=NetworkSelect,
+            NetworkSelector=NetworkSelector,
             UDPChannel=UDPChannel,
             UDPMulticastChannel=UDPMulticastChannel,)
 
@@ -29,22 +29,26 @@ class BlatherNetworkMgr(BlatherObject):
         BlatherObject.__init__(self)
         self.host = host.asWeakRef()
 
-    _networkSelect = None
-    def getNetworkSelect(self):
-        result = self._networkSelect
+    _networkSelector = None
+    def getNetworkSelector(self):
+        result = self._networkSelector
         if result is None:
-            result = self._fm_.NetworkSelect()
+            result = self._fm_.NetworkSelector()
             result.run()
-            self._networkSelect = result
+            self._networkSelector = result
         return result
-    networkSelect = property(getNetworkSelect)
+    selector = property(getNetworkSelector)
+
+    #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    #~ Factory methods
+    #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
     def addUdpChannel(self, address='127.0.0.1', port=8470, assign=False):
         if not isinstance(address, tuple):
             address = address, port
 
         ch = self._fm_.UDPChannel(address)
-        self.networkSelect.add(ch)
+        self.selector.add(ch)
         if assign: self.setUdpChannel(ch)
         return ch
 
@@ -57,7 +61,7 @@ class BlatherNetworkMgr(BlatherObject):
         ch.grpAddr = ch.normSockAddr(address)[1]
         ch.joinGroup(ch.grpAddr)
 
-        self.networkSelect.add(ch)
+        self.selector.add(ch)
         if assign: self.setMudpChannel(ch)
         return ch
 
