@@ -34,10 +34,14 @@ class BlatherNetworkMgr(BlatherObject):
         result = self._networkSelector
         if result is None:
             result = self._fm_.NetworkSelector()
-            result.run()
             self._networkSelector = result
         return result
     selector = property(getNetworkSelector)
+
+    _tasksleep = None
+    def getTaskSleep(self):
+        return self.selector.processSelectable
+    tasksleep = property(getTaskSleep)
 
     #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     #~ Factory methods

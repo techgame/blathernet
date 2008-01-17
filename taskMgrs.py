@@ -21,6 +21,8 @@ from heapq import heappop, heappush
 
 from TG.kvObserving import KVSet, KVList
 
+from .base import BlatherObject
+
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 #~ Definitions 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -35,39 +37,45 @@ def threadcall(method):
     decorate.__doc__ = method.__doc__
     return decorate
 
-class BlatherTaskMgr(object):
-    def __init__(self, name, masterTaskMgr):
-        self.name = name
-        self.etasks = masterTaskMgr.addMgr(self)
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
+class BasicBlatherTaskMgr(BlatherObject):
+    timeout = 0.5
+
+    def __init__(self, name):
+        BlatherObject.__init__(self)
+        self.name = name
         self.tasks = set()
-        self.hqTimer = []
-        self.lockTimer = threading.Lock()
-        self.threadTimers()
 
     def __repr__(self):
         return '<TM %s |%s|>' % (self.name, len(self.tasks))
 
-    def asWeakProxy(self, cb=None): return weakref.proxy(self, cb)
-    def asWeakRef(self, cb=None): return weakref.ref(self, cb)
+    def __len__(self):
+        return len(self.tasks)
 
-    def add(self, task):
+    def addTask(self, task):
         if task is None:
             return None
 
         self.tasks.add(task)
-        self.etasks.set()
         return task
-    def addTask(self, task):
-        return self.add(task)
 
-    def __len__(self):
-        return len(self.tasks)
+    def run(self, threaded=False):
+        if threaded:
+            return self.runThreaded()
+
+        while not self.done:
+            self.process(False)
+
+    @threadcall
+    def runThreaded(self):
+        self.run(False)
 
     def process(self, allActive=True):
         n = 0
         activeTasks = self.tasks
         while activeTasks:
+            self.kvpub.event('@process')
             for task in list(activeTasks):
                 n += 1
                 try:
@@ -77,42 +85,32 @@ class BlatherTaskMgr(object):
                     traceback.print_exc()
                     activeTasks.discard(task)
 
-            if not allActive:
-                break
+            if allActive and n:
+                self.tasksleep(0)
+            else: break
+        if not n:
+            self.kvpub.event('@process_sleep')
+            self.tasksleep(self.timeout)
         return n
-    __call__ = process
 
-    #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    tasksleep = time.sleep
 
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+#~ Timer based Tasks
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+class BasicBlatherTimerMgr(BasicBlatherTaskMgr):
     done = False
     timestamp = time.time
-    sleep = time.sleep
-    minTimerFrequency = 0.008
-    @threadcall
-    def threadTimers(self):
-        hqTimer = self.hqTimer
-        while not self.done:
-            if hqTimer:
-                ts = self.timestamp()
 
-                firedTimers = []
-                with self.lockTimer:
-                    while hqTimer and ts > hqTimer[0][0]:
-                        firedTimers.append(heappop(hqTimer)[1])
+    def __init__(self, name):
+        BasicBlatherTaskMgr.__init__(self, name)
+        self.initTimer()
 
-                if firedTimers:
-                    self.add(partial(self._processFiredTimers, ts, firedTimers))
-
-            self.sleep(self.minTimerFrequency)
-
-    def _processFiredTimers(self, ts, firedTimers):
-        timerEvents = []
-        for task in firedTimers:
-            tsNext = task(ts)
-            if tsNext is not None:
-                timerEvents.append((tsNext, task))
-
-        self.extendTimers(timerEvents, ts)
+    def initTimer(self):
+        self.hqTimer = []
+        self.lockTimerHQ = threading.Lock()
+        self.threadTimers()
 
     def addTimer(self, tsStart, task):
         if task is None:
@@ -121,7 +119,7 @@ class BlatherTaskMgr(object):
         if tsStart <= 4000:
             tsStart += self.timestamp()
 
-        with self.lockTimer:
+        with self.lockTimerHQ:
             heappush(self.hqTimer, (tsStart, task))
 
         return task
@@ -131,65 +129,46 @@ class BlatherTaskMgr(object):
             ts = self.timestamp()
 
         hqTimer = self.hqTimer
-        with self.lockTimer:
+        with self.lockTimerHQ:
             for (tsStart, task) in timerEvents:
                 if tsStart <= 4000:
                     tsStart += ts
                 heappush(hqTimer, (tsStart, task))
 
+    timersleep = time.sleep
+    minTimerFrequency = 0.008
+    @threadcall
+    def threadTimers(self):
+        hqTimer = self.hqTimer
+        while not self.done:
+            if hqTimer:
+                ts = self.timestamp()
+
+                firedTimers = []
+                with self.lockTimerHQ:
+                    while hqTimer and ts > hqTimer[0][0]:
+                        firedTimers.append(heappop(hqTimer)[1])
+
+                if firedTimers:
+                    self.addTask(partial(self._processFiredTimers, ts, firedTimers))
+
+            self.timersleep(self.minTimerFrequency)
+
+    def _processFiredTimers(self, ts, firedTimers):
+        self.kvpub.event('@timer')
+
+        timerEvents = []
+        for task in firedTimers:
+            tsNext = task(ts)
+            if tsNext is not None:
+                timerEvents.append((tsNext, task))
+
+        self.extendTimers(timerEvents, ts)
+
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+#~ Blather Task Manger
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-class MasterTaskMgr(object):
-    timeout = 0.5
-
-    def __init__(self):
-        self.mgrs = []
-        self.etasks = threading.Event()
-
-    def __repr__(self):
-        return '<TM Master |%s|>' % (len(self.mgrs),)
-
-    def asWeakProxy(self, cb=None): return weakref.proxy(self, cb)
-    def asWeakRef(self, cb=None): return weakref.ref(self, cb)
-
-    def __len__(self):
-        return len(self.mgrs)
-
-    def addMgr(self, mgr):
-        self.mgrs.append(mgr.asWeakRef(self._onDiscardMgr))
-        return self.etasks
-    def removeMgr(self, mgr):
-        self.mgrs.remove(mgr.asWeakRef())
-    def _onDiscardMgr(self, wrMgr):
-        self.mgrs.remove(wrMgr)
-
-    def process(self, allActive=True, timeout=None):
-        if timeout is None:
-            timeout = self.timeout
-
-        mgrs = self.mgrs
-
-        n = True
-        total = 0
-        while n:
-            self.etasks.clear()
-
-            n = 0
-            for taskMgr in list(mgrs):
-                n += taskMgr().process(False)
-            total += n
-
-            if not total:
-                self.etasks.wait(self.timeout)
-                if not self.etasks.isSet():
-                    break
-
-            if not allActive:
-                break
-
-        return total
-    __call__ = process
-
-    def onTaskAdded(self):
-        self.etasks.set()
+class BlatherTaskMgr(BasicBlatherTimerMgr):
+    pass
 

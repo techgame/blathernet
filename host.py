@@ -30,7 +30,6 @@ class BlatherHost(BlatherObject):
             MessageRouter = msgRouter.MessageRouter,
             RouteFactory = routes.BlatherRouteFactory,
             )
-    _masterTaskMgr = taskMgrs.MasterTaskMgr()
     taskMgr = None
     msgRouter = None
     networkMgr = None
@@ -43,13 +42,14 @@ class BlatherHost(BlatherObject):
         BlatherObject.__init__(self)
         if name is not None:
             self.name = name
+        self.initMgrs()
 
-        self.taskMgr = self._fm_.TaskMgr(name, self._masterTaskMgr)
-        #self._masterTaskMgr.add(self.taskMgr)
-
+    def initMgrs(self):
+        self.taskMgr = self._fm_.TaskMgr(self.name)
         self.msgRouter = self._fm_.MessageRouter(self)
         self.networkMgr = self._fm_.NetworkMgr(self)
         self.routeFactory = self._fm_.RouteFactory(self)
+        self.taskMgr.tasksleep = self.networkMgr.tasksleep
 
     def __repr__(self):
         if self.name is None:
@@ -65,17 +65,15 @@ class BlatherHost(BlatherObject):
     def registerService(self, service):
         self.msgRouter.registerOn(service)
 
-    @classmethod
-    def processAll(klass, allActive=True, timeout=None):
-        return klass._masterTaskMgr(allActive, timeout)
-
     def process(self, allActive=True):
-        return self.taskMgr(allActive)
+        return self.taskMgr.process(allActive)
+    def run(self, threaded=False):
+        return self.taskMgr.run(threaded)
 
     def addTimer(self, tsStart, task):
         return self.taskMgr.addTimer(tsStart, task)
     def addTask(self, task):
-        return self.taskMgr.add(task)
+        return self.taskMgr.addTask(task)
 
 Host = BlatherHost
 

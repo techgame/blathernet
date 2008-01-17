@@ -14,7 +14,6 @@ import time
 import errno
 import weakref
 
-import threading
 import select
 import socket
 from socket import error as SocketError
@@ -26,16 +25,6 @@ from .socketConfigTools import socketErrorMap
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 #~ Definitions 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-def threadcall(method):
-    def decorate(*args, **kw):
-        t = threading.Thread(target=method, args=args, kwargs=kw)
-        t.setDaemon(True)
-        t.start()
-        return t
-    decorate.__name__ = method.__name__
-    decorate.__doc__ = method.__doc__
-    return decorate
 
 class NetworkCommon(KVObject):
     _fm_ = OBFactoryMap()
@@ -154,16 +143,4 @@ class NetworkSelector(NetworkCommon):
 
         for fn, items in tasks:
             fn(items)
-
-    #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-    done = False
-
-    def run(self, timeout=1):
-        self.threadProcessSelectable(timeout)
-
-    @threadcall
-    def threadProcessSelectable(self, timeout):
-        while not self.done:
-            self.processSelectable(timeout)
 
