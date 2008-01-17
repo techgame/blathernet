@@ -110,16 +110,7 @@ class AdvertRouterEntry(BlatherObject):
         self.deliverPacket(packet, dmsg, pinfo)
         return True
 
-    def recvPacketDup(self, packet, dmsg, pinfo):
-        self._incRecvDupStats(pinfo, len(packet))
-        return False
-
     def recvReturnRoute(self, pinfo):
-        self._incRecvStats(pinfo, None)
-        self.addRoute(pinfo.get('recvRoute'))
-        return True
-
-    def recvReturnRouteDup(self, pinfo):
         self._incRecvStats(pinfo, None)
         self.addRoute(pinfo.get('recvRoute'))
         return True
@@ -150,16 +141,16 @@ class AdvertRouterEntry(BlatherObject):
     #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
     def deliverPacket(self, packet, dmsg, pinfo):
-        r = self.handleDelivery(dmsg, pinfo)
-        r = self.forwardPacket(packet, pinfo) or r
+        sendOpt = pinfo.get('sendOpt', 0)
+
+        r = self.handleDelivery(dmsg, pinfo, sendOpt)
+        if not r or (sendOpt & 0x80):
+            r = self.forwardPacket(packet, pinfo, sendOpt) or r
         return r, pinfo
 
-    def handleDelivery(self, dmsg, pinfo):
-        sendOpt = pinfo.get('sendOpt', 0)
-        flags = sendOpt >> 4
-
-        # flags b1000 signals to forward even if delivered
-        stopOnDelivered = not (flags & 0x8)
+    def handleDelivery(self, dmsg, pinfo, sendOpt):
+        # sendOpt b1000:0000 signals to forward even if delivered
+        stopOnDelivered = not (sendOpt & 0x80)
 
         delivered = False
         for fn in self.handlerFns:
@@ -171,8 +162,8 @@ class AdvertRouterEntry(BlatherObject):
         pinfo['delivered'] = delivered
         return delivered
 
-    def forwardPacket(self, packet, pinfo):
-        fwroutes = self.forwardRoutesFor(pinfo)
+    def forwardPacket(self, packet, pinfo, sendOpt):
+        fwroutes = self.forwardRoutesFor(pinfo, sendOpt)
         forwarded = False
         for r in fwroutes:
             r.sendPacket(packet)
@@ -182,21 +173,13 @@ class AdvertRouterEntry(BlatherObject):
 
     #~ Forward route selection ~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-    def forwardRoutesFor(self, pinfo):
+    def forwardRoutesFor(self, pinfo, sendOpt):
         sendRoute = pinfo.get('sendRoute')
         if sendRoute is not None:
             return [sendRoute()]
 
-        sendOpt = pinfo.get('sendOpt', 0)
-        flags = sendOpt >> 4
-        fwdkind = sendOpt & 0xf
-
-        if not (flags & 0x8) and pinfo['delivered']:
-            # flags b1000 signals to forward even if delivered
-            return []
-
-        if (flags & 0x4):
-            # flags b0100 signals to use allRoutes to start from
+        if (sendOpt & 0x40):
+            # sendOpt b0100:0000 signals to use allRoutes to start from
             routes = self.allRoutes
         else: 
             # otherwise, use the entry's routes
@@ -208,6 +191,8 @@ class AdvertRouterEntry(BlatherObject):
         if recvRoute is not None:
             routes.pop(recvRoute(), None)
 
+        # fwdKind is the lower nibble of sendOpt
+        fwdkind = sendOpt & 0xf
         fwdFilter = self.fwdKindFilters.get(fwdkind, None)
         if fwdFilter is not None:
             return fwdFilter(self, routes)
@@ -287,15 +272,5 @@ class AdvertRouterEntry(BlatherObject):
         if bytes is not None:
             stats['recv_count'] += 1
             stats['recv_bytes'] += bytes
-        return ts
-
-    def _incRecvDupStats(self, pinfo, bytes=None):
-        ts = self.timestamp()
-        pinfo['ts'] = ts
-        stats = self.stats
-        stats['dup_time'] = ts 
-        if bytes is not None:
-            stats['dup_count'] += 1
-            stats['dup_bytes'] += bytes
         return ts
 

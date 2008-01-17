@@ -93,15 +93,11 @@ class BlatherMessageRouter(BlatherObject):
         if replyId is not None:
             retAdvertEntry = self.routeTable[replyId]
             pinfo['retEntry'] = retAdvertEntry
-            if not msgIdDup:
-                retAdvertEntry.recvReturnRoute(pinfo)
-            else: 
-                retAdvertEntry.recvReturnRouteDup(pinfo)
+            retAdvertEntry.recvReturnRoute(pinfo)
         else: pinfo['retEntry'] = None
 
         if not msgIdDup:
             return advEntry.recvPacket(packet, dmsg, pinfo)
-        else: return advEntry.recvPacketDup(packet, dmsg, pinfo)
 
     #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
