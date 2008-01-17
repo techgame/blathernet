@@ -68,8 +68,6 @@ class MessageCompleteProtocol(BasicBlatherProtocol):
             key = dmsgId & 0xff
 
             if self.outbound.get(key) is not None:
-                print 'out:', sorted(self.outbound.keys())
-                print 'req:', sorted(self.requestedMsgs)
                 raise RuntimeError("DmsgId never acknowledged: %r, key: %s" % (dmsgId, key))
             self.outbound[key] = (dmsg, pinfo)
             return dmsgId
@@ -245,7 +243,7 @@ class MessageCompleteProtocol(BasicBlatherProtocol):
             dmsgId = circularAdjust(lastRecvDmsgId, dmsgId, 0xff)
             self.recvInbound(chan, dmsgId, dmsg)
 
-        needPing = needPing or newMissing
+        needPing = needPing or newMissing or (lastRecvDmsgId - self.sentAckDmsgId > 64)
         if needPing and self.tsSend<self.tsRecv:
             # we didn't send a message after recving this one... let's send our
             # new missing, but don't force a full ping

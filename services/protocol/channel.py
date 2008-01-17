@@ -48,6 +48,9 @@ class BasicChannel(object):
         return self.toEntry.msgRouter
     msgRouter = property(getMsgRouter)
 
+    def timestamp(self):
+        return self.toEntry.timestamp()
+
     #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
     @classmethod
