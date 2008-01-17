@@ -264,9 +264,9 @@ class MessageCompleteProtocol(BasicBlatherProtocol):
     #~ Periodic status tracking
     #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-    rateBusy = .050 # in seconds
-    rateIdle = .250 # in seconds
-    rateShutdown = .500 # in seconds
+    rateBusy = .200 # in seconds
+    rateIdle = .500 # in seconds
+    rateShutdown = 1.000 # in seconds
     rate = rateIdle
 
     def getPeriodicRates(self):
