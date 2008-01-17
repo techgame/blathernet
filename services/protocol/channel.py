@@ -105,6 +105,6 @@ class Channel(BasicChannel):
 
     def getPeriodicRates(self):
         return self.protocol.getPeriodicRates()
-    def setPeriodicRates(self, rateBusy, rateIdle=None):
-        return self.protocol.setPeriodicRates(rateBusy, rateIdle)
+    def setPeriodicRates(self, *args, **kw):
+        return self.protocol.setPeriodicRates(*args, **kw)
 
