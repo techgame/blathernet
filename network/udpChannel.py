@@ -31,9 +31,9 @@ class UDPChannel(SocketChannel):
     socketErrorMap = udpSocketErrorMap
 
     sockType = SOCK_DGRAM
-    bufferSize = 65536
     recvThrottle = 16
     sendThrottle = 16
+    bufferSize = 64 * 65536
 
     def __init__(self, address=None, interface=None, onBindError=None):
         SocketChannel.__init__(self)
@@ -84,8 +84,7 @@ class UDPChannel(SocketChannel):
         SocketChannel._socketConfig(self, sock, cfgUtils)
         cfgUtils.disallowMixed()
 
-        nSlots = self.sendThrottle+self.recvThrottle
-        cfgUtils.setBufferSize(nSlots*self.bufferSize)
+        cfgUtils.setBufferSize(self.bufferSize)
 
     def onBindError(self, address, err):
         r = list(address)
@@ -103,14 +102,13 @@ class UDPChannel(SocketChannel):
             recv(packet, address)
 
     def performRead(self, tasks):
-        bufferSize = self.bufferSize
         sock = self.sock
         iterThrottle = xrange(self.recvThrottle)
 
         recvQueue = []
         try:
             for n in iterThrottle:
-                recvQueue.append(sock.recvfrom(bufferSize))
+                recvQueue.append(sock.recvfrom(65536))
         except SocketError, err:
             if self.reraiseSocketError(err, err.args[0]):
                 traceback.print_exc()
