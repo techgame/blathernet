@@ -67,7 +67,7 @@ class BasicBlatherService(MessageHandlerBase):
             session = self.Session(self, chan)
             session.sessionId = sessionId
             self.sessionIdMap[sessionId] = True
-        return session
+            return session
 
     def removeSession(self, session):
         del self.sessionIdMap[session.sessionId]

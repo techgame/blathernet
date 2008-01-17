@@ -20,17 +20,17 @@ from struct import pack, unpack
 from array import array
 
 from .base import BasicBlatherProtocol, BlatherProtocolError
-from .circularUtils import circularDiff, circularAdjust, circularMaskedRange
+from .circularUtils import circularDiff, circularAdjust, circularMaskedRange, circularVectorAdjust
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 #~ Definitions 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 class SendBufferFull(BlatherProtocolError):
-    def __init__(self, sentDmsgId, recvAckDmsgId):
-        BlatherProtocolError.__init__(self, sentDmsgId, recvAckDmsgId)
-        self.sentDmsgId = sentDmsgId
+    def __init__(self, recvAckDmsgId, sentDmsgId, dmsgIdDelta):
+        BlatherProtocolError.__init__(self, recvAckDmsgId, sentDmsgId, dmsgIdDelta)
         self.recvAckDmsgId = recvAckDmsgId
+        self.sentDmsgId = sentDmsgId
 
 class MessageCompleteProtocol(BasicBlatherProtocol):
     ri = random.Random()
@@ -59,15 +59,17 @@ class MessageCompleteProtocol(BasicBlatherProtocol):
     
     def nextDmsgIdFor(self, dmsg, pinfo):
         if dmsg:
-            d = self.sentDmsgIdDelta()
-            if d < -112:
-                raise SendBufferFull(self.sentDmsgId, self.recvAckDmsgId)
+            dmsgIdDelta = self.sentDmsgIdDelta()
+            if dmsgIdDelta < -112:
+                raise SendBufferFull(self.recvAckDmsgId, self.sentDmsgId, dmsgIdDelta)
 
             dmsgId = self.sentDmsgId + 1
             self.sentDmsgId = dmsgId
-
             key = dmsgId & 0xff
+
             if self.outbound.get(key) is not None:
+                print 'out:', sorted(self.outbound.keys())
+                print 'req:', sorted(self.requestedMsgs)
                 raise RuntimeError("DmsgId never acknowledged: %r, key: %s" % (dmsgId, key))
             self.outbound[key] = (dmsg, pinfo)
             return dmsgId
@@ -192,12 +194,8 @@ class MessageCompleteProtocol(BasicBlatherProtocol):
     #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
     def sentDmsgIdDelta(self):
-        return circularDiff(self.sentDmsgId, min(self.requestedMsgs or [self.recvAckDmsgId]), 0xff)
-    def sentAckDmsgIdDelta(self):
         return self.sentDmsgId - self.recvAckDmsgId
     def recvDmsgIdDelta(self):
-        return circularDiff(self.recvDmsgId, min(self.missingMsgs or [self.sentAckDmsgId]), 0xff)
-    def recvAckDmsgIdDelta(self):
         return self.recvDmsgId - self.sentAckDmsgId
     def sendSeqDelta(self):
         return self.sendSeq - self.recvAck
@@ -249,7 +247,8 @@ class MessageCompleteProtocol(BasicBlatherProtocol):
 
         needPing = needPing or newMissing
         if needPing and self.tsSend<self.tsRecv:
-            # we didn't send a message after recving this one... let's send our new missing
+            # we didn't send a message after recving this one... let's send our
+            # new missing, but don't force a full ping
             self.sendPing(False)
 
     def recvInbound(self, chan, dmsgId, dmsg):
@@ -267,21 +266,20 @@ class MessageCompleteProtocol(BasicBlatherProtocol):
     #~ Periodic status tracking
     #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-    rateBusy = .020 #  20 miliseconds...
-    rateIdle = 10*rateBusy
-    rateShutdown = 4*rateIdle
+    rateBusy = .050 # in seconds
+    rateIdle = .250 # in seconds
+    rateShutdown = .500 # in seconds
     rate = rateIdle
 
     def getPeriodicRates(self):
         return (self.rateBusy, self.rateIdle)
-    def setPeriodicRates(self, rateBusy=None, rateIdle=None):
-        if rateBusy is None:
-            rateBusy = self.__class__.rateBusy
-        if rateIdle is None:
-            rateIdle = 10*rateBusy
-
-        self.rateBusy = rateBusy
-        self.rateIdle = rateIdle
+    def setPeriodicRates(self, rateBusy=None, rateIdle=None, rateShutdown=None):
+        if rateBusy is not None:
+            self.rateBusy = rateBusy
+        if rateIdle is not None:
+            self.rateIdle = rateIdle
+        if rateShutdown is not None:
+            self.rateShutdown = rateShutdown
 
     def onPeriodic(self, advEntry, ts):
         rate = self.rate
@@ -329,10 +327,21 @@ class MessageCompleteProtocol(BasicBlatherProtocol):
                 self.resendRecvSeq = recvSeq
             else:
                 # resend new requests
-                self.resend(chan, requestedMsgs - self.requestedMsgs)
+                newRequest = requestedMsgs - self.requestedMsgs
+                self.resend(chan, newRequest)
+
+                if len(requestedMsgs) - len(newRequest) > 4:
+                    # we are falling behind, spam a few more
+                    oldRequest = list(requestedMsgs - newRequest)
+                    oldRequest = self.ri.sample(oldRequest, len(oldRequest)//2)
+                    self.resend(chan, oldRequest)
+
+            needPing = False
+        else: 
+            # reply ping is need if nothing is requested, and fullPing is requested
+            needPing = fullPing
 
         self.requestedMsgs = requestedMsgs
-        needPing = fullPing and not requestedMsgs
         return needPing
 
     def updateAckOutbound(self, dmsgIdAckHigh, requestedMsgs):
@@ -342,8 +351,8 @@ class MessageCompleteProtocol(BasicBlatherProtocol):
 
         if requestedMsgs:
             ack -= requestedMsgs
-            recvAckDmsgId = min(requestedMsgs)-1
-        else: recvAckDmsgId = dmsgIdAckHigh
+            recvAckDmsgId = min(circularVectorAdjust(self.recvAckDmsgId, requestedMsgs, 0xff))-1
+        else: recvAckDmsgId = dmsgIdAckHigh-1
 
         # adjust the recvAckDmsgId
         self.recvAckDmsgId = circularAdjust(self.recvAckDmsgId, recvAckDmsgId, 0xff)
