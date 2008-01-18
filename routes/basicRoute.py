@@ -36,6 +36,9 @@ class BasicBlatherRoute(BlatherObject):
         self.msgRouter = msgRouter
         self.registerOn(msgRouter)
 
+    def __cmp__(self, other):
+        return cmp(self.rating, other.rating)
+
     def getHost(self):
         return self.msgRouter.host
     host = property(getHost)
