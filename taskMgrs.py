@@ -40,12 +40,18 @@ def threadcall(method):
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 class BasicBlatherTaskMgr(BlatherObject):
-    timeout = 0.5
+    timeout = 0.05
+    tasksleep = time.sleep
 
     def __init__(self, name):
         BlatherObject.__init__(self)
         self.name = name
+        self.initTasks()
+
+    def initTasks(self):
         self.tasks = set()
+        self._e_tasks = threading.Event()
+        self.setTaskSleep()
 
     def __repr__(self):
         return '<TM %s |%s|>' % (self.name, len(self.tasks))
@@ -53,11 +59,17 @@ class BasicBlatherTaskMgr(BlatherObject):
     def __len__(self):
         return len(self.tasks)
 
+    def setTaskSleep(self, tasksleep=None):
+        if tasksleep is None:
+            tasksleep = self._e_tasks.wait
+        self.tasksleep = tasksleep
+
     def addTask(self, task):
         if task is None:
             return None
 
         self.tasks.add(task)
+        self._e_tasks.set()
         return task
 
     def run(self, threaded=False):
@@ -74,7 +86,9 @@ class BasicBlatherTaskMgr(BlatherObject):
     def process(self, allActive=True):
         n = 0
         activeTasks = self.tasks
+        e_task = self._e_tasks
         while activeTasks:
+            e_task.clear()
             self.kvpub.event('@process')
             for task in list(activeTasks):
                 n += 1
@@ -92,8 +106,6 @@ class BasicBlatherTaskMgr(BlatherObject):
             self.kvpub.event('@process_sleep')
             self.tasksleep(self.timeout)
         return n
-
-    tasksleep = time.sleep
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 #~ Timer based Tasks

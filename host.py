@@ -13,7 +13,7 @@
 import uuid
 import md5
 
-from .base import BlatherObject
+from .base import BlatherObject, kvobserve
 from . import msgRouter
 from . import routes 
 from . import network
@@ -49,12 +49,19 @@ class BlatherHost(BlatherObject):
         self.msgRouter = self._fm_.MessageRouter(self)
         self.networkMgr = self._fm_.NetworkMgr(self)
         self.routeFactory = self._fm_.RouteFactory(self)
-        self.taskMgr.tasksleep = self.networkMgr.tasksleep
 
     def __repr__(self):
         if self.name is None:
             return '<%s %s>' % (self.__class__.__name__, id(self))
         else: return '<%s "%s" %s>' % (self.__class__.__name__, self.name, id(self))
+
+    @kvobserve('networkMgr.selector.selectables.*')
+    def _onNetworkSelectorChange(self, selectables):
+        # if we have a network task, use the network's tasksleep mechanism.  Otherwise, use the taskMgr's default one
+        if len(selectables):
+            tasksleep = self.networkMgr.process
+        else: tasksleep = None
+        self.taskMgr.setTaskSleep(tasksleep)
 
     def registerRoute(self, route):
         self.msgRouter.registerOn(route)

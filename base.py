@@ -12,7 +12,7 @@
 
 import weakref
 
-from TG.kvObserving import KVObject, KVProperty, OBFactoryMap
+from TG.kvObserving import KVObject, KVProperty, OBFactoryMap, kvobserve
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 #~ Definitions 
