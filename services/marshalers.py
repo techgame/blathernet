@@ -30,13 +30,14 @@ class BlatherMarshal(object):
             return (NotImplemented, bytes)
 
     def loadCall(self, bytes):
-        dmsg, sep, data = bytes.rpartition('\0')
+        dmsg, sep, data = bytes.partition('\0')
         call = self._loads(dmsg)
         if data:
-            call[-1]['bytes'] = bytes
+            kw = call[-1]
+            kw['bytes'] = data
         return 'call', call
     def loadBytes(self, bytes):
-        methodKey, sep, data = bytes.rpartition('\0')
+        methodKey, sep, data = bytes.partition('\0')
         return 'bytes', (methodKey, (data,), {})
 
     #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -44,8 +45,6 @@ class BlatherMarshal(object):
     def packCall(self, methodKey, args, kw):
         # MARSHAL_CALL
         data = kw.pop('bytes', '')
-        #if data:
-        #    data = '-'
         return chr(1) + self._dumps([methodKey, args, kw]) + '\0' + data
     def packBytes(self, methodKey, data=''):
         # MARSHAL_BYTES

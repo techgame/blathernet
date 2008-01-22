@@ -10,6 +10,8 @@
 #~ Imports 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
+import uuid
+
 from .adverts import BlatherServiceAdvert
 from .protocol import IncrementProtocol
 from .msgHandler import MessageHandlerBase
