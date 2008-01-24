@@ -10,7 +10,11 @@
 #~ Imports 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
+from __future__ import with_statement
+
 import weakref
+import traceback
+import threading
 import uuid
 
 from ..base import BlatherObject
@@ -43,6 +47,8 @@ class BlatherMessageRouter(BlatherObject):
     def __init__(self, host):
         BlatherObject.__init__(self, host)
         self.host = host.asWeakRef()
+        self._lock_deferredDelivery = threading.Lock()
+
         self.allRoutes = dict()
         self.recentMsgIdSets = [set(), set()]
 
@@ -97,7 +103,35 @@ class BlatherMessageRouter(BlatherObject):
         else: pinfo['retEntry'] = None
 
         if not msgIdDup:
-            return advEntry.recvPacket(packet, dmsg, pinfo)
+            try:
+                return advEntry.recvPacket(packet, dmsg, pinfo)
+            except Exception:
+                traceback.print_exc()
+
+    _deferredDelivery = None
+    def deferPacket(self, advEntry, packet, dmsg, pinfo):
+        entry = (advEntry, packet, dmsg, pinfo)
+        with self._lock_deferredDelivery:
+            deferred = self._deferredDelivery
+            if deferred is not None:
+                deferred.append(entry)
+            else:
+                self._deferredDelivery = deferred = [entry]
+                self.host().addTask(self.deliverDeferredPackets)
+
+    def deliverDeferredPackets(self):
+        with self._lock_deferredDelivery:
+            deferred = self._deferredDelivery
+            self._deferredDelivery = None
+
+        if deferred:
+            for advEntry, packet, dmsg, pinfo in deferred:
+                try:
+                    advEntry.recvPacket(packet, dmsg, pinfo)
+                except Exception:
+                    traceback.print_exc()
+
+        return self._deferredDelivery is not None
 
     #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 

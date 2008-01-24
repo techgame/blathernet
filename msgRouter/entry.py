@@ -81,6 +81,7 @@ class AdvertRouterEntry(BlatherObject):
         if not self.handlerFns:
             self.handlerFns = []
         self.handlerFns.append(fn)
+        self._deliverSentPacket = self.deferSentPacket
 
     def removeHandlerFn(self, fn):
         try:
@@ -134,7 +135,7 @@ class AdvertRouterEntry(BlatherObject):
     def sendPacket(self, packet, dmsg, pinfo):
         self._incSentStats(pinfo, len(packet))
         self.msgRouter.addMessageId(pinfo['msgId'])
-        return self.deliverPacket(packet, dmsg, pinfo)
+        return self._deliverSentPacket(packet, dmsg, pinfo)
 
     #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     #~ Delivery and Forwarding of Packets
@@ -147,6 +148,20 @@ class AdvertRouterEntry(BlatherObject):
         if not r or (sendOpt & 0x80):
             r = self.forwardPacket(packet, pinfo, sendOpt) or r
         return r, pinfo
+
+    def deliverSentPacket(self, packet, dmsg, pinfo):
+        # deliverPacket without the handleDelivery.  If hanlderFns is
+        # populated, this method is replaced with deferSentPacket to avoid
+        # infinite recursion
+        sendOpt = pinfo.get('sendOpt', 0)
+        r = self.forwardPacket(packet, pinfo, sendOpt)
+        return r, pinfo
+    _deliverSentPacket = deliverSentPacket
+
+    def deferSentPacket(self, packet, dmsg, pinfo):
+        pinfo.setdefault('advEntry', self)
+        pinfo.setdefault('retEntry', None)
+        self.msgRouter.deferPacket(self, packet, dmsg, pinfo)
 
     def handleDelivery(self, dmsg, pinfo, sendOpt):
         # sendOpt b1000:0000 signals to forward even if delivered
