@@ -34,7 +34,6 @@ class BasicChannel(object):
         self.toEntry = toEntry
         if fromEntry is not None:
             self.fromEntry = fromEntry
-        else: assert False
 
     def __repr__(self):
         return '<%s to:%s from: %s>' % (

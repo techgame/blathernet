@@ -43,7 +43,7 @@ class BasicBlatherClient(MessageHandlerBase):
         clientEntry.registerOn(self.sessionProtocol)
         clientEntry.addTimer(0, self.onPeriodic)
 
-        self.chanService = self.serviceProtocol.newChannel(self.advert.entry, clientEntry)
+        self.chanService = self.serviceProtocol.Channel(self.advert.entry, clientEntry)
         self.sessionInitiate(self.chanService)
 
     def onPeriodic(self, advEntry, ts):

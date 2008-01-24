@@ -26,8 +26,8 @@ class BlatherMarshal(object):
             return self.loadCall(bytes)
         elif mkind == 2: # MARSHAL_BYTES
             return self.loadBytes(bytes)
-        else:
-            return (NotImplemented, bytes)
+
+        raise ValueError("Unknown pack mkind: %r" % (mkind,))
 
     def loadCall(self, bytes):
         dmsg, sep, data = bytes.partition('\0')

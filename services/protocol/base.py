@@ -37,6 +37,9 @@ class BasicBlatherProtocol(BlatherObject):
             self.Channel = Channel
         self.reset()
 
+    def __repr__(self):
+        return '<%s on: %r>' % (self.__class__.__name__, self.hostEntry)
+
     def getKind(self):
         return self.msgHandler.kind
     kind = property(getKind)
@@ -68,17 +71,6 @@ class BasicBlatherProtocol(BlatherObject):
         if msgHandler is not None:
             self.Channel = self.Channel.newFlyweightForMsgHandler(msgHandler, self)
         else: self.Channel = (lambda toEntry, fromEntry: None)
-
-    #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-    #~ Channel creation and handling
-    #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-    def newChannel(self, toEntry, fromEntry=None, sendOpt=None):
-        if fromEntry is None:
-            fromEntry = toEntry.msgRouter.newSession(sendOpt)
-
-        fromEntry.registerOn(self)
-        return self.Channel(toEntry, fromEntry)
 
     #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     #~ Registration on advert entry
