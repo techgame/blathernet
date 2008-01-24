@@ -34,6 +34,7 @@ class SocketConfigUtils(object):
 
     def disallowMixed(self):
         if (self.afamily == AF_INET6) and  self.disallowMixedIPv4andIPv6:
+            sock = self.sock
             sock.setsockopt(socket.IPPROTO_IPV6, socket.IPV6_V6ONLY, 1)
 
     def reuseAddress(self, bReuse=True):
