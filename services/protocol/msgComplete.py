@@ -35,8 +35,8 @@ class SendBufferFull(BlatherProtocolError):
 class MessageCompleteProtocol(BasicBlatherProtocol):
     ri = random.Random()
 
-    def reset(self):
-        self.chan = None
+    def reset(self, peerEntry=None):
+        self.peerEntry = peerEntry
 
         self.sentDmsgId = 0
         self.sentAckDmsgId = 0
@@ -167,25 +167,20 @@ class MessageCompleteProtocol(BasicBlatherProtocol):
     #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
     chan = None
-    def resetOnNewPeer(self, retEntry):
-        chan = self.chan
-        if retEntry is None:
-            return chan
-        elif chan is not None:
-            if retEntry is chan.toEntry:
-                return chan
-            else: return None
+    peerEntry = None
+    def resetOnNewPeer(self, retEntry, pinfo=None):
+        peerEntry = self.peerEntry
+        if peerEntry is not None:
+            if retEntry is not peerEntry:
+                return None
+        elif retEntry is None:
+            return None
+        else:
+            self.reset(retEntry)
 
-        self.reset()
-        self.chan = self.Channel(retEntry, self.hostEntry)
-        return self.chan
-
-    def getPeerEntry(self):
-        chan = self.chan
-        if chan is not None:
-            return chan.toEntry
-        else: return None
-    peerEntry = property(getPeerEntry)
+        if pinfo is not None:
+            return self.Channel(retEntry, self.hostEntry, pinfo)
+        else: return True
 
     #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     #~ DmsgId sequences, 
@@ -222,7 +217,7 @@ class MessageCompleteProtocol(BasicBlatherProtocol):
         return toEntry.sendBytes(bytes, pinfo)
 
     def recvEncoded(self, advEntry, bytes, pinfo):
-        chan = self.resetOnNewPeer(pinfo['retEntry'])
+        chan = self.resetOnNewPeer(pinfo['retEntry'], pinfo)
         if chan is None:
             # the protocol is already engaged with another entry -- simply ignore
             return 

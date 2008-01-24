@@ -22,18 +22,21 @@ class BasicChannel(object):
 
     toEntry = None
     fromEntry = None
+    pinfo = None
 
     def isBlatherAdvert(self): return False
     def isBlatherAdvertEntry(self): return False
     def isBlatherChannel(self): return True
 
-    def __init__(self, toEntry, fromEntry=None):
+    def __init__(self, toEntry, fromEntry=None, pinfo=None):
         if toEntry is None:
             raise ValueError("Cannot create a channel to a None entry")
 
         self.toEntry = toEntry
         if fromEntry is not None:
             self.fromEntry = fromEntry
+        if pinfo is not None:
+            self.pinfo = pinfo
 
     def __repr__(self):
         return '<%s to:%s from: %s>' % (
@@ -75,9 +78,6 @@ class BasicChannel(object):
     def sendDmsg(self, dmsg, **pinfo):
         pinfo['retEntry'] = self.fromEntry
         return self.protocol.send(self.toEntry, dmsg, pinfo)
-
-    def sendPing(self):
-        return self.protocol.sendPing()
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 #~ Channel
