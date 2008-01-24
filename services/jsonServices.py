@@ -15,6 +15,7 @@ import simplejson
 from .marshalers import BlatherMarshal
 from .basicSession import BasicBlatherSession
 from .basicService import BasicBlatherService
+from .basicPeerService import BasicBlatherPeerService
 from .basicClient import BasicBlatherClient
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -36,5 +37,8 @@ class BlatherJsonSession(BasicBlatherSession):
 class BlatherJsonService(BasicBlatherService):
     _fm_ = BasicBlatherService._fm_.branch(
             Session=BlatherJsonSession)
+    marshal = JsonMarshal()
+
+class BlatherJsonPeerService(BasicBlatherPeerService):
     marshal = JsonMarshal()
 

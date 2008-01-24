@@ -10,7 +10,7 @@
 #~ Imports 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-from .adverts import BlatherServiceAdvert
+from .adverts import BlatherAdvert
 from .protocol import IncrementProtocol
 from .protocol import MessageCompleteProtocol
 from .msgHandler import MessageHandlerBase
@@ -20,7 +20,7 @@ from .msgHandler import MessageHandlerBase
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 class BasicBlatherClient(MessageHandlerBase):
-    advert = BlatherServiceAdvert('advertInfo')
+    advert = BlatherAdvert('advertInfo')
     advertInfo = {'name': 'Blather Client'}
 
     kind = 'client'
@@ -45,6 +45,8 @@ class BasicBlatherClient(MessageHandlerBase):
 
         self.chanService = self.serviceProtocol.Channel(self.advert.entry, clientEntry)
         self.sessionInitiate(self.chanService)
+
+    #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
     def onPeriodic(self, advEntry, ts):
         # default calls sessionInitiate

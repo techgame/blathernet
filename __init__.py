@@ -12,16 +12,16 @@
 
 from .services import (
         BlatherAdvert, Advert,
-        BlatherServiceAdvert, ServiceAdvert,
 
         BasicBlatherSession, BasicSession, 
         BasicBlatherService, BasicService, 
         BasicBlatherClient, BasicClient,
+        BasicBlatherPeerService, BasicPeerService,
 
         BlatherJsonSession, JsonSession,
         BlatherJsonService, JsonService,
+        BlatherJsonPeerService, JsonPeerService,
         BlatherJsonClient, JsonClient,
-
         )
         
 

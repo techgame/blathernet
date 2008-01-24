@@ -102,6 +102,10 @@ class Channel(BasicChannel):
         dmsg = self.marshal.packCall(method, args, kw)
         return self.sendDmsg(dmsg, sendOpt=0x4f)
 
+    def multicast(self, method, *args, **kw):
+        dmsg = self.marshal.packCall(method, args, kw)
+        return self.sendDmsg(dmsg, sendOpt=0xcf)
+
     def shutdown(self, kind, *args, **kw):
         return self.protocol.shutdown(kind, *args, **kw)
 

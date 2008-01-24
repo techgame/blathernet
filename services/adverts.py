@@ -20,7 +20,7 @@ from ..base import BlatherObject
 #~ Definitions 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-class BlatherAdvert(BlatherObject):
+class BasicBlatherAdvert(BlatherObject):
     infoSetter = OBClassRegistry()
     info = None
     entry = None
@@ -35,7 +35,9 @@ class BlatherAdvert(BlatherObject):
         return '<%s %s name:"%s">' % (self.__class__.__name__, self.advertUUID, self.info.get('name'))
 
     def __str__(self):
-        return self.advertId.encode('base64')[:-3]
+        if self.advertId:
+            return self.advertId.encode('hex')
+        else: return repr(None)
 
     #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -45,7 +47,10 @@ class BlatherAdvert(BlatherObject):
         entry = msgRouter.entryForId(self.advertId)
         entry.registerOn(self)
     def registerAdvertEntry(self, advEntry):
-        self.entry = advEntry
+        if self.entry is None:
+            self.entry = advEntry
+        elif self.entry is not advEntry:
+            raise RuntimeError("Advert changed advEntry")
     def registerClient(self, client):
         self.msgRouter.registerOn(client)
     def registerService(self, service):
@@ -134,22 +139,22 @@ class BlatherAdvert(BlatherObject):
         self.info['opt'] = int(opt) & 0xff
     opt = property(getOpt, setOpt)
 
-Advert = BlatherAdvert
+BasicAdvert = BasicBlatherAdvert
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-#~ Service Advert for class-based observing
+#~ Advert for class and instance based observing
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-class BlatherServiceAdvert(BlatherAdvert):
+class BlatherAdvert(BasicBlatherAdvert):
     NAMESPACE_BLATHER = uuid.NAMESPACE_OID
     _infoAttrName = None
 
     def __init__(self, infoAttrName):
-        BlatherAdvert.__init__(self)
+        BasicBlatherAdvert.__init__(self)
         self._infoAttrName = infoAttrName
 
     def copy(self):
-        newSelf = BlatherAdvert.copy(self)
+        newSelf = BasicBlatherAdvert.copy(self)
         newSelf._infoAttrName = self._infoAttrName
         return newSelf
 
@@ -158,7 +163,10 @@ class BlatherServiceAdvert(BlatherAdvert):
     def onObservableClassInit(self, pubName, obKlass):
         info = self._copyAdvertInfoOn(obKlass)
 
-        self = self.branch(info)
+        if info is None:
+            self = self.copy()
+        else: self = self.branch(info)
+
         self.applyAdvertIdMorph()
         setattr(obKlass, pubName, self)
         self._updateAdvertOn(obKlass, '_classUpdate', pubName)
@@ -168,7 +176,10 @@ class BlatherServiceAdvert(BlatherAdvert):
     def onObservableInit(self, pubName, obInstance):
         info = self._copyAdvertInfoOn(obInstance)
 
-        self = self.branch(info)
+        if info is None:
+            self = self.copy()
+        else: self = self.branch(info)
+
         self.applyAdvertIdMorph()
         setattr(obInstance, pubName, self)
         self._updateAdvertOn(obInstance, '_update', pubName)
@@ -185,7 +196,8 @@ class BlatherServiceAdvert(BlatherAdvert):
 
     def _copyAdvertInfoOn(self, obj):
         info = getattr(obj, self._infoAttrName, {})
-        info = info.copy()
+        if info is not None:
+            info = info.copy()
         setattr(obj, self._infoAttrName, info)
         return info
 
@@ -198,5 +210,5 @@ class BlatherServiceAdvert(BlatherAdvert):
         advertUUID = uuid.uuid3(self.NAMESPACE_BLATHER, uri)
         self.advertUUID = advertUUID
 
-ServiceAdvert = BlatherServiceAdvert
+Advert = BlatherAdvert
 

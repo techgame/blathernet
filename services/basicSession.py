@@ -10,7 +10,6 @@
 #~ Imports 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-from .adverts import BlatherServiceAdvert
 from .protocol import MessageCompleteProtocol
 from .msgHandler import MessageHandlerBase
 
@@ -38,6 +37,8 @@ class BasicBlatherSession(MessageHandlerBase):
 
         chan = self.sessionProtocol.Channel(chan.toEntry, sessionEntry)
         self.sessionStart(chan)
+
+    #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
     def onPeriodic(self, advEntry, ts):
         return None

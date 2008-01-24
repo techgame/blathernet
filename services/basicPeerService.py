@@ -16,20 +16,20 @@ from .adverts import BlatherAdvert
 from .protocol import IncrementProtocol
 from .msgHandler import MessageHandlerBase
 
-from .basicSession import BasicBlatherSession
-
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 #~ Definitions 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-class BasicBlatherService(MessageHandlerBase):
-    Session = BasicBlatherSession
-
+class BasicBlatherPeerService(MessageHandlerBase):
     advert = BlatherAdvert('advertInfo')
-    advertInfo = {'name': 'Blather Service'}
+    advertInfo = {'name': 'Blather Peer Host'}
+
+    peerAdvert = BlatherAdvert('peerAdvertInfo')
+    peerAdvertInfo = {'name': 'Blather Peer Client'}
 
     kind = 'service'
-    serviceProtocol = IncrementProtocol()
+    inboundProtocol = IncrementProtocol()
+    outboundProtocol = IncrementProtocol()
 
     def isBlatherService(self): return True
 
@@ -38,8 +38,14 @@ class BasicBlatherService(MessageHandlerBase):
     def registerMsgRouter(self, msgRouter):
         advert = self.advert
         advert.registerOn(msgRouter)
-        advert.registerOn(self.serviceProtocol)
+        advert.registerOn(self.inboundProtocol)
         advert.entry.addTimer(0, self.onPeriodic)
+
+        peerAdvert = self.peerAdvert
+        peerAdvert.registerOn(msgRouter)
+
+        self.chan = self.outboundProtocol.Channel(peerAdvert.entry, advert.entry)
+        self.sessionInitiate(self.chan)
 
     #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -47,34 +53,16 @@ class BasicBlatherService(MessageHandlerBase):
         if advert.advertId is None:
             advert.advertUUID = uuid.uuid4()
 
+    def _update_peerAdvert(self, peerAdvert):
+        if peerAdvert.advertId is None:
+            peerAdvert.advertId = self.advert.advertId
+
     #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
     def onPeriodic(self, advEntry, ts):
+        # default calls sessionInitiate
+        return self.sessionInitiate(self.chan) or None
+
+    def sessionInitiate(self, chan):
         return None
-    onPeriodic = None # default is hidden
-
-    #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-    #~ Session management
-    #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-    _sessionIdMap = None
-    def getSessionIdMap(self):
-        sessionIdMap = self._sessionIdMap
-        if sessionIdMap is None:
-            sessionIdMap = {}
-            self._sessionIdMap = sessionIdMap
-        return sessionIdMap
-    sessionIdMap = property(getSessionIdMap)
-
-    def newSession(self, chan):
-        sessionId = chan.id
-        session = self.sessionIdMap.get(sessionId)
-        if session is None:
-            session = self.Session(self, chan)
-            session.sessionId = sessionId
-            self.sessionIdMap[sessionId] = True
-            return session
-
-    def removeSession(self, session):
-        del self.sessionIdMap[session.sessionId]
 

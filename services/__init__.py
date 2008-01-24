@@ -10,14 +10,15 @@
 #~ Imports 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
+from .adverts import BasicBlatherAdvert, BasicAdvert
 from .adverts import BlatherAdvert, Advert
-from .adverts import BlatherServiceAdvert, ServiceAdvert
 
 from .basicSession import BasicBlatherSession
 from .basicService import BasicBlatherService
+from .basicPeerService import BasicBlatherPeerService
 from .basicClient import BasicBlatherClient
 
-from .jsonServices import BlatherJsonClient, BlatherJsonSession, BlatherJsonService
+from .jsonServices import BlatherJsonClient, BlatherJsonSession, BlatherJsonService, BlatherJsonPeerService
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 #~ Aliases
@@ -26,8 +27,10 @@ from .jsonServices import BlatherJsonClient, BlatherJsonSession, BlatherJsonServ
 BasicClient = BasicBlatherClient
 BasicSession = BasicBlatherSession
 BasicService = BasicBlatherService
+BasicPeerService = BasicBlatherPeerService
 
 JsonClient = BlatherJsonClient
 JsonSession = BlatherJsonSession
 JsonService = BlatherJsonService
+JsonPeerService = BlatherJsonPeerService
 
