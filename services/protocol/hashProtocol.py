@@ -10,6 +10,7 @@
 #~ Imports 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
+import os
 import md5
 from .base import BasicBlatherProtocol
 
@@ -24,7 +25,7 @@ class HashProtocol(BasicBlatherProtocol):
     def reset(self):
         self.sendSeq = 0
         self.recvSeq = 0
-        self.hash = self.newHash(str(self))
+        self.hash = self.newHash(os.urandom(16))
 
     def send(self, toEntry, dmsg, pinfo):
         if dmsg:
