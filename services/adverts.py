@@ -107,8 +107,11 @@ class BasicBlatherAdvert(BlatherObject):
         if self.entry is None:
             raise RuntimeError("Advert's entry is already registered")
 
-        self.id = pinfo['replyId']
-        self.opt = pinfo['replyOpt']
+        replyId = pinfo.get('replyId')
+        if replyId:
+            self.id = replyId
+            return True
+        else: return False
 
     def getAdvertId(self):
         advertId = self.attr('id')
@@ -131,13 +134,6 @@ class BasicBlatherAdvert(BlatherObject):
     def setAdvertUUID(self, uuid):
         self.advertId = uuid.bytes
     advertUUID = property(getAdvertUUID, setAdvertUUID)
-
-    def getOpt(self):
-        return self.attr('opt')
-    @infoSetter.on('opt')
-    def setOpt(self, opt):
-        self.info['opt'] = int(opt) & 0xff
-    opt = property(getOpt, setOpt)
 
 BasicAdvert = BasicBlatherAdvert
 

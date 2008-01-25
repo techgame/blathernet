@@ -107,7 +107,7 @@ class AdvertRouterEntry(BlatherObject):
     #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
     def recvPacket(self, packet, dmsg, pinfo):
-        self._incRecvStats(pinfo, len(packet))
+        self._incRecvStats(pinfo, len(dmsg))
         self.deliverPacket(packet, dmsg, pinfo)
         return True
 
@@ -133,7 +133,7 @@ class AdvertRouterEntry(BlatherObject):
         return self.sendPacket(packet, dmsg, pinfo)
 
     def sendPacket(self, packet, dmsg, pinfo):
-        self._incSentStats(pinfo, len(packet))
+        self._incSentStats(pinfo, len(dmsg))
         self.msgRouter.addMessageId(pinfo['msgId'])
         return self._deliverSentPacket(packet, dmsg, pinfo)
 
@@ -178,11 +178,12 @@ class AdvertRouterEntry(BlatherObject):
         return delivered
 
     def forwardPacket(self, packet, pinfo, sendOpt):
-        fwroutes = self.forwardRoutesFor(pinfo, sendOpt)
         forwarded = False
-        for r in fwroutes:
-            r.sendPacket(packet)
-            forwarded = True
+        if packet is not None:
+            fwroutes = self.forwardRoutesFor(pinfo, sendOpt)
+            for r in fwroutes:
+                r.sendPacket(packet)
+                forwarded = True
         pinfo['forwarded'] = forwarded
         return forwarded
 

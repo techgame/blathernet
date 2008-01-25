@@ -46,11 +46,11 @@ class RouteHeaderCodecBase(object):
 class RouteHeaderCodec(RouteHeaderCodecBase):
     def decode(self, packet, pinfo):
         """Packet Coding:
-            [0]         -> Header Info
-                .4:7    Version 
-                .0:3    Reserved
+            [0]         -> Packet Info
+                .4:7        Flags
+                .0:3        Version
         """
-        packetVersion = ord(packet[0]) >> 4
+        packetVersion = ord(packet[0]) & 0x0f
         codec = self.codecs.get(packetVersion)
         if codec is None:
             return None, pinfo
@@ -68,77 +68,103 @@ class RouteHeaderCodecV1(RouteHeaderCodecBase):
 
     def decode(self, packet, pinfo):
         """Packet Coding:
-            [0]         -> Header Info
-                .4:7    Packet Version 
-                .0:3    Packet Info
+            [0]         -> Packet Info
+                .7          <unused>
+                .6          <unused>
+                .5          Forwarded Advert IDs included
+                .4          Return Advert ID included
+
+                .0:3        Packet Version 
             
-            [1]         -> Advert Options
-            [2:18]      -> Advert Id
+            [1]        -> Message Info
+                .4:7        Reserved
+                .0:3        Message Id Length (after Return AdvertId)
             
-            [18]        -> Message Info
-                .5:7    Reserved
-                .4      Return Advert ID Included
-                .0:3    Message Id Length (after AdvertId)
+            [2]         -> Send Hops
+            [3]         -> Send Opt
+            [4:20]      -> Send Advert Id
             
-            [19]        -> Return Advert Options (0 if not selected)
-            [20:36]     -> Return Advert Id
+            if 0.5:     -> Forward AdvertId List
+                [0]         Count => n
+                [1:1+n*16]  Packed 16 byte AdvertIds
             
-            [20:20+d]   -> Unique Message Id
+            if 0.4:     -> Return AdvertId included
+                [0:16]      -> Return Advert Id
+            
+            [k:k+d]   -> Unique Message Id, supplied by protocol
             
             [doff:]     -> Data; 
                 doff = 36 if return advert present, 
                 doff = 20 otherwise
         """
-        dataOffset = 20
-
         headerInfo = ord(packet[0])
-        pinfo['packetVersion'] = headerInfo >> 4
-        pinfo['packetInfo'] = headerInfo & 0x0f
 
-        pinfo['sendOpt'] = ord(packet[1])
-        pinfo['sendId'] = packet[2:18]
+        hops = ord(packet[1])
+        pinfo['hops'] = hops
+        if hops > 0:
+            fwdPacket = packet[0]+chr(hops-1)+packet[2:]
+        else: fwdPacket = ''
 
-        msgInfo = ord(packet[18])
+        msgInfo = ord(packet[2])
         msgIdLen = (msgInfo & 0xf) << 1
-        pinfo['msgIdLen'] = msgIdLen
-        msgInfo >>= 4
 
-        if msgInfo & 0x1:
-            pinfo['replyOpt'] = ord(packet[19])
-            pinfo['replyId'] = packet[20:36]
-            dataOffset += 16
+        pinfo['sendOpt'] = ord(packet[3])
+        pinfo['sendId'] = packet[4:20]
+
+        # variable secion
+        bytes = packet[20:]
+
+        if headerInfo & 0x20:
+            nb = 16*ord(bytes[0])
+            fwdIds = bytes[1:1+nb]
+            bytes = bytes[1+nb:]
+            pinfo['fwdIds'] = [fwdIds[bi:bi+16] for bi in range(0, nb, 16)]
+
+        if headerInfo & 0x10:
+            pinfo['replyId'] = bytes[:16]
             msgIdLen += 16
-        else: pinfo['replyId'] = None
+            dmsg = bytes[16:]
+        else: 
+            dmsg = bytes
 
-        pinfo['msgId'] = packet[20:20+msgIdLen]
-        dmsg = packet[dataOffset:]
-        return dmsg, pinfo
+        # msgId is a combination of replyId and msgIdLen of the body
+        pinfo['msgId'] = bytes[:msgIdLen]
+        return fwdPacket, dmsg, pinfo
 
     #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
     def encode(self, dmsg, pinfo):
-        sendId = pinfo['sendId']
-        part = [None, None, None, None, None]
+        headerInfo = self.packetVersion
+        parts = [None]
 
-        part[0] = chr((self.packetVersion << 4) | (pinfo.get('packetInfo', 0) & 0xf))
-        part[1] = chr(pinfo.setdefault('sendOpt', 0)) + sendId
+        hops = pinfo.get('hops', 64)
+        parts.append(chr(hops))
 
-        msgInfo = 0
-        replyId = pinfo.setdefault('replyId', None)
+        msgIdLen = pinfo.get('msgIdLen', 0)
+        msgInfo = ((msgIdLen >> 1) & 0x0f)
+        parts.append(chr(msgInfo))
+
+        # sendOpt and sendId
+        parts.append(chr(pinfo.get('sendOpt', 0)))
+        parts.append('%-16s' % pinfo['sendId'])
+
+        fwdIds = pinfo.get('fwdIds')
+        if fwdIds:
+            headerInfo |= 0x20
+            parts.append(chr(len(fwdIds)))
+            parts.extend('%-16s'%fid for fid in fwdIds)
+
+        replyId = pinfo.get('replyId') or ''
         if replyId:
-            part[3] = chr(pinfo.setdefault('replyOpt', 0)) + replyId
-            msgInfo |= 1
-        else: part[3] = chr(0)
-
-        msgIdLen = pinfo.setdefault('msgIdLen', 0)
-        part[2] = chr((msgInfo << 4) | ((msgIdLen >> 1) & 0x0f))
-        part[4] = dmsg
-
-        packet = ''.join(part)
+            headerInfo |= 0x10
+            replyId = '%-16s'%replyId
+            parts.append(replyId)
 
         # annotate pinfo with msgId
-        if msgInfo & 0x1:
-            msgIdLen += 16
-        pinfo['msgId'] = packet[20:20+msgIdLen]
+        pinfo['msgId'] = replyId + dmsg[:msgIdLen]
+
+        parts[0] = chr(headerInfo)
+        parts.append(dmsg)
+        packet = ''.join(parts)
         return packet, pinfo
 

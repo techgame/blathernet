@@ -86,7 +86,7 @@ class BlatherMessageRouter(BlatherObject):
     #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
     def recvPacket(self, packet, pinfo):
-        dmsg, pinfo = self.codec.decode(packet, pinfo)
+        fwdPacket, dmsg, pinfo = self.codec.decode(packet, pinfo)
         if dmsg is None:
             return False
 
@@ -94,6 +94,11 @@ class BlatherMessageRouter(BlatherObject):
         pinfo['advEntry'] = advEntry
 
         msgIdDup = self.isDuplicateMessageId(pinfo['msgId'])
+
+        fwdIds = pinfo.get('fwdIds')
+        if fwdIds is not None:
+            for fid in fwdIds:
+                routeTable[fid].recvReturnRoute(pinfo)
 
         replyId = pinfo.get('replyId')
         if replyId is not None:
@@ -104,7 +109,7 @@ class BlatherMessageRouter(BlatherObject):
 
         if not msgIdDup:
             try:
-                return advEntry.recvPacket(packet, dmsg, pinfo)
+                return advEntry.recvPacket(fwdPacket, dmsg, pinfo)
             except Exception:
                 traceback.print_exc()
 
