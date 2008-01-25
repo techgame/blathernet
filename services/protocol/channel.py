@@ -29,9 +29,6 @@ class BasicChannel(object):
     def isBlatherChannel(self): return True
 
     def __init__(self, toEntry, fromEntry=None, pinfo=None):
-        if toEntry is None:
-            raise ValueError("Cannot create a channel to a None entry")
-
         self.toEntry = toEntry
         if fromEntry is not None:
             self.fromEntry = fromEntry

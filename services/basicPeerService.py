@@ -13,7 +13,7 @@
 import uuid
 
 from .adverts import BlatherAdvert
-from .protocol import IncrementProtocol
+from .protocol import HashProtocol
 from .msgHandler import MessageHandlerBase
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -28,8 +28,8 @@ class BasicBlatherPeerService(MessageHandlerBase):
     peerAdvertInfo = {'name': 'Blather Peer Client'}
 
     kind = 'service'
-    inboundProtocol = IncrementProtocol()
-    outboundProtocol = IncrementProtocol()
+    inboundProtocol = HashProtocol()
+    outboundProtocol = HashProtocol()
 
     def isBlatherService(self): return True
 

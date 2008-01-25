@@ -11,7 +11,7 @@
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 from .adverts import BlatherAdvert
-from .protocol import IncrementProtocol
+from .protocol import HashProtocol
 from .protocol import MessageCompleteProtocol
 from .msgHandler import MessageHandlerBase
 
@@ -26,7 +26,7 @@ class BasicBlatherClient(MessageHandlerBase):
     kind = 'client'
     chan = None
 
-    serviceProtocol = IncrementProtocol()
+    serviceProtocol = HashProtocol()
     sessionProtocol = MessageCompleteProtocol()
 
     def isBlatherClient(self): return True

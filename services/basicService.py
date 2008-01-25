@@ -13,7 +13,7 @@
 import uuid
 
 from .adverts import BlatherAdvert
-from .protocol import IncrementProtocol
+from .protocol import HashProtocol
 from .msgHandler import MessageHandlerBase
 
 from .basicSession import BasicBlatherSession
@@ -29,7 +29,7 @@ class BasicBlatherService(MessageHandlerBase):
     advertInfo = {'name': 'Blather Service'}
 
     kind = 'service'
-    serviceProtocol = IncrementProtocol()
+    serviceProtocol = HashProtocol()
 
     def isBlatherService(self): return True
 

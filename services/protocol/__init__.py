@@ -13,6 +13,7 @@
 from .base import BasicBlatherProtocol
 from .channel import BasicChannel, Channel
 
+from .hashProtocol import HashProtocol
 from .incProtocol import IncrementProtocol
 from .msgComplete import MessageCompleteProtocol
 
