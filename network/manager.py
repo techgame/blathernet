@@ -54,14 +54,14 @@ class BlatherNetworkMgr(BlatherObject):
         if assign: self.setUdpChannel(ch)
         return ch
 
-    def addMudpChannel(self, address='238.1.9.1', port=8469, assign=False):
+    def addMudpChannel(self, address='238.1.9.1', port=8469, interface=None, assign=False):
         if not isinstance(address, tuple):
             address = address, port
 
-        ch = self._fm_.UDPMulticastChannel(address)
+        ch = self._fm_.UDPMulticastChannel(address, interface)
 
         ch.grpAddr = ch.normSockAddr(address)[1]
-        ch.joinGroup(ch.grpAddr)
+        ch.joinGroup(ch.grpAddr, interface)
 
         self.selector.add(ch)
         if assign: self.setMudpChannel(ch)
