@@ -54,6 +54,9 @@ class SocketChannel(NetworkChannel):
     afamily = socket.AF_INET
     sockType = None
 
+    def __repr__(self):
+        return "<%s addr: %s>" % (self.__class__.__name__, self.sock.getsockname())
+
     def fileno(self):
         sock = self.sock
         if sock is not None:

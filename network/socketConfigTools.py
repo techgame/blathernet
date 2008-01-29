@@ -84,20 +84,24 @@ class SocketConfigUtils(object):
 
         return klass._socketMaxBufferSize
 
-    def asSockAddr(self, address):
+    @classmethod
+    def asSockAddr(klass, address):
         if address is not None:
             if not isinstance(address, tuple):
                 address = (address, 0)
-            address = self.normSockAddr(address)[1]
+            address = klass.normSockAddr(address)[1]
         return address
 
-    def normSockAddr(self, address):
+    @classmethod
+    def normSockAddr(klass, address):
         # normalize the address into a routing token
         ip, port = address[:2]
         info = socket.getaddrinfo(ip, int(port))[0]
         # grab the address portion of the info
         afamily, address  = info[0], info[-1]
         return afamily, address
+
+asSockAddr = SocketConfigUtils.asSockAddr
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 #~ Socket Multicast Config

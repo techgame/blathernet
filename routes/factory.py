@@ -42,7 +42,9 @@ class BlatherRouteFactory(BlatherObject):
         return route
 
     def newTestingRoute(self, cbIsPacketLost):
-        return BlatherTestingRoute(self.msgRouter(), cbIsPacketLost)
+        rotue = BlatherTestingRoute(self.msgRouter(), cbIsPacketLost)
+        route.registerOn(self.msgRouter())
+        return route
     def connectTesting(self, otherHost, cbIsPacketLost, cbIsPacketLostOther=None):
         if cbIsPacketLostOther is None:
             cbIsPacketLostOther = cbIsPacketLost
@@ -56,25 +58,35 @@ class BlatherRouteFactory(BlatherObject):
 
     #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-    def newNetworkRoute(self):
-        route = BlatherNetworkRoute(self.msgRouter())
-        return route
-    def connectNetwork(self, channel, addrInbound, addrOutbound=None):
-        route = self.newNetworkRoute()
-        route.setChannel(channel, addrInbound, addrOutbound)
-        return route
-
     def connectMUDP(self):
         mudpChannel = self.networkMgr.mudpChannel
-        return self.connectNetwork(mudpChannel, None, mudpChannel.grpAddr)
-    def connectUDP(self, addrInbound, addrOutbound=None):
+
+        route = BlatherNetworkRoute()
+        route.setChannel(mudpChannel, mudpChannel.grpAddr, None)
+        route.registerOn(self.msgRouter())
+        return route
+    def connectUDP(self, addrOutbound=None, addrInbound=None):
         udpChannel = self.networkMgr.udpChannel
-        return self.connectNetwork(udpChannel, addrInbound, addrOutbound)
+
+        route = BlatherNetworkRoute()
+        route.setChannel(udpChannel, addrOutbound, addrInbound)
+        route.registerOn(self.msgRouter())
+        return route
+    def connectAutoUDP(self):
+        udpChannel = self.networkMgr.udpChannel
+        mudpChannel = self.networkMgr.mudpChannel
+
+        route = BlatherNetworkOpenRoute()
+        route.setOutboundChannel(udpChannel, mudpChannel.grpAddr)
+        route.setInboundChannel(mudpChannel, None)
+        route.registerOn(self.msgRouter())
+        return route
+
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 #~ Imports 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 from .directRoutes import BlatherDirectRoute, BlatherTestingRoute
-from .networkRoutes import BlatherNetworkRoute
+from .networkRoutes import BlatherNetworkRoute, BlatherNetworkOpenRoute
 

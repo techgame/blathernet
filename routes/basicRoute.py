@@ -24,17 +24,17 @@ class BasicBlatherRoute(BlatherObject):
     rating = 0
 
     def isBlatherRoute(self): return True
-    def isPartyLine(self): return False
+    def isOpenRoute(self): return False
     def isInprocess(self): return False
 
-    def __init__(self, msgRouter):
+    def matchAddr(self, addr): return False
+
+    def __init__(self, msgRouter=None):
         BlatherObject.__init__(self)
-        self._wrSelf = self.asWeakRef()
-
+        self._wrRoute = self.asWeakRef()
         self._initStats()
-
-        self.msgRouter = msgRouter
-        self.registerOn(msgRouter)
+        if msgRouter is not None:
+            self.registerOn(msgRouter)
 
     def __cmp__(self, other):
         return cmp(self.rating, other.rating)
@@ -46,7 +46,8 @@ class BasicBlatherRoute(BlatherObject):
     def registerOn(self, blatherObj):
         blatherObj.registerRoute(self)
     def registerMsgRouter(self, msgRouter):
-        self.registerOn(msgRouter)
+        self.msgRouter = msgRouter
+        msgRouter.addRoute(self)
 
     def sendPacket(self, packet, onNotify=None):
         self._incSentStats(len(packet))
@@ -56,7 +57,7 @@ class BasicBlatherRoute(BlatherObject):
 
     def recvDispatch(self, packet, addr):
         ts = self._incRecvStats(len(packet))
-        pinfo = {'addr': addr, 'recvRoute': self._wrSelf}
+        pinfo = {'addr': addr, 'recvRoute': self._wrRoute}
         self.recvPacket(packet, pinfo)
     def recvPacket(self, packet, pinfo):
         self.msgRouter.recvPacket(packet, pinfo)

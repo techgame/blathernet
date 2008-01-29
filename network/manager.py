@@ -45,26 +45,20 @@ class BlatherNetworkMgr(BlatherObject):
     #~ Factory methods
     #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-    def addUdpChannel(self, address='127.0.0.1', port=8470, assign=False):
-        if not isinstance(address, tuple):
-            address = address, port
-
+    def addUdpChannel(self, address=('0.0.0.0', 8470), assign=None):
         ch = self._fm_.UDPChannel(address)
         self.selector.add(ch)
-        if assign: self.setUdpChannel(ch)
+        self.checkUdpChannel(ch, assign)
         return ch
 
-    def addMudpChannel(self, address='238.1.9.1', port=8469, interface=None, assign=False):
-        if not isinstance(address, tuple):
-            address = address, port
-
+    def addMudpChannel(self, address=('238.1.9.1', 8469), interface=None, assign=None):
         ch = self._fm_.UDPMulticastChannel(address, interface)
 
         ch.grpAddr = ch.normSockAddr(address)[1]
         ch.joinGroup(ch.grpAddr, interface)
 
         self.selector.add(ch)
-        if assign: self.setMudpChannel(ch)
+        self.checkMudpChannel(ch, assign)
         return ch
 
     #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -77,6 +71,11 @@ class BlatherNetworkMgr(BlatherObject):
     def setUdpChannel(self, udpChannel):
         self._udpChannel = udpChannel
     udpChannel = property(getUdpChannel, setUdpChannel)
+    def checkUdpChannel(self, udpChannel, assign=None):
+        if self._udpChannel is None and assign is None:
+            assign = True
+
+        if assign: self.setUdpChannel(udpChannel)
 
     _mudpChannel = None
     def getMudpChannel(self):
@@ -85,5 +84,11 @@ class BlatherNetworkMgr(BlatherObject):
         return self._mudpChannel
     def setMudpChannel(self, mudpChannel):
         self._mudpChannel = mudpChannel
+    def checkMudpChannel(self, mudpChannel, assign=None):
+        if self._mudpChannel is None and assign is None:
+            assign = True
+
+        if assign: self.setMudpChannel(mudpChannel)
+
     mudpChannel = property(getMudpChannel, setMudpChannel)
 
