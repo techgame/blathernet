@@ -49,7 +49,7 @@ class BlatherMessageRouter(BlatherObject):
         self.host = host.asWeakRef()
         self._lock_deferredDelivery = threading.Lock()
 
-        self.allRoutes = dict()
+        self.allRoutes = set()
         self.recentMsgIdSets = [set(), set()]
 
         self.routeTable = self._fm_.RouterTable()
@@ -64,16 +64,15 @@ class BlatherMessageRouter(BlatherObject):
     def registerOn(self, blatherObj):
         blatherObj.registerMsgRouter(self)
     def registerRoute(self, route):
-        self.addRoute(route)
+        self.registerOn(route)
     def registerAdvert(self, advert):
         self.registerOn(advert)
 
-    def addRoute(self, route, weight=0):
+    def addRoute(self, route):
         allRoutes = self.allRoutes
         if isinstance(route, weakref.ref):
             route = route()
-        if route is not None:
-            allRoutes[route] = max(weight, allRoutes.get(route, weight))
+        allRoutes.add(route)
 
     def entryForAdvert(self, advert):
         return self.entryForId(advert.advertId)

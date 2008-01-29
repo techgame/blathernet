@@ -87,21 +87,24 @@ class Channel(BasicChannel):
 
     #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-    def sendBytes(self, method, bytes):
+    def sendBytes(self, method, bytes, sendOpt=0):
         dmsg = self.marshal.packBytes(method, bytes)
-        return self.sendDmsg(dmsg)
+        return self.sendDmsg(dmsg, sendOpt=sendOpt)
 
     def send(self, method, *args, **kw):
+        sendOpt = kw.pop('sendOpt', 0)
         dmsg = self.marshal.packCall(method, args, kw)
-        return self.sendDmsg(dmsg)
+        return self.sendDmsg(dmsg, sendOpt=sendOpt)
 
     def broadcast(self, method, *args, **kw):
+        sendOpt = kw.pop('sendOpt', 0x1f)
         dmsg = self.marshal.packCall(method, args, kw)
-        return self.sendDmsg(dmsg, sendOpt=0x4f)
+        return self.sendDmsg(dmsg, sendOpt=sendOpt)
 
     def multicast(self, method, *args, **kw):
+        sendOpt = kw.pop('sendOpt', 0x9f)
         dmsg = self.marshal.packCall(method, args, kw)
-        return self.sendDmsg(dmsg, sendOpt=0xcf)
+        return self.sendDmsg(dmsg, sendOpt=sendOpt)
 
     def shutdown(self, kind, *args, **kw):
         return self.protocol.shutdown(kind, *args, **kw)

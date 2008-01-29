@@ -194,72 +194,109 @@ class AdvertRouterEntry(BlatherObject):
         if sendRoute is not None:
             return [sendRoute()]
 
-        if (sendOpt & 0x40):
-            # sendOpt b0100:0000 signals to use allRoutes to start from
-            routes = self.allRoutes
+        # sendOpt b0111:0000 is fwdRoutes
+        fwdRoutes = (sendOpt & 0x70) >> 4
+        if fwdRoutes:
+            routes = list(self.allRoutes)
+            weights = None
         else: 
             # otherwise, use the entry's routes
             routes = self.entryRoutes
+            weights = routes.values()
+            routes = routes.keys()
 
         if not routes:
             return []
-
-        weights = routes.values()
-        routes = routes.keys()
 
         # discard our route
         recvRoute = pinfo.get('recvRoute')
         if recvRoute is not None:
             try:
                 i = routes.index(recvRoute())
-            except ValueError: 
-                pass
+            except ValueError: pass
             else:
                 routes.pop(i)
-                weights.pop(i)
+                if weights is not None:
+                    weights.pop(i)
 
-        # fwdKind is the lower nibble of sendOpt
+        # sendOpt b0000:1111 is fwdKind
         fwdkind = sendOpt & 0xf
         fwdFilter = self.fwdKindFilters.get(fwdkind, None)
         if fwdFilter is not None:
-            routes = fwdFilter(self, routes, weights)
+            asSorted = lambda count: self._sortedRoutes(weights, routes, count)
+            routes = fwdFilter(self, routes, asSorted)
         return routes
+
+    def _sortedRoutes(self, weights, routes, count):
+        if weights is None:
+            routes.sort(reverse=True)
+            return routes[:count]
+        else:
+            items = zip(weights, routes)
+            items.sort(reverse=True)
+            return [wr[1] for wr in items[:count]]
 
     #~ Forward Kind Filters ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
     @fwdKindFilters.on(0x0)
-    def fwdKindFilter_0x0(self, routes, weights):
-        """Greatest route, sorted by weight and rating"""
-        items = zip(weights, routes)
-        items.sort()
-        items = [wr[1] for wr in items[-1:]]
-        return items
+    def fwdKindFilter_0x0(self, routes, asSorted):
+        """Send to first route as ordered"""
+        return routes[:1]
 
     @fwdKindFilters.on(0x1)
-    def fwdKindFilter_0x1(self, routes, weights):
-        """Greatest two routes, sorted by weight and rating"""
-        items = zip(weights, routes)
-        items.sort()
-        items = [wr[1] for wr in items[-2:]]
-        return items
+    def fwdKindFilter_0x1(self, routes, asSorted):
+        """Greatest route, sorted by weight and rating"""
+        return asSorted(1)
 
     @fwdKindFilters.on(0x2)
-    def fwdKindFilter_0x2(self, routes, weights):
+    def fwdKindFilter_0x2(self, routes, asSorted):
+        """Send to first two routes as ordered"""
+        return routes[:2]
+
+    @fwdKindFilters.on(0x3)
+    def fwdKindFilter_0x3(self, routes, asSorted):
+        """Greatest two routes, sorted by weight and rating"""
+        return asSorted(2)
+
+    #~ fwd random routes by... ~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+    @fwdKindFilters.on(0x8)
+    def fwdKindFilter_0x8(self, routes, asSorted):
         """Send to random sample of 1 route"""
         if len(routes) > 1:
             routes = [self.ri.choose(routes)]
         return routes
 
-    @fwdKindFilters.on(0x3)
-    def fwdKindFilter_0x3(self, routes, weights):
+    @fwdKindFilters.on(0x9)
+    def fwdKindFilter_0x9(self, routes, asSorted):
         """Send to random sample of 2 routes"""
         if len(routes) > 2:
             routes = self.ri.sample(routes, 2)
         return routes
 
+    @fwdKindFilters.on(0xa)
+    def fwdKindFilter_0xa(self, routes, asSorted):
+        """Send to random sample of 2 routes"""
+        if len(routes) > 4:
+            routes = self.ri.sample(routes, 4)
+        return routes
+
+    @fwdKindFilters.on(0xb)
+    def fwdKindFilter_0xb(self, routes, asSorted):
+        """Send to random sample of 2 routes"""
+        if len(routes) > 8:
+            routes = self.ri.sample(routes, 8)
+        return routes
+
+    #~ fwd all routes by... ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+    @fwdKindFilters.on(0xe)
+    def fwdKindFilter_0xe(self, routes, asSorted):
+        """Broadcast to all routes, sorted by weight and rating"""
+        return asSorted(None)
     @fwdKindFilters.on(0xf)
-    def fwdKindFilter_0xf(self, routes, weights):
-        """Broadcast to all routes"""
+    def fwdKindFilter_0xf(self, routes, asSorted):
+        """Broadcast to all routes, as ordered"""
         return routes
 
     #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
