@@ -23,6 +23,7 @@ class BlatherBasicNetworkRoute(BasicBlatherRoute):
 
     addrInbound = None
     addrOutbound = None
+    channel = lambda self: None
 
     def __repr__(self):
         return "<%s in:%r out:%r)" % (
@@ -45,7 +46,7 @@ class BlatherBasicNetworkRoute(BasicBlatherRoute):
         route = self.findPeerRoute(addr)
         if route is None:
             route = self.newRoute()
-            route.setChannel(self.chOutbound(), addr, addr)
+            route.setChannel(self.channel(), addr, addr)
             route.registerOn(self.msgRouter)
             return route
 
@@ -56,8 +57,6 @@ class BlatherBasicNetworkRoute(BasicBlatherRoute):
 
 class BlatherNetworkRoute(BlatherBasicNetworkRoute):
     routeKinds = ['direct-remote', 'broadcast']
-
-    channel = lambda self: None
 
     def setChannel(self, channel, addrOutbound, addrInbound):
         self.channel = channel.asWeakRef()
@@ -77,23 +76,9 @@ class BlatherNetworkRoute(BlatherBasicNetworkRoute):
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-class BlatherNetworkOpenRoute(BlatherBasicNetworkRoute):
+class BlatherNetworkRecvRoute(BlatherNetworkRoute):
+    routeKinds = []
+
+class BlatherNetworkDiscoveryRoute(BlatherNetworkRoute):
     routeKinds = ['discovery', 'broadcast']
-
-    chInbound = lambda self: None
-    chOutbound = lambda self: None
-
-    def setOutboundChannel(self, chOutbound, addrOutbound):
-        self.addrOutbound = asSockAddr(addrOutbound)
-        self.chOutbound = chOutbound.asWeakRef()
-
-    def setInboundChannel(self, chInbound, addrInbound):
-        self.chInbound = chInbound.asWeakRef()
-        if addrInbound is not None:
-            self.addrInbound = asSockAddr(addrInbound)
-        else: self.addrInbound = None
-        chInbound.register(self.addrInbound, self.recvDispatch)
-
-    def sendDispatch(self, packet, onNotify=None):
-        self.chOutbound().send(packet, self.addrOutbound, onNotify)
 

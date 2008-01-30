@@ -75,18 +75,28 @@ class BlatherRouteFactory(BlatherObject):
     def connectAutoUDP(self):
         udpChannel = self.networkMgr.udpChannel
         mudpChannel = self.networkMgr.mudpChannel
+        maddr = mudpChannel.grpAddr
 
-        route = BlatherNetworkOpenRoute()
-        route.setOutboundChannel(udpChannel, mudpChannel.grpAddr)
-        route.setInboundChannel(mudpChannel, None)
+        route = BlatherNetworkRecvRoute()
+        route.setChannel(mudpChannel, maddr, None)
+        route.channel = udpChannel.asWeakRef()
         route.registerOn(self.msgRouter())
-        return route
 
+        route = BlatherNetworkDiscoveryRoute()
+        route.setChannel(udpChannel, maddr, None)
+        route.registerOn(self.msgRouter())
+        
+    def connectAllUDP(self):
+        maddr = self.networkMgr.mudpChannel.grpAddr
+        for addr, ch in self.networkMgr.allUdpChannels().iteritems():
+            route = BlatherNetworkDiscoveryRoute()
+            route.setChannel(ch, maddr, None)
+            route.registerOn(self.msgRouter())
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 #~ Imports 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 from .directRoutes import BlatherDirectRoute, BlatherTestingRoute
-from .networkRoutes import BlatherNetworkRoute, BlatherNetworkOpenRoute
+from .networkRoutes import BlatherNetworkRoute, BlatherNetworkDiscoveryRoute, BlatherNetworkRecvRoute
 

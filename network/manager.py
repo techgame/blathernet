@@ -52,12 +52,24 @@ class BlatherNetworkMgr(BlatherObject):
         self.checkUdpChannel(ch, assign)
         return ch
 
+    _allUdpChannels = None
+    def allUdpChannels(self):
+        allChannels = self._allUdpChannels
+        if allChannels is None:
+            allChannels = {}
+            for ifname, ifaddrs in netif.getifaddrs_v4().iteritems():
+                for addr in ifaddrs:
+                    ch = self.addUdpChannel((str(addr.ip), 8470), str(addr.ip), False)
+                    allChannels[addr] = ch
+
+            self._allUdpChannels = allChannels
+        return allChannels
+
     def addMudpChannel(self, address=('238.1.9.1', 8469), interface=None, assign=None):
         ch = self._fm_.UDPMulticastChannel(address, interface)
 
         ch.grpAddr = ch.normSockAddr(address)[1]
-        ch.joinGroup(ch.grpAddr, interface)
-        #ch.joinGroupAll(ch.grpAddr)
+        ch.joinGroupAll(ch.grpAddr)
 
         self.selector.add(ch)
         self.checkMudpChannel(ch, assign)

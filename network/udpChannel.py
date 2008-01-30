@@ -191,7 +191,6 @@ class UDPMulticastChannel(UDPChannel):
     def joinGroupAll(self, group):
         for name, addrList in self.cfgUtils.getifaddrs().items():
             for addr in addrList:
-                print 'join:', group, addr
                 self.cfgUtils.joinGroup(group, str(addr.ip))
 
     def leaveGroup(self, group, interface=None):
