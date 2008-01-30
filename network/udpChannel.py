@@ -19,7 +19,7 @@ from socket import error as SocketError
 from TG.kvObserving import KVProperty, KVSet
 
 from .socketChannel import SocketChannel
-from .socketConfigTools import SocketConfigUtils, MulticastConfigUtils, udpSocketErrorMap
+from .socketConfigTools import udpSocketErrorMap
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 #~ Definitions 
@@ -78,13 +78,20 @@ class UDPChannel(SocketChannel):
             self.createSocket(afamily)
 
         self.bindSocket(address, onBindError)
+        self.setMulticastInterface(address, interface)
+
         self.needsRead = True
 
     def _socketConfig(self, sock, cfgUtils):
         SocketChannel._socketConfig(self, sock, cfgUtils)
         cfgUtils.disallowMixed()
+        cfgUtils.setMulticastHops(5)
+        cfgUtils.setMulticastLoop(True)
 
         cfgUtils.setBufferSize(self.bufferSize)
+
+    def setMulticastInterface(self, group, interface):
+        self.cfgUtils.setMulticastInterface(group, interface)
 
     def onBindError(self, address, err):
         r = list(address)
@@ -151,8 +158,7 @@ class UDPChannel(SocketChannel):
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 class UDPMulticastChannel(UDPChannel):
-    _fm_ = UDPChannel._fm_.branch(
-            ConfigUtils=MulticastConfigUtils)
+    _fm_ = UDPChannel._fm_.branch()
 
     def isMulticast(self): return True
 
@@ -162,11 +168,11 @@ class UDPMulticastChannel(UDPChannel):
         if self.sock is None or self.afamily != afamily:
             self.createSocket(afamily)
 
-        self.cfgUtils.setMulticastInterface(address, interface)
-
         # multicast addresses should always be bound to INADDR_ANY=""
         bindAddr = ("",) + address[1:]
         self.bindSocket(bindAddr, onBindError)
+
+        self.setMulticastInterface(address, interface)
 
         self.needsRead = True
 
@@ -179,14 +185,14 @@ class UDPMulticastChannel(UDPChannel):
     def onBindError(self, address, err):
         return None
 
-    def joinGroup(self, group, interface=True):
-        if interface == 'all':
-            for name, addrList in self.cfgUtils.getifaddrs().items():
-                for addr in addrList:
-                    print 'join:', addr.ip
-                    self.cfgUtils.joinGroup(group, str(addr.ip))
-        else:
-            self.cfgUtils.joinGroup(group, interface)
+    def joinGroup(self, group, interface=None):
+        self.cfgUtils.joinGroup(group, interface)
+
+    def joinGroupAll(self, group):
+        for name, addrList in self.cfgUtils.getifaddrs().items():
+            for addr in addrList:
+                print 'join:', group, addr
+                self.cfgUtils.joinGroup(group, str(addr.ip))
 
     def leaveGroup(self, group, interface=None):
         self.cfgUtils.leaveGroup(group, interface)

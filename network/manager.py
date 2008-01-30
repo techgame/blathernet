@@ -12,6 +12,7 @@
 
 from ..base import BlatherObject
 
+from .socketConfigTools import netif
 from .selectTask import NetworkSelector
 from .udpChannel import UDPChannel, UDPMulticastChannel
 
@@ -45,8 +46,8 @@ class BlatherNetworkMgr(BlatherObject):
     #~ Factory methods
     #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-    def addUdpChannel(self, address=('0.0.0.0', 8470), assign=None):
-        ch = self._fm_.UDPChannel(address)
+    def addUdpChannel(self, address=('0.0.0.0', 8470), interface=None, assign=None):
+        ch = self._fm_.UDPChannel(address, interface)
         self.selector.add(ch)
         self.checkUdpChannel(ch, assign)
         return ch
@@ -55,7 +56,8 @@ class BlatherNetworkMgr(BlatherObject):
         ch = self._fm_.UDPMulticastChannel(address, interface)
 
         ch.grpAddr = ch.normSockAddr(address)[1]
-        ch.joinGroup(ch.grpAddr, 'all')
+        ch.joinGroup(ch.grpAddr, interface)
+        #ch.joinGroupAll(ch.grpAddr)
 
         self.selector.add(ch)
         self.checkMudpChannel(ch, assign)

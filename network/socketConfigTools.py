@@ -101,13 +101,10 @@ class SocketConfigUtils(object):
         afamily, address  = info[0], info[-1]
         return afamily, address
 
-asSockAddr = SocketConfigUtils.asSockAddr
+    #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    #~ Socket Multicast Config
+    #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-#~ Socket Multicast Config
-#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-class MulticastConfigUtils(SocketConfigUtils):
     def setMulticastHops(self, hops):
         if self.afamily == AF_INET:
             self.sock.setsockopt(socket.IPPROTO_IP, socket.IP_MULTICAST_TTL, hops)
@@ -128,7 +125,6 @@ class MulticastConfigUtils(SocketConfigUtils):
         elif self.afamily == AF_INET6:
             result = self.sock.getsockopt(socket.IPPROTO_IPV6, socket.IPV6_MULTICAST_IF)
         return result
-
     def setMulticastInterface(self, group, if_address=None):
         groupAddr = self.asSockAddr(group)
         if_address = self._packetInterface(groupAddr, if_address)
@@ -203,6 +199,8 @@ class MulticastConfigUtils(SocketConfigUtils):
             if afamily != AF_INET:
                 raise NotImplementedError()
             return socket.inet_aton(addr)
+
+asSockAddr = SocketConfigUtils.asSockAddr
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 #~ Constants / Variiables / Etc. 
