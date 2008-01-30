@@ -55,7 +55,7 @@ class BlatherNetworkMgr(BlatherObject):
         ch = self._fm_.UDPMulticastChannel(address, interface)
 
         ch.grpAddr = ch.normSockAddr(address)[1]
-        ch.joinGroup(ch.grpAddr, interface)
+        ch.joinGroup(ch.grpAddr, 'all')
 
         self.selector.add(ch)
         self.checkMudpChannel(ch, assign)

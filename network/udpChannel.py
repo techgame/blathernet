@@ -179,8 +179,14 @@ class UDPMulticastChannel(UDPChannel):
     def onBindError(self, address, err):
         return None
 
-    def joinGroup(self, group, interface=None):
-        self.cfgUtils.joinGroup(group, interface)
+    def joinGroup(self, group, interface=True):
+        if interface == 'all':
+            for name, addrList in self.cfgUtils.getifaddrs().items():
+                for addr in addrList:
+                    print 'join:', addr.ip
+                    self.cfgUtils.joinGroup(group, str(addr.ip))
+        else:
+            self.cfgUtils.joinGroup(group, interface)
 
     def leaveGroup(self, group, interface=None):
         self.cfgUtils.leaveGroup(group, interface)

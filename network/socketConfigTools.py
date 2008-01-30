@@ -141,6 +141,9 @@ class MulticastConfigUtils(SocketConfigUtils):
             return True
         return False
 
+    def getifaddrs(self):
+        return netif.getifaddrs(self.afamily)
+
     def joinGroup(self, group, if_address=None):
         groupAndIF = self._packedGroup(group, if_address)
         if self.afamily == AF_INET:
