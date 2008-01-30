@@ -22,6 +22,7 @@ from .basicRoute import BasicBlatherRoute
 
 class BlatherDirectRoute(BasicBlatherRoute):
     _fm_ = BasicBlatherRoute._fm_.branch()
+    routeKinds = ['direct-inprocess', 'broadcast']
     nextId = count(0).next
 
     def isInprocess(self): return True

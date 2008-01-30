@@ -19,6 +19,8 @@ from ..network.socketConfigTools import asSockAddr
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 class BlatherBasicNetworkRoute(BasicBlatherRoute):
+    routeKinds = ['direct-remote', 'broadcast']
+
     addrInbound = None
     addrOutbound = None
 
@@ -53,6 +55,8 @@ class BlatherBasicNetworkRoute(BasicBlatherRoute):
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 class BlatherNetworkRoute(BlatherBasicNetworkRoute):
+    routeKinds = ['direct-remote', 'broadcast']
+
     channel = lambda self: None
 
     def setChannel(self, channel, addrOutbound, addrInbound):
@@ -74,6 +78,8 @@ class BlatherNetworkRoute(BlatherBasicNetworkRoute):
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 class BlatherNetworkOpenRoute(BlatherBasicNetworkRoute):
+    routeKinds = ['discovery', 'broadcast']
+
     chInbound = lambda self: None
     chOutbound = lambda self: None
 

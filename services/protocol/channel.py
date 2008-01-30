@@ -87,6 +87,10 @@ class Channel(BasicChannel):
 
     #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
+    def sendAdv(self, method, bytes='', **kw):
+        dmsg = self.marshal.packBytes(method, bytes)
+        return self.sendDmsg(dmsg, **kw)
+
     def sendBytes(self, method, bytes, sendOpt=0):
         dmsg = self.marshal.packBytes(method, bytes)
         return self.sendDmsg(dmsg, sendOpt=sendOpt)
@@ -97,12 +101,12 @@ class Channel(BasicChannel):
         return self.sendDmsg(dmsg, sendOpt=sendOpt)
 
     def broadcast(self, method, *args, **kw):
-        sendOpt = kw.pop('sendOpt', 0x1f)
+        sendOpt = kw.pop('sendOpt', 0x2f)
         dmsg = self.marshal.packCall(method, args, kw)
         return self.sendDmsg(dmsg, sendOpt=sendOpt)
 
     def multicast(self, method, *args, **kw):
-        sendOpt = kw.pop('sendOpt', 0x9f)
+        sendOpt = kw.pop('sendOpt', 0xaf)
         dmsg = self.marshal.packCall(method, args, kw)
         return self.sendDmsg(dmsg, sendOpt=sendOpt)
 

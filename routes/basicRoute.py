@@ -22,6 +22,7 @@ from ..base import BlatherObject
 
 class BasicBlatherRoute(BlatherObject):
     rating = 0
+    routeKinds = ['direct', 'broadcast']
 
     def isBlatherRoute(self): return True
     def isOpenRoute(self): return False

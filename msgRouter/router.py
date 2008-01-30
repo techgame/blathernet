@@ -25,7 +25,7 @@ from .headerCodec import RouteHeaderCodec
 #~ Definitions 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-class AdvertRouterTable(dict):
+class AdvertEntryTable(dict):
     EntryBasic = AdvertRouterEntry
     EntryFactory = None
 
@@ -41,7 +41,7 @@ class AdvertRouterTable(dict):
 
 class BlatherMessageRouter(BlatherObject):
     _fm_ = BlatherObject._fm_.branch(
-            RouterTable=AdvertRouterTable)
+            EntryTable=AdvertEntryTable)
     codec = RouteHeaderCodec()
 
     def __init__(self, host):
@@ -49,14 +49,38 @@ class BlatherMessageRouter(BlatherObject):
         self.host = host.asWeakRef()
         self._lock_deferredDelivery = threading.Lock()
 
-        self.allRoutes = set()
         self.recentMsgIdSets = [set(), set()]
 
-        self.routeTable = self._fm_.RouterTable()
-        self.routeTable.setupEntryFlyweight(
+        self.createRouteMaps()
+        self.entryTable = self._fm_.EntryTable()
+        self.entryTable.setupEntryFlyweight(
                 msgRouter=self.asWeakProxy(),
                 codec=self.codec,
-                allRoutes=self.allRoutes)
+                routesByKind=self.routesByKind)
+
+    def createRouteMaps(self):
+        self.allRoutes = set()
+
+        byKind = {
+            0: ('entry', frozenset()),
+
+            1: ('none', frozenset()),
+            2: ('broadcast', set()),
+            3: ('discovery', set()),
+
+            4: ('direct', set()),
+            5: ('direct-remote', set()),
+            6: ('direct-inprocess', set()),
+
+            7: ('all', self.allRoutes)}
+
+        for mask in xrange(0, 8):
+            assert mask in byKind
+
+        for k, v in byKind.items():
+            byKind[v[0]] = (k, v[1])
+
+        self.routesByKind = byKind
 
     def __repr__(self):
         return '<MsgRouter on:%r>' % (self.host(),)
@@ -69,15 +93,27 @@ class BlatherMessageRouter(BlatherObject):
         self.registerOn(advert)
 
     def addRoute(self, route):
-        allRoutes = self.allRoutes
         if isinstance(route, weakref.ref):
             route = route()
-        allRoutes.add(route)
+        self.allRoutes.add(route)
+
+        byKind = self.routesByKind
+        for kind in route.routeKinds:
+            while kind:
+                byKind[kind][1].add(route)
+                kind = kind.rpartition('-')[0]
+
+    def removeRoute(self, route):
+        if isinstance(route, weakref.ref):
+            route = route()
+        self.allRoutes.discard(route)
+        for entry in self.routesByKind.itervalues():
+            entry[1].discard(route)
 
     def entryForAdvert(self, advert):
         return self.entryForId(advert.advertId)
     def entryForId(self, advertId):
-        return self.routeTable[advertId]
+        return self.entryTable[advertId]
 
     def newSession(self):
         return self.entryForId(uuid.uuid4().bytes)
@@ -89,7 +125,7 @@ class BlatherMessageRouter(BlatherObject):
         if dmsg is None:
             return False
 
-        advEntry = self.routeTable[pinfo.get('sendId')]
+        advEntry = self.entryTable[pinfo.get('sendId')]
         pinfo['advEntry'] = advEntry
 
         msgIdDup = self.isDuplicateMessageId(pinfo['msgId'])
@@ -97,11 +133,11 @@ class BlatherMessageRouter(BlatherObject):
         fwdIds = pinfo.get('fwdIds')
         if fwdIds is not None:
             for fid in fwdIds:
-                routeTable[fid].recvReturnRoute(pinfo)
+                entryTable[fid].recvReturnRoute(pinfo)
 
         replyId = pinfo.get('replyId')
         if replyId is not None:
-            retAdvertEntry = self.routeTable[replyId]
+            retAdvertEntry = self.entryTable[replyId]
             pinfo['retEntry'] = retAdvertEntry
             retAdvertEntry.recvReturnRoute(pinfo)
         else: pinfo['retEntry'] = None
