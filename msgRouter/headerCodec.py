@@ -50,10 +50,13 @@ class RouteHeaderCodec(RouteHeaderCodecBase):
                 .4:7        Flags
                 .0:3        Version
         """
+        if not packet:
+            return packet, None, pinfo
+
         packetVersion = ord(packet[0]) & 0x0f
         codec = self.codecs.get(packetVersion)
         if codec is None:
-            return None, pinfo
+            return packet, None, pinfo
 
         return codec.decode(packet, pinfo)
         
