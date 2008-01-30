@@ -291,6 +291,12 @@ class AdvertRouterEntry(BlatherObject):
 
     #~ fwd all routes by... ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
+    @fwdKindFilters.on(0xd)
+    def fwdKindFilter_0xd(self, routes, weights):
+        """Broadcast to all routes, sorted by weight and rating"""
+        if len(routes) > 1:
+            self.ri.shuffle(routes)
+        return routes
     @fwdKindFilters.on(0xe)
     def fwdKindFilter_0xe(self, routes, weights):
         """Broadcast to all routes, sorted by weight and rating"""
