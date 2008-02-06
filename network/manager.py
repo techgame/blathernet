@@ -14,7 +14,7 @@ from ..base import BlatherObject
 
 from .socketConfigTools import netif
 from .selectTask import NetworkSelector
-from .udpChannel import UDPChannel, UDPMulticastChannel
+from .udpChannel import UDPChannel, UDPSharedChannel, UDPMulticastChannel
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 #~ Definitions 
@@ -24,6 +24,7 @@ class BlatherNetworkMgr(BlatherObject):
     _fm_ = BlatherObject._fm_.branch(
             NetworkSelector=NetworkSelector,
             UDPChannel=UDPChannel,
+            UDPSharedChannel=UDPSharedChannel, 
             UDPMulticastChannel=UDPMulticastChannel,)
 
     def __init__(self, host):
@@ -57,13 +58,18 @@ class BlatherNetworkMgr(BlatherObject):
         allChannels = self._allUdpChannels
         if allChannels is None:
             allChannels = {}
-            for ifname, ifaddrs in netif.getifaddrs_v4().iteritems():
+            for ifname, ifaddrs in netif.getifaddrs_v4():
                 for addr in ifaddrs:
                     ch = self.addUdpChannel((str(addr.ip), 8470), str(addr.ip), False)
                     allChannels[addr] = ch
 
             self._allUdpChannels = allChannels
         return allChannels
+
+    def addSharedUdpChannel(self, address=('0.0.0.0', 8469), interface=None):
+        ch = self._fm_.UDPSharedChannel(address, interface)
+        self.selector.add(ch)
+        return ch
 
     def addMudpChannel(self, address=('238.1.9.1', 8469), interface=None, assign=None):
         ch = self._fm_.UDPMulticastChannel(address, interface)

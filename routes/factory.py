@@ -59,32 +59,53 @@ class BlatherRouteFactory(BlatherObject):
     #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
     def connectMUDP(self):
-        mudpChannel = self.networkMgr.mudpChannel
+        mch = self.networkMgr.mudpChannel
 
         route = BlatherNetworkRoute()
-        route.setChannel(mudpChannel, mudpChannel.grpAddr, None)
+        route.setChannel(mch, mch.grpAddr, None)
         route.registerOn(self.msgRouter())
         return route
+
     def connectUDP(self, addrOutbound=None, addrInbound=None):
-        udpChannel = self.networkMgr.udpChannel
+        ch = self.networkMgr.udpChannel
 
         route = BlatherNetworkRoute()
-        route.setChannel(udpChannel, addrOutbound, addrInbound)
+        route.setChannel(ch, addrOutbound, addrInbound)
         route.registerOn(self.msgRouter())
         return route
-    def connectAutoUDP(self):
-        udpChannel = self.networkMgr.udpChannel
-        mudpChannel = self.networkMgr.mudpChannel
-        maddr = mudpChannel.grpAddr
+
+    def connectSharedUDP(self, addrOutbound=None, addrInbound=None):
+        chIn = self.networkMgr.addSharedUdpChannel()
+        chOut = self.networkMgr.udpChannel
+
+        route = BlatherNetworkRoute()
+        route.setChannel(chIn, addrOutbound, addrInbound)
+        chOut.register(None, route.recvDispatch)
+        route.channel = chOut.asWeakRef()
+        route.registerOn(self.msgRouter())
+        return route
+
+    def connectRecvMUDP(self):
+        ch = self.networkMgr.udpChannel
+        mch = self.networkMgr.mudpChannel
+        maddr = mch.grpAddr
 
         route = BlatherNetworkRecvRoute()
-        route.setChannel(mudpChannel, maddr, None)
-        route.channel = udpChannel.asWeakRef()
+        route.setChannel(mch, maddr, None)
+        route.channel = ch.asWeakRef()
         route.registerOn(self.msgRouter())
+        return route
 
-        route = BlatherNetworkDiscoveryRoute()
-        route.setChannel(udpChannel, maddr, None)
-        route.registerOn(self.msgRouter())
+    def connectAutoUDP(self):
+        ch = self.networkMgr.udpChannel
+        mch = self.networkMgr.mudpChannel
+        maddr = mch.grpAddr
+
+        discRoute = BlatherNetworkDiscoveryRoute()
+        discRoute.setChannel(ch, maddr, None)
+        discRoute.registerOn(self.msgRouter())
+
+        return self.connectRecvMUDP()
         
     def connectAllUDP(self):
         maddr = self.networkMgr.mudpChannel.grpAddr

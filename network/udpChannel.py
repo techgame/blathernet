@@ -154,12 +154,20 @@ class UDPChannel(SocketChannel):
         return n
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+class UDPSharedChannel(UDPChannel):
+    def _socketConfig(self, sock, cfgUtils):
+        UDPChannel._socketConfig(self, sock, cfgUtils)
+        cfgUtils.reuseAddress()
+
+    def onBindError(self, address, err):
+        return None
+
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 #~ Multicast
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-class UDPMulticastChannel(UDPChannel):
-    _fm_ = UDPChannel._fm_.branch()
-
+class UDPMulticastChannel(UDPSharedChannel):
     def isMulticast(self): return True
 
     def setSocketAddress(self, address, interface=None, onBindError=None):
@@ -176,20 +184,11 @@ class UDPMulticastChannel(UDPChannel):
 
         self.needsRead = True
 
-    def _socketConfig(self, sock, cfgUtils):
-        UDPChannel._socketConfig(self, sock, cfgUtils)
-        cfgUtils.reuseAddress()
-        cfgUtils.setMulticastHops(5)
-        cfgUtils.setMulticastLoop(True)
-
-    def onBindError(self, address, err):
-        return None
-
     def joinGroup(self, group, interface=None):
         self.cfgUtils.joinGroup(group, interface)
 
     def joinGroupAll(self, group):
-        for name, addrList in self.cfgUtils.getifaddrs().items():
+        for name, addrList in self.cfgUtils.getifaddrs():
             for addr in addrList:
                 self.cfgUtils.joinGroup(group, str(addr.ip))
 
