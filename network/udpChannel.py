@@ -88,7 +88,7 @@ class UDPChannel(SocketChannel):
         cfgUtils.setMulticastHops(5)
         cfgUtils.setMulticastLoop(True)
 
-        cfgUtils.setBufferSize(self.bufferSize)
+        cfgUtils.setMaxBufferSize()
 
     def setMulticastInterface(self, group, interface):
         self.cfgUtils.setMulticastInterface(group, interface)

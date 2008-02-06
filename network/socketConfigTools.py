@@ -96,9 +96,19 @@ class SocketConfigUtils(object):
     def normSockAddr(klass, address):
         # normalize the address into a routing token
         ip, port = address[:2]
-        info = socket.getaddrinfo(ip, int(port))[0]
-        # grab the address portion of the info
-        afamily, address  = info[0], info[-1]
+        try:
+            info = socket.getaddrinfo(ip, int(port))[0]
+
+            # grab the address portion of the info
+            afamily = info[0]
+            address = info[-1]
+        except socket.gaierror, e:
+            if e.args[0] == socket.EAI_SERVICE:
+                info = socket.getaddrinfo(ip, None)[0]
+                afamily = info[0]
+                address = (info[-1][0], port) + info[-1][2:]
+            else: raise
+
         return afamily, address
 
     #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
