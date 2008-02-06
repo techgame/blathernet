@@ -50,9 +50,14 @@ class SocketConfigUtils(object):
             bitmask |= fcntl.FD_CLOEXEC
             fcntl.fcntl(fileno, fcntl.F_SETFD, bitmask)
 
-    def setMaxBufferSize(self):
+    def setMaxBufferSize(self, recvSize=None, sendSize=None):
         size = self.findMaxBufferSize(self.sock)
-        return self.setBufferSize(size)
+        if recvSize is not None:
+            recvSize = min(recvSize, size)
+        else: recvSize = size
+        if sendSize is not None:
+            sendSize = min(sendSize, size)
+        return self.setBufferSize(recvSize, sendSize)
 
     def setBufferSize(self, recvSize, sendSize=None):
         if sendSize is None: sendSize = recvSize
