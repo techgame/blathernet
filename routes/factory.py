@@ -75,7 +75,7 @@ class BlatherRouteFactory(BlatherObject):
         return route
 
     def connectSharedUDP(self, addrOutbound=None, addrInbound=None):
-        chIn = self.networkMgr.addSharedUdpChannel()
+        chIn = self.networkMgr.sudpChannel
         chOut = self.networkMgr.udpChannel
 
         route = BlatherNetworkRoute()

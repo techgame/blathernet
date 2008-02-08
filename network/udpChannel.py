@@ -62,6 +62,16 @@ class UDPChannel(SocketChannel):
         self.sendQueue.put((packet, address, onNotify))
         self.needsWrite = True
 
+    def sendMulticast(self, packet, address, onNotify=None, interfaces=[]):
+        try:
+            # send it directly, if we can
+            self.sock.sendto(packet, address)
+            return 
+        except SocketError, err:
+            if onNotify is None:
+                reraise = self.reraiseSocketError(err, err.args[0])
+            else: reraise = onNotify('error', packet, address, err)
+
     def recvDefault(self, packet, address):
         print
         print self.sock.getsockname(), 'recvDefault:'
@@ -78,7 +88,7 @@ class UDPChannel(SocketChannel):
             self.createSocket(afamily)
 
         self.bindSocket(address, onBindError)
-        self.setMulticastInterface(address, interface)
+        self.setMulticastInterface(interface, True)
 
         self.needsRead = True
 
@@ -90,8 +100,20 @@ class UDPChannel(SocketChannel):
 
         cfgUtils.setMaxBufferSize(self.bufferSize)
 
-    def setMulticastInterface(self, group, interface):
-        self.cfgUtils.setMulticastInterface(group, interface)
+    def getBroadcast(self):
+        return self.cfgUtils.getBroadcast()
+    def setBroadcast(self, bAllow=True):
+        return self.cfgUtils.setBroadcast(bAllow)
+
+    def getMulticastInterface(self, raw=False):
+        return self.cfgUtils.getMulticastInterface(raw)
+    _mcast_if_primary = None
+    def setMulticastInterface(self, interface=None, primary=False):
+        if interface is None:
+            interface = self._mcast_if_primary
+        self.cfgUtils.setMulticastInterface(interface)
+        if primary:
+            self._mcast_if_primary = self.getMulticastInterface(False) 
 
     def onBindError(self, address, err):
         r = list(address)
@@ -136,9 +158,6 @@ class UDPChannel(SocketChannel):
             for n in iterThrottle:
                 packet, address, onNotify = sendQueue.get(False, 0.1)
                 sock.sendto(packet, address)
-
-                if onNotify is not None:
-                    onNotify('sent', packet, address, None)
         except Queue.Empty:
             self.needsWrite = False
         except SocketError, err:
@@ -179,8 +198,7 @@ class UDPMulticastChannel(UDPSharedChannel):
         # multicast addresses should always be bound to INADDR_ANY=""
         bindAddr = ("",) + address[1:]
         self.bindSocket(bindAddr, onBindError)
-
-        self.setMulticastInterface(address, interface)
+        self.setMulticastInterface(interface, True)
 
         self.needsRead = True
 
@@ -188,9 +206,9 @@ class UDPMulticastChannel(UDPSharedChannel):
         self.cfgUtils.joinGroup(group, interface)
 
     def joinGroupAll(self, group):
-        for name, addrList in self.cfgUtils.getifaddrs():
+        for name, addrList in self.cfgUtils.getAllMulticastIF():
             for addr in addrList:
-                self.cfgUtils.joinGroup(group, str(addr.ip))
+                self.cfgUtils.joinGroup(group, addr)
 
     def leaveGroup(self, group, interface=None):
         self.cfgUtils.leaveGroup(group, interface)

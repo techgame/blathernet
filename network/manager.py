@@ -47,8 +47,12 @@ class BlatherNetworkMgr(BlatherObject):
     #~ Factory methods
     #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
+    def addUdpChannelIPv6(self, address=('::', 8470), interface=1, assign=None):
+        return self.addUdpChannel(address, interface, assign)
+
     def addUdpChannel(self, address=('0.0.0.0', 8470), interface=None, assign=None):
         ch = self._fm_.UDPChannel(address, interface)
+        ch.setBroadcast(True)
         self.selector.add(ch)
         self.checkUdpChannel(ch, assign)
         return ch
@@ -60,21 +64,28 @@ class BlatherNetworkMgr(BlatherObject):
             allChannels = {}
             for ifname, ifaddrs in netif.getifaddrs_v4():
                 for addr in ifaddrs:
-                    ch = self.addUdpChannel((str(addr.ip), 8470), str(addr.ip), False)
+                    ch = self.addUdpChannel((str(addr), 8470), str(addr), False)
                     allChannels[addr] = ch
 
             self._allUdpChannels = allChannels
         return allChannels
 
-    def addSharedUdpChannel(self, address=('0.0.0.0', 8469), interface=None):
+    def addSharedUdpChannelIPv6(self, address=('::', 8469), interface=1, assign=None):
+        return self.addSharedUdpChannel(address, interface)
+    def addSharedUdpChannel(self, address=('0.0.0.0', 8469), interface=None, assign=None):
         ch = self._fm_.UDPSharedChannel(address, interface)
+        ch.setBroadcast(True)
         self.selector.add(ch)
+        self.checkSudpChannel(ch, assign)
         return ch
+
+    def addMudpChannelIPv6(self, address=('ff02::238.1.9.1', 8469), interface=1, assign=None):
+        return self.addMudpChannel(address, interface, assign)
 
     def addMudpChannel(self, address=('238.1.9.1', 8469), interface=None, assign=None):
         ch = self._fm_.UDPMulticastChannel(address, interface)
 
-        ch.grpAddr = ch.normSockAddr(address)[1]
+        ch.grpAddr = ch.normSockAddr(address)[1][:2]
         ch.joinGroupAll(ch.grpAddr)
 
         self.selector.add(ch)
@@ -96,6 +107,20 @@ class BlatherNetworkMgr(BlatherObject):
             assign = True
 
         if assign: self.setUdpChannel(udpChannel)
+
+    _sudpChannel = None
+    def getSudpChannel(self):
+        if self._sudpChannel is None:
+            self._sudpChannel = self.addSharedUdpChannel()
+        return self._sudpChannel
+    def setSudpChannel(self, sudpChannel):
+        self._sudpChannel = sudpChannel
+    sudpChannel = property(getSudpChannel, setSudpChannel)
+    def checkSudpChannel(self, sudpChannel, assign=None):
+        if self._sudpChannel is None and assign is None:
+            assign = True
+
+        if assign: self.setSudpChannel(sudpChannel)
 
     _mudpChannel = None
     def getMudpChannel(self):

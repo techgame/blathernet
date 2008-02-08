@@ -50,10 +50,10 @@ class BasicBlatherRoute(BlatherObject):
         self.msgRouter = msgRouter
         msgRouter.addRoute(self)
 
-    def sendPacket(self, packet, onNotify=None):
+    def sendPacket(self, packet):
         self._incSentStats(len(packet))
-        return self.sendDispatch(packet, onNotify)
-    def sendDispatch(self, packet, onNotify=None):
+        return self.sendDispatch(packet)
+    def sendDispatch(self, packet):
         raise NotImplementedError('Subclass Responsibility: %r' % (self,))
 
     def recvDispatch(self, packet, addr):

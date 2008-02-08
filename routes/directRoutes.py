@@ -42,10 +42,8 @@ class BlatherDirectRoute(BasicBlatherRoute):
         self._peer = peer
     peer = property(getPeer, setPeer)
 
-    def sendDispatch(self, packet, onNotify=None):
+    def sendDispatch(self, packet):
         self.peer.transferDispatch(packet, self.addr)
-        if onNotify is not None:
-            onNotify('sent', packet, self.addr, None)
 
     def transferDispatch(self, packet, addr):
         self._inbox.put((packet, addr))

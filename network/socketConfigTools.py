@@ -43,6 +43,14 @@ class SocketConfigUtils(object):
         if hasattr(socket, "SO_REUSEPORT"):
             sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEPORT, bReuse)
 
+    def getBroadcast(self):
+        if hasattr(socket, "SO_BROADCAST"):
+            return self.sock.getsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST)
+    def setBroadcast(self, bAllow=True):
+        if hasattr(socket, "SO_BROADCAST"):
+            self.sock.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, bAllow)
+            return bAllow
+
     def configFcntl(self):
         if fcntl and hasattr(fcntl, 'FD_CLOEXEC'):
             fileno = self.sock.fileno()
@@ -102,7 +110,7 @@ class SocketConfigUtils(object):
         # normalize the address into a routing token
         ip, port = address[:2]
         try:
-            info = socket.getaddrinfo(ip, int(port))[0]
+            info = socket.getaddrinfo(str(ip), int(port))[0]
 
             # grab the address portion of the info
             afamily = info[0]
@@ -111,10 +119,10 @@ class SocketConfigUtils(object):
             if e.args[0] == socket.EAI_SERVICE:
                 info = socket.getaddrinfo(ip, None)[0]
                 afamily = info[0]
-                address = (info[-1][0], port) + info[-1][2:]
+                address = (info[-1][0], port) + info[-1]
             else: raise
 
-        return afamily, address
+        return afamily, address[:2]
 
     #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     #~ Socket Multicast Config
@@ -133,17 +141,26 @@ class SocketConfigUtils(object):
         elif self.afamily == AF_INET6:
             self.sock.setsockopt(socket.IPPROTO_IPV6, socket.IP_MULTICAST_LOOP, loop)
 
-    def getMulticastInterface(self, group):
+    def getMulticastInterface(self, raw=False):
         if self.afamily == AF_INET:
             result = self.sock.getsockopt(socket.IPPROTO_IP, socket.IP_MULTICAST_IF)
-            result = socket.inet_ntoa(struct.pack('I', result))
+            result = struct.pack('I', result)
+            if not raw:
+                result = socket.inet_ntoa(result)
         elif self.afamily == AF_INET6:
             result = self.sock.getsockopt(socket.IPPROTO_IPV6, socket.IPV6_MULTICAST_IF)
+            if raw:
+                result = struct.pack('I', result)
         return result
-    def setMulticastInterface(self, group, if_address=None):
-        groupAddr = self.asSockAddr(group)
-        if_address = self._packetInterface(groupAddr, if_address)
+    def setMulticastInterface(self, if_address=None):
+        if not if_address:
+            return False
+        if_address = self._packedInterface(if_address)
+        return self.setMulticastInterfacePacked(if_address)
 
+    def setMulticastInterfacePacked(self, if_address):
+        if not if_address:
+            return False
         if self.afamily == AF_INET:
             self.sock.setsockopt(socket.IPPROTO_IP, socket.IP_MULTICAST_IF, if_address)
             return True
@@ -152,8 +169,18 @@ class SocketConfigUtils(object):
             return True
         return False
 
-    def getifaddrs(self):
+    def getIFAddrs(self):
         return netif.getifaddrs(self.afamily)
+    def getIFIndexes(self):
+        return netif.getifindexes(self.afamily)
+    def getIFInfo(self):
+        return netif.getifinfo(self.afamily)
+
+    def getAllMulticastIF(self):
+        if self.afamily == AF_INET:
+            return self.getIFAddrs()
+        elif self.afamily == AF_INET6:
+            return self.getIFIndexes()
 
     def joinGroup(self, group, if_address=None):
         groupAndIF = self._packedGroup(group, if_address)
@@ -171,31 +198,27 @@ class SocketConfigUtils(object):
 
     #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-    def _packetInterface(self, group, if_address=None):
+    def _packedInterface(self, if_address=None):
         if self.afamily == AF_INET:
             # IPV4 require the interface IP to bind the multicast interface
             if if_address:
                 if_address = self.asSockAddr(if_address)[0]
             else:
-                if_address = self.getMulticastInterface(group)
+                if_address = self.getMulticastInterface(False)
 
             return self._inet_pton(self.afamily, if_address)
 
         elif self.afamily == AF_INET6:
             # IPV6 require the interface number to bind the multicast interface
-            # which is happily packed at position 3 (zero based) of the IPV6 if_address
             if if_address:
                 if_address = netif.getIFIndex(if_address) 
-            if not if_address and group:
-                if_address = netif.getIFIndexForIP(group[0], self.afamily) 
-            if not if_address:
-                if_address = self.getMulticastInterface(group)
-
-            return struct.pack('I', if_address)
+            if if_address:
+                return struct.pack('I', if_address)
+            else: return self.getMulticastInterface(True)
 
     def _packedGroup(self, group, if_address=None):
         groupAddr = self.asSockAddr(group)
-        interface = self._packetInterface(None, if_address)
+        interface = self._packedInterface(if_address)
         group = self._inet_pton(self.afamily, groupAddr[0])
         return group + interface
 
