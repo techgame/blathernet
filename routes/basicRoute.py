@@ -20,9 +20,38 @@ from ..base import BlatherObject
 #~ Routes
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
+_allRouteKinds = {
+    0: ('entry', frozenset()),
+
+    1: ('direct', set()),
+    2: ('broadcast', set()),
+
+    # discovery is used by routes to opt out of broadcast, but still be
+    # allowed to used for discovery.  Basically used as a rate limiter.
+    3: ('discovery', set()), 
+
+    4: ('<unused-4>', set()),
+    5: ('<unused-5>', set()),
+    6: ('<unused-6>', set()),
+
+    7: ('all', set())}
+
+def allRouteKindMap(incNames=True):
+    byKind = dict((k, (n, s.copy())) for k, (n, s) in _allRouteKinds.iteritems())
+    for mask in xrange(0, 8):
+        if mask not in byKind:
+            raise RuntimeError("RouteKindMap does not have entrys for all values of mask")
+
+    if incNames:
+        for k, (n, s) in byKind.items():
+            byKind[n] = (k, s)
+    return byKind
+
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
 class BasicBlatherRoute(BlatherObject):
     rating = 0
-    routeKinds = ['direct', 'broadcast']
+    routeKinds = ['direct', 'broadcast', 'discovery']
 
     def isBlatherRoute(self): return True
     def isOpenRoute(self): return False
@@ -54,14 +83,42 @@ class BasicBlatherRoute(BlatherObject):
         self._incSentStats(len(packet))
         return self.sendDispatch(packet)
     def sendDispatch(self, packet):
+        return self._sendDispatch(packet)
+    def _sendDispatch(self, packet):
         raise NotImplementedError('Subclass Responsibility: %r' % (self,))
 
-    def recvDispatch(self, packet, addr):
+    def _recvDispatch(self, packet, addr):
         ts = self._incRecvStats(len(packet))
         pinfo = {'addr': addr, 'recvRoute': self._wrRoute}
         self.recvPacket(packet, pinfo)
+    recvDispatch = _recvDispatch
     def recvPacket(self, packet, pinfo):
         self.msgRouter.recvPacket(packet, pinfo)
+
+    #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+    def setSendDebug(self, debug=True):
+        if debug:
+            self.sendDispatch = self._sendDispatchDebug
+        else: 
+            self.sendDispatch = None
+            del self.sendDispatch
+
+    def _sendDispatchDebug(self, packet):
+        print 'send:', repr(packet)
+        return self._sendDispatch(packet)
+
+    def setRecvDebug(self, debug=True):
+        if debug:
+            self.recvDispatch = self._recvDispatchDebug
+        else: 
+            self.recvDispatch = None
+            del self.recvDispatch
+
+    def _recvDispatchDebug(self, packet, addr):
+        print 'recv:', addr, repr(packet)
+        return self._recvDispatch(packet, addr)
+
 
     #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     #~ Stats Tracking

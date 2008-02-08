@@ -14,7 +14,7 @@ from ..base import BlatherObject
 
 from .socketConfigTools import netif
 from .selectTask import NetworkSelector
-from .udpChannel import UDPChannel, UDPSharedChannel, UDPMulticastChannel
+from . import udpChannel
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 #~ Definitions 
@@ -22,10 +22,7 @@ from .udpChannel import UDPChannel, UDPSharedChannel, UDPMulticastChannel
 
 class BlatherNetworkMgr(BlatherObject):
     _fm_ = BlatherObject._fm_.branch(
-            NetworkSelector=NetworkSelector,
-            UDPChannel=UDPChannel,
-            UDPSharedChannel=UDPSharedChannel, 
-            UDPMulticastChannel=UDPMulticastChannel,)
+            NetworkSelector=NetworkSelector,)
 
     def __init__(self, host):
         BlatherObject.__init__(self)
@@ -50,8 +47,10 @@ class BlatherNetworkMgr(BlatherObject):
     def addUdpChannelIPv6(self, address=('::', 8470), interface=1, assign=None):
         return self.addUdpChannel(address, interface, assign)
 
-    def addUdpChannel(self, address=('0.0.0.0', 8470), interface=None, assign=None):
-        ch = self._fm_.UDPChannel(address, interface)
+    def addUdpChannel(self, address=('0.0.0.0', 8470), interface=None, static=False, assign=None):
+        if static:
+            ch = udpChannel.UDPChannel(address, interface)
+        else: ch = udpChannel.UDPAutoChannel(address, interface)
         self.selector.add(ch)
         self.checkUdpChannel(ch, assign)
         return ch
@@ -72,7 +71,7 @@ class BlatherNetworkMgr(BlatherObject):
     def addSharedUdpChannelIPv6(self, address=('::', 8469), interface=1, assign=None):
         return self.addSharedUdpChannel(address, interface)
     def addSharedUdpChannel(self, address=('0.0.0.0', 8469), interface=None, assign=None):
-        ch = self._fm_.UDPSharedChannel(address, interface)
+        ch = udpChannel.UDPSharedChannel(address, interface)
         self.selector.add(ch)
         self.checkSudpChannel(ch, assign)
         return ch
@@ -81,7 +80,7 @@ class BlatherNetworkMgr(BlatherObject):
         return self.addMudpChannel(address, interface, assign)
 
     def addMudpChannel(self, address=('238.1.9.1', 8469), interface=None, assign=None):
-        ch = self._fm_.UDPMulticastChannel(address, interface)
+        ch = udpChannel.UDPMulticastChannel(address, interface)
 
         ch.grpAddr = ch.normSockAddr(address)[1][:2]
         ch.joinGroupAll(ch.grpAddr)

@@ -19,7 +19,7 @@ from ..network.socketConfigTools import asSockAddr
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 class BlatherBasicNetworkRoute(BasicBlatherRoute):
-    routeKinds = ['direct-remote', 'broadcast']
+    routeKinds = ['direct', 'broadcast']
 
     addrInbound = None
     addrOutbound = None
@@ -56,7 +56,7 @@ class BlatherBasicNetworkRoute(BasicBlatherRoute):
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 class BlatherNetworkRoute(BlatherBasicNetworkRoute):
-    routeKinds = ['direct-remote', 'broadcast']
+    routeKinds = ['direct', 'broadcast', 'discovery']
 
     def setChannel(self, channel, addrOutbound, addrInbound):
         self.channel = channel.asWeakRef()
@@ -73,12 +73,16 @@ class BlatherNetworkRoute(BlatherBasicNetworkRoute):
         if not self.addrOutbound:
             self.routeKinds = []
 
-    def sendDispatch(self, packet):
+    def _sendDispatch(self, packet):
         self.channel().send(packet, self.addrOutbound, self._onSendNotify)
+    def _sendDispatchDebug(self, packet):
+        print 'send:', self.addrOutbound, repr(packet)
+        return self._sendDispatch(packet)
+    sendDispatch = _sendDispatch
 
     def _onSendNotify(self, kind, packet, address, err):
         print (kind, address, err)
-        pass
+
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -86,5 +90,5 @@ class BlatherNetworkRecvRoute(BlatherNetworkRoute):
     routeKinds = []
 
 class BlatherNetworkDiscoveryRoute(BlatherNetworkRoute):
-    routeKinds = ['discovery', 'broadcast']
+    routeKinds = ['discovery']
 

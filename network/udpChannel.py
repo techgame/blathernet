@@ -25,7 +25,7 @@ from .socketConfigTools import udpSocketErrorMap
 #~ Definitions 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-class UDPChannel(SocketChannel):
+class UDPBaseChannel(SocketChannel):
     registry = None
 
     socketErrorMap = udpSocketErrorMap
@@ -101,6 +101,10 @@ class UDPChannel(SocketChannel):
 
         cfgUtils.setMaxBufferSize(self.bufferSize)
 
+    #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    #~ Broadcast and multicast
+    #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
     def getBroadcast(self):
         return self.cfgUtils.getBroadcast()
     def setBroadcast(self, bAllow=True):
@@ -116,11 +120,19 @@ class UDPChannel(SocketChannel):
         if primary:
             self._mcast_if_primary = self.getMulticastInterface(False) 
 
-    def onBindError(self, address, err):
-        r = list(address)
-        r[1] += 1
-        return tuple(r)
+    def joinGroup(self, group, interface=None):
+        self.cfgUtils.joinGroup(group, interface)
 
+    def joinGroupAll(self, group):
+        for name, addrList in self.cfgUtils.getAllMulticastIF():
+            for addr in addrList:
+                self.cfgUtils.joinGroup(group, addr)
+
+    def leaveGroup(self, group, interface=None):
+        self.cfgUtils.leaveGroup(group, interface)
+
+    #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    #~ Socket processing
     #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
     def processRecvQueue(self, recvQueue):
@@ -174,22 +186,28 @@ class UDPChannel(SocketChannel):
         return n
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+#~ Specific channel Setup
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-class UDPSharedChannel(UDPChannel):
-    def _socketConfig(self, sock, cfgUtils):
-        UDPChannel._socketConfig(self, sock, cfgUtils)
-        cfgUtils.reuseAddress()
+class UDPChannel(UDPBaseChannel):
+    pass
 
+class UDPAutoChannel(UDPBaseChannel):
     def onBindError(self, address, err):
-        return None
+        r = list(address)
+        r[1] += 1
+        return tuple(r)
+
+class UDPSharedChannel(UDPBaseChannel):
+    def _socketConfig(self, sock, cfgUtils):
+        UDPBaseChannel._socketConfig(self, sock, cfgUtils)
+        cfgUtils.reuseAddress()
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 #~ Multicast
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 class UDPMulticastChannel(UDPSharedChannel):
-    def isMulticast(self): return True
-
     def setSocketAddress(self, address, interface=None, onBindError=None):
         afamily, address = self.normSockAddr(address)
 
@@ -202,17 +220,6 @@ class UDPMulticastChannel(UDPSharedChannel):
         self.setMulticastInterface(interface, True)
 
         self.needsRead = True
-
-    def joinGroup(self, group, interface=None):
-        self.cfgUtils.joinGroup(group, interface)
-
-    def joinGroupAll(self, group):
-        for name, addrList in self.cfgUtils.getAllMulticastIF():
-            for addr in addrList:
-                self.cfgUtils.joinGroup(group, addr)
-
-    def leaveGroup(self, group, interface=None):
-        self.cfgUtils.leaveGroup(group, interface)
 
 MUDPChannel = UDPMulticastChannel
 

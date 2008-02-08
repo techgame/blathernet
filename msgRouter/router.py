@@ -18,6 +18,7 @@ import threading
 import uuid
 
 from ..base import BlatherObject
+from .. import routes
 from .entry import AdvertRouterEntry
 from .headerCodec import RouteHeaderCodec
 
@@ -59,28 +60,8 @@ class BlatherMessageRouter(BlatherObject):
                 routesByKind=self.routesByKind)
 
     def createRouteMaps(self):
-        self.allRoutes = set()
-
-        byKind = {
-            0: ('entry', frozenset()),
-
-            1: ('none', frozenset()),
-            2: ('broadcast', set()),
-            3: ('discovery', set()),
-
-            4: ('direct', set()),
-            5: ('direct-remote', set()),
-            6: ('direct-inprocess', set()),
-
-            7: ('all', self.allRoutes)}
-
-        for mask in xrange(0, 8):
-            assert mask in byKind
-
-        for k, v in byKind.items():
-            byKind[v[0]] = (k, v[1])
-
-        self.routesByKind = byKind
+        self.routesByKind = routes.allRouteKindMap()
+        self.allRoutes = self.routesByKind['all'][-1]
 
     def __repr__(self):
         return '<MsgRouter on:%r>' % (self.host(),)
@@ -99,9 +80,7 @@ class BlatherMessageRouter(BlatherObject):
 
         byKind = self.routesByKind
         for kind in route.routeKinds:
-            while kind:
-                byKind[kind][1].add(route)
-                kind = kind.rpartition('-')[0]
+            byKind[kind][1].add(route)
 
     def removeRoute(self, route):
         if isinstance(route, weakref.ref):

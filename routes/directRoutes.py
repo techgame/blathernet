@@ -42,8 +42,9 @@ class BlatherDirectRoute(BasicBlatherRoute):
         self._peer = peer
     peer = property(getPeer, setPeer)
 
-    def sendDispatch(self, packet):
+    def _sendDispatch(self, packet):
         self.peer.transferDispatch(packet, self.addr)
+    sendDispatch = _sendDispatch
 
     def transferDispatch(self, packet, addr):
         self._inbox.put((packet, addr))

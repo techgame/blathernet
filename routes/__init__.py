@@ -10,5 +10,6 @@
 #~ Imports 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
+from .basicRoute import allRouteKindMap
 from .factory import BlatherRouteFactory
 
