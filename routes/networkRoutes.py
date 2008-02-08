@@ -70,11 +70,14 @@ class BlatherNetworkRoute(BlatherBasicNetworkRoute):
         self.addrInbound = addrInbound
 
         channel.register(self.addrInbound, self.recvDispatch)
+        if not self.addrOutbound:
+            self.routeKinds = []
 
     def sendDispatch(self, packet):
         self.channel().send(packet, self.addrOutbound, self._onSendNotify)
 
     def _onSendNotify(self, kind, packet, address, err):
+        print (kind, address, err)
         pass
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

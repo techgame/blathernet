@@ -52,7 +52,6 @@ class BlatherNetworkMgr(BlatherObject):
 
     def addUdpChannel(self, address=('0.0.0.0', 8470), interface=None, assign=None):
         ch = self._fm_.UDPChannel(address, interface)
-        ch.setBroadcast(True)
         self.selector.add(ch)
         self.checkUdpChannel(ch, assign)
         return ch
@@ -74,7 +73,6 @@ class BlatherNetworkMgr(BlatherObject):
         return self.addSharedUdpChannel(address, interface)
     def addSharedUdpChannel(self, address=('0.0.0.0', 8469), interface=None, assign=None):
         ch = self._fm_.UDPSharedChannel(address, interface)
-        ch.setBroadcast(True)
         self.selector.add(ch)
         self.checkSudpChannel(ch, assign)
         return ch

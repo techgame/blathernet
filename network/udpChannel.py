@@ -95,6 +95,7 @@ class UDPChannel(SocketChannel):
     def _socketConfig(self, sock, cfgUtils):
         SocketChannel._socketConfig(self, sock, cfgUtils)
         cfgUtils.disallowMixed()
+        cfgUtils.setBroadcast(True)
         cfgUtils.setMulticastHops(5)
         cfgUtils.setMulticastLoop(True)
 
