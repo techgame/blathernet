@@ -282,6 +282,7 @@ class MessageCompleteProtocol(BasicBlatherProtocol):
             if self.isIdle():
                 self.rate = self.rateIdle
             else:
+                print 'SWH::onPeriodic:', False, ts
                 self.rate = self.rateBusy
                 self.sendPing()
 

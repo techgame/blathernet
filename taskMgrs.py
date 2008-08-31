@@ -147,6 +147,7 @@ class BasicBlatherTimerMgr(BasicBlatherTaskMgr):
                     tsStart += ts
                 heappush(hqTimer, (tsStart, task))
 
+    debug = False
     timersleep = time.sleep
     minTimerFrequency = 0.008
     @threadcall
@@ -175,7 +176,8 @@ class BasicBlatherTimerMgr(BasicBlatherTaskMgr):
             if tsNext is not None:
                 timerEvents.append((tsNext, task))
 
-        self.extendTimers(timerEvents, ts)
+        if timerEvents:
+            self.extendTimers(timerEvents, ts)
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 #~ Blather Task Manger

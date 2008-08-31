@@ -100,7 +100,11 @@ class AdvertRouterEntry(BlatherObject):
         if task is None: 
             return None
         host = self.msgRouter.host()
-        return host.addTimer(tsStart, lambda ts: task(self, ts))
+
+        def timerTask(ts, task=task, entry=self):
+            return task(entry, ts)
+
+        return host.addTimer(tsStart, timerTask)
 
     #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     #~ Recv Packets and Routes

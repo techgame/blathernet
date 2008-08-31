@@ -42,7 +42,7 @@ class BlatherRouteFactory(BlatherObject):
         return route
 
     def newTestingRoute(self, cbIsPacketLost):
-        rotue = BlatherTestingRoute(self.msgRouter(), cbIsPacketLost)
+        route = BlatherTestingRoute(self.msgRouter(), cbIsPacketLost)
         route.registerOn(self.msgRouter())
         return route
     def connectTesting(self, otherHost, cbIsPacketLost, cbIsPacketLostOther=None):

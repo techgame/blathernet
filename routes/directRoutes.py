@@ -22,7 +22,7 @@ from .basicRoute import BasicBlatherRoute
 
 class BlatherDirectRoute(BasicBlatherRoute):
     _fm_ = BasicBlatherRoute._fm_.branch()
-    routeKinds = ['direct-inprocess', 'broadcast']
+    routeKinds = ['direct', 'broadcast']
     nextId = count(0).next
 
     def isInprocess(self): return True
@@ -89,8 +89,8 @@ class BlatherTestingRoute(BlatherDirectRoute):
 
 
     printSummaryCount = 100
-    printLost = False
-    printPassed = False
+    printLost = True
+    printPassed = True
 
     countTotal = 0
     countPassed = 0
