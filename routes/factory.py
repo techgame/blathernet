@@ -108,11 +108,24 @@ class BlatherRouteFactory(BlatherObject):
         return self.connectRecvMUDP()
         
     def connectAllUDP(self):
-        maddr = self.networkMgr.mudpChannel.grpAddr
-        for addr, ch in self.networkMgr.allUdpChannels().iteritems():
+        mch = self.networkMgr.mudpChannel
+        grpAddr = mch.grpAddr
+
+        for addr, ch in self.networkMgr.allUdpChannels():
             route = BlatherNetworkDiscoveryRoute()
-            route.setChannel(ch, maddr, None)
-            route.registerOn(self.msgRouter())
+            route.setAddrs(grpAddr, None)
+            route.channel = ch.asWeakRef()
+            route.registerForInbound(self.msgRouter(), [ch, mch])
+
+    def connectDiscovery(self):
+        ch = self.networkMgr.udpChannel
+        mch = self.networkMgr.mudpChannel
+        grpAddr = mch.grpAddr
+
+        route = BlatherNetworkDiscoveryRoute()
+        route.setAddrs(grpAddr, None)
+        route.channel = ch.asWeakRef()
+        route.registerForInbound(self.msgRouter(), [ch, mch])
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 #~ Imports 
