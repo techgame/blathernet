@@ -45,7 +45,7 @@ class UDPBaseChannel(SocketChannel):
     #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
     def register(self, address, recv):
-        self.registry[address] = recv
+        self.registry.setdefault(address, []).append(recv)
 
     def send(self, packet, address, onNotify=None):
         try:
@@ -137,11 +137,12 @@ class UDPBaseChannel(SocketChannel):
 
     def processRecvQueue(self, recvQueue):
         registry = self.registry
-        default = registry.get(None, self.recvDefault)
+        default = registry.get(None) or [self.recvDefault]
 
         for packet, address in recvQueue:
-            recv = registry.get(address, default)
-            recv(packet, address)
+            recvFns = registry.get(address, default)
+            for recv in recvFns:
+                recv(packet, address)
 
     def performRead(self, tasks):
         sock = self.sock

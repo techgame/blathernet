@@ -144,13 +144,13 @@ class SocketConfigUtils(object):
     def getMulticastInterface(self, raw=False):
         if self.afamily == AF_INET:
             result = self.sock.getsockopt(socket.IPPROTO_IP, socket.IP_MULTICAST_IF)
-            result = struct.pack('I', result)
+            result = struct.pack('i', result)
             if not raw:
                 result = socket.inet_ntoa(result)
         elif self.afamily == AF_INET6:
             result = self.sock.getsockopt(socket.IPPROTO_IPV6, socket.IPV6_MULTICAST_IF)
             if raw:
-                result = struct.pack('I', result)
+                result = struct.pack('i', result)
         return result
     def setMulticastInterface(self, if_address=None):
         if not if_address:
