@@ -92,12 +92,12 @@ class BasicBlatherTaskMgr(BlatherObject):
             self.kvpub.event('@process')
             for task in list(activeTasks):
                 n += 1
+                activeTasks.discard(task)
                 try:
-                    if not task():
-                        activeTasks.discard(task)
+                    if task():
+                        activeTasks.add(task)
                 except Exception:
                     traceback.print_exc()
-                    activeTasks.discard(task)
 
             if allActive and n:
                 self.tasksleep(0)
@@ -120,8 +120,9 @@ class BasicBlatherTimerMgr(BasicBlatherTaskMgr):
         self.initTimer()
 
     def initTimer(self):
-        self.hqTimer = []
         self.lockTimerHQ = threading.Lock()
+        with self.lockTimerHQ:
+            self.hqTimer = []
         self.threadTimers()
 
     def addTimer(self, tsStart, task):
@@ -132,7 +133,8 @@ class BasicBlatherTimerMgr(BasicBlatherTaskMgr):
             tsStart += self.timestamp()
 
         with self.lockTimerHQ:
-            heappush(self.hqTimer, (tsStart, task))
+            hqTimer = self.hqTimer
+            heappush(hqTimer, (tsStart, task))
 
         return task
 
@@ -140,8 +142,8 @@ class BasicBlatherTimerMgr(BasicBlatherTaskMgr):
         if ts is None:
             ts = self.timestamp()
 
-        hqTimer = self.hqTimer
         with self.lockTimerHQ:
+            hqTimer = self.hqTimer
             for (tsStart, task) in timerEvents:
                 if tsStart <= 4000:
                     tsStart += ts
@@ -153,14 +155,17 @@ class BasicBlatherTimerMgr(BasicBlatherTaskMgr):
     @threadcall
     def threadTimers(self):
         hqTimer = self.hqTimer
+        used = []
         while not self.done:
             if hqTimer:
                 ts = self.timestamp()
 
                 firedTimers = []
+                used.append(firedTimers)
                 with self.lockTimerHQ:
                     while hqTimer and ts > hqTimer[0][0]:
-                        firedTimers.append(heappop(hqTimer)[1])
+                        tsTask, task = heappop(hqTimer)
+                        firedTimers.append(task)
 
                 if firedTimers:
                     self.addTask(partial(self._processFiredTimers, ts, firedTimers))
@@ -175,6 +180,7 @@ class BasicBlatherTimerMgr(BasicBlatherTaskMgr):
             tsNext = task(ts)
             if tsNext is not None:
                 timerEvents.append((tsNext, task))
+        firedTimers[:] = []
 
         if timerEvents:
             self.extendTimers(timerEvents, ts)
