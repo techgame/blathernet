@@ -155,13 +155,11 @@ class BasicBlatherTimerMgr(BasicBlatherTaskMgr):
     @threadcall
     def threadTimers(self):
         hqTimer = self.hqTimer
-        used = []
         while not self.done:
             if hqTimer:
                 ts = self.timestamp()
 
                 firedTimers = []
-                used.append(firedTimers)
                 with self.lockTimerHQ:
                     while hqTimer and ts > hqTimer[0][0]:
                         tsTask, task = heappop(hqTimer)
