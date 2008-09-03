@@ -39,13 +39,15 @@ class BasicBlatherPeerService(MessageHandlerBase):
         advert = self.advert
         advert.registerOn(msgRouter)
         advert.registerOn(self.inboundProtocol)
-        advert.entry.addTimer(0, self.onPeriodic)
 
         peerAdvert = self.peerAdvert
         peerAdvert.registerOn(msgRouter)
 
         self.chan = self.outboundProtocol.Channel(peerAdvert.entry, advert.entry)
-        self.sessionInitiate(self.chan)
+
+        ts = self.sessionInitiate(self.chan)
+        if ts is not None:
+            advert.entry.addTimer(ts, self.onPeriodic)
 
     #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 

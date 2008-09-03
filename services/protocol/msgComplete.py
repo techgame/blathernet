@@ -170,16 +170,18 @@ class MessageCompleteProtocol(BasicBlatherProtocol):
     peerEntry = None
     def resetOnNewPeer(self, retEntry, pinfo=None):
         peerEntry = self.peerEntry
-        if peerEntry is not None:
+        if retEntry is None:
+            return self.chan
+        elif peerEntry is not None:
             if retEntry is not peerEntry:
                 return None
-        elif retEntry is None:
-            return None
         else:
             self.reset(retEntry)
 
         if pinfo is not None:
-            return self.Channel(retEntry, self.hostEntry, pinfo)
+            chan = self.Channel(retEntry, self.hostEntry, pinfo)
+            self.chan = chan
+            return chan
         else: return True
 
     #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -282,7 +284,6 @@ class MessageCompleteProtocol(BasicBlatherProtocol):
             if self.isIdle():
                 self.rate = self.rateIdle
             else:
-                print 'SWH::onPeriodic:', False, ts
                 self.rate = self.rateBusy
                 self.sendPing()
 
