@@ -34,10 +34,10 @@ class BlatherBasicNetworkRoute(BasicBlatherRoute):
         return self.addrInbound is None
 
     def matchPeerAddr(self, addr): 
-        addr = asSockAddr(addr)
         return (addr == self.addrInbound and addr == self.addrOutbound)
 
     def findPeerRoute(self, addr):
+        addr = asSockAddr(addr)
         for route in self.msgRouter.allRoutes:
             if route.matchPeerAddr(addr):
                 return route
@@ -79,9 +79,9 @@ class BlatherNetworkRoute(BlatherBasicNetworkRoute):
             self.routeKinds = list(routeKinds)
 
     def setChannel(self, channel, addrOutbound=None, addrInbound=None):
-        self.channel = channel.asWeakRef()
         self.setAddrs(addrOutbound, addrInbound)
-        self.channel().register(self.addrInbound, self.recvDispatch)
+        self.channel = channel.asWeakRef()
+        channel.register(self.addrInbound, self.recvDispatch)
 
     def registerForInbound(self, msgRouter, channels):
         for ch in channels:

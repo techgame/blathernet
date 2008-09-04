@@ -66,10 +66,17 @@ class BlatherRouteFactory(BlatherObject):
         route.registerOn(self.msgRouter())
         return route
 
-    def connectUDP(self, addrOutbound=None, addrInbound=None):
+    def connectDirect(self, addr):
+        if addr is None:
+            raise ValueError("Excpected a valid address")
+        return self.connectUDP(addr, addr, ['discovery'])
+
+    def connectUDP(self, addrOutbound=None, addrInbound=None, routeKinds=None):
         ch = self.networkMgr.udpChannel
 
         route = BlatherNetworkRoute()
+        if routeKinds:
+            route.routeKinds = route.routeKinds + ['discovery']
         route.setChannel(ch, addrOutbound, addrInbound)
         route.registerOn(self.msgRouter())
         return route
@@ -126,6 +133,20 @@ class BlatherRouteFactory(BlatherObject):
         route.setAddrs(grpAddr, None)
         route.channel = ch.asWeakRef()
         route.registerForInbound(self.msgRouter(), [ch, mch])
+        return route
+
+    def connectBroadcast(self):
+        ch = self.networkMgr.udpChannel
+        bcastPort = 8468
+        bcastCh = self.networkMgr.addSharedUdpChannel(('0.0.0.0', bcastPort), assign=False)
+        bcastAddr = ('255.255.255.255', bcastPort)
+
+        route = BlatherNetworkDiscoveryRoute()
+        route.setAddrs(bcastAddr, None)
+        route.channel = ch.asWeakRef()
+        route.registerForInbound(self.msgRouter(), [ch, bcastCh])
+        return route
+
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 #~ Imports 
