@@ -54,10 +54,11 @@ class BasicBlatherRoute(BlatherObject):
     routeKinds = ['direct', 'broadcast', 'discovery']
 
     def isBlatherRoute(self): return True
-    def isOpenRoute(self): return False
     def isInprocess(self): return False
+    def isOpenRoute(self): return False
+    def isSendRoute(self): return True
 
-    def matchAddr(self, addr): return False
+    def matchPeerAddr(self, addr): return False
 
     def __init__(self, msgRouter=None):
         BlatherObject.__init__(self)

@@ -32,6 +32,8 @@ class BlatherBasicNetworkRoute(BasicBlatherRoute):
 
     def isOpenRoute(self): 
         return self.addrInbound is None
+    def isSendRoute(self): 
+        return self.addrOutbound is not None
 
     def matchPeerAddr(self, addr): 
         return (addr == self.addrInbound and addr == self.addrOutbound)

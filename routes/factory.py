@@ -135,18 +135,15 @@ class BlatherRouteFactory(BlatherObject):
         route.registerForInbound(self.msgRouter(), [ch, mch])
         return route
 
-    def connectBroadcast(self):
+    def connectBroadcast(self, bcastAddr=('255.255.255.255', 8468)):
         ch = self.networkMgr.udpChannel
-        bcastPort = 8468
-        bcastCh = self.networkMgr.addSharedUdpChannel(('0.0.0.0', bcastPort), assign=False)
-        bcastAddr = ('255.255.255.255', bcastPort)
+        bcastCh = self.networkMgr.sudpChannel
 
         route = BlatherNetworkDiscoveryRoute()
         route.setAddrs(bcastAddr, None)
         route.channel = ch.asWeakRef()
         route.registerForInbound(self.msgRouter(), [ch, bcastCh])
         return route
-
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 #~ Imports 

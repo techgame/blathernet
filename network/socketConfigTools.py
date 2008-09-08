@@ -117,7 +117,7 @@ class SocketConfigUtils(object):
             address = info[-1]
         except socket.gaierror, e:
             if e.args[0] == socket.EAI_SERVICE:
-                info = socket.getaddrinfo(ip, None)[0]
+                info = socket.getaddrinfo(str(ip), None)[0]
                 afamily = info[0]
                 address = (info[-1][0], port) + info[-1]
             else: raise

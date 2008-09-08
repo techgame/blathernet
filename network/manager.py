@@ -68,9 +68,9 @@ class BlatherNetworkMgr(BlatherObject):
             self._allUdpChannels = allChannels
         return allChannels
 
-    def addSharedUdpChannelIPv6(self, address=('::', 8469), interface=1, assign=None):
-        return self.addSharedUdpChannel(address, interface)
-    def addSharedUdpChannel(self, address=('0.0.0.0', 8469), interface=None, assign=None):
+    def addSharedUdpChannelIPv6(self, address=('::', 8468), interface=1, assign=None):
+        return self.addSharedUdpChannel(address, interface, assign)
+    def addSharedUdpChannel(self, address=('0.0.0.0', 8468), interface=None, assign=None):
         ch = udpChannel.UDPSharedChannel(address, interface)
         self.selector.add(ch)
         self.checkSudpChannel(ch, assign)
