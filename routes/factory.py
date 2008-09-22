@@ -41,6 +41,11 @@ class BlatherRouteFactory(BlatherObject):
         peer.setPeer(route)
         return route
 
+    def connectNamedGroup(self, groupName):
+        route = BlatherNamedGroupRoute(self.msgRouter())
+        route.joinGroup(groupName)
+        return route
+
     def newTestingRoute(self, cbIsPacketLost):
         route = BlatherTestingRoute(self.msgRouter(), cbIsPacketLost)
         route.registerOn(self.msgRouter())
@@ -66,7 +71,7 @@ class BlatherRouteFactory(BlatherObject):
         route.registerOn(self.msgRouter())
         return route
 
-    def connectDirect(self, addr):
+    def connectDirectUDP(self, addr):
         if addr is None:
             raise ValueError("Excpected a valid address")
         return self.connectUDP(addr, addr, ['discovery'])
@@ -149,6 +154,6 @@ class BlatherRouteFactory(BlatherObject):
 #~ Imports 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-from .directRoutes import BlatherDirectRoute, BlatherTestingRoute
+from .directRoutes import BlatherDirectRoute, BlatherTestingRoute, BlatherNamedGroupRoute
 from .networkRoutes import BlatherNetworkRoute, BlatherNetworkDiscoveryRoute, BlatherNetworkRecvRoute
 

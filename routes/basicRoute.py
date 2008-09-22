@@ -58,8 +58,6 @@ class BasicBlatherRoute(BlatherObject):
     def isOpenRoute(self): return False
     def isSendRoute(self): return True
 
-    def matchPeerAddr(self, addr): return False
-
     def __init__(self, msgRouter=None):
         BlatherObject.__init__(self)
         self._wrRoute = self.asWeakRef()
@@ -95,6 +93,29 @@ class BasicBlatherRoute(BlatherObject):
     recvDispatch = _recvDispatch
     def recvPacket(self, packet, pinfo):
         self.msgRouter.recvPacket(packet, pinfo)
+
+    #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+    def matchPeerAddr(self, addr): 
+        return False
+    def normPeerAddr(self, addr):
+        return addr
+    def findPeerRoute(self, addr):
+        addr = self.normPeerAddr(addr)
+        for route in self.msgRouter.allRoutes:
+            if route.matchPeerAddr(addr):
+                return route
+        else: return None
+    def addPeerRoute(self, addr, orExisting=False):
+        addr = self.normPeerAddr(addr)
+        route = self.findPeerRoute(addr)
+        if route is None:
+            return self.newPeerRoute(addr)
+        elif orExisting:
+            return route
+
+    def newPeerRoute(self, addr):
+        raise NotImplementedError('Subclass Responsibility: %r' % (self,))
 
     #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 

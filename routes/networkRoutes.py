@@ -38,18 +38,8 @@ class BlatherBasicNetworkRoute(BasicBlatherRoute):
     def matchPeerAddr(self, addr): 
         return (addr == self.addrInbound and addr == self.addrOutbound)
 
-    def findPeerRoute(self, addr):
-        addr = asSockAddr(addr)
-        for route in self.msgRouter.allRoutes:
-            if route.matchPeerAddr(addr):
-                return route
-        else: return None
-    def addPeerRoute(self, addr, orExisting=False):
-        route = self.findPeerRoute(addr)
-        if route is None:
-            return self.newPeerRoute(addr)
-        elif orExisting:
-            return route
+    def normPeerAddr(self, addr):
+        return addr
 
     def newPeerRoute(self, addr):
         route = BlatherNetworkRoute()

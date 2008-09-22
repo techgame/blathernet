@@ -20,33 +20,19 @@ from .basicRoute import BasicBlatherRoute
 #~ Definitions 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-class BlatherDirectRoute(BasicBlatherRoute):
-    _fm_ = BasicBlatherRoute._fm_.branch()
+class BlatherInprocessRoute(BasicBlatherRoute):
     routeKinds = ['direct', 'broadcast']
-    nextId = count(0).next
 
     def isInprocess(self): return True
 
     def __init__(self, msgRouter):
         BasicBlatherRoute.__init__(self, msgRouter)
-        self.addr = 'direct:%s' % (self.nextId(),)
         self._inbox = Queue.Queue()
 
     def __repr__(self):
         return "<%s %s on: %r>" % (self.__class__.__name__, id(self), self.msgRouter.host())
 
-    _peer = None
-    def getPeer(self):
-        return self._peer
-    def setPeer(self, peer):
-        self._peer = peer
-    peer = property(getPeer, setPeer)
-
-    def _sendDispatch(self, packet):
-        self.peer.transferDispatch(packet, self.addr)
-    sendDispatch = _sendDispatch
-
-    def transferDispatch(self, packet, addr):
+    def transferDispatch(self, packet, addr, route):
         self._inbox.put((packet, addr))
         self.host().addTask(self._processInbox)
 
@@ -62,13 +48,49 @@ class BlatherDirectRoute(BasicBlatherRoute):
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-class BlatherLoopbackRoute(BlatherDirectRoute):
-    _fm_ = BlatherDirectRoute._fm_.branch(
-            routeServices={})
+class BlatherDirectRoute(BlatherInprocessRoute):
+    nextId = count(0).next
 
-    peer = property(lambda self: self)
+    def __init__(self, msgRouter):
+        BlatherInprocessRoute.__init__(self, msgRouter)
+        self.addr = 'direct:%s:%s' % (self.nextId(), id(self))
 
-    def isLoopback(self): return True
+    _peer = None
+    def getPeer(self):
+        return self._peer
+    def setPeer(self, peer):
+        self._peer = peer
+    peer = property(getPeer, setPeer)
+
+    def matchPeerAddr(self, addr):
+        return addr == self.addr
+
+    def _sendDispatch(self, packet):
+        self.peer.transferDispatch(packet, self.addr, self)
+    sendDispatch = _sendDispatch
+
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+class BlatherNamedGroupRoute(BasicBlatherRoute):
+    routeKinds = ['direct', 'broadcast', 'discovery']
+
+    namedGroups = {}
+
+    def joinGroup(self, groupName):
+        self.addr = 'group:%s:%s' % (groupName, id(self))
+        self.peerGroup = self.namedGroups.setdefault(groupName, set())
+        self.peerGroup.add(self)
+
+    def isOpenRoute(self): 
+        return True
+
+    def matchPeerAddr(self, addr):
+        return addr == self.addr
+
+    def _sendDispatch(self, packet):
+        for peer in self.peerGroup:
+            peer.transferDispatch(packet, self.addr, self)
+    sendDispatch = _sendDispatch
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 #~ Testing route for lossy-ness
@@ -94,7 +116,7 @@ class BlatherTestingRoute(BlatherDirectRoute):
 
     countTotal = 0
     countPassed = 0
-    def transferDispatch(self, packet, addr):
+    def transferDispatch(self, packet, addr, route):
         lost = self.isPacketLost(self, self.ri)
         countTotal = self.countTotal + 1
         countPassed = self.countPassed + (0 if lost else 1)
