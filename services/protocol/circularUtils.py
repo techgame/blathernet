@@ -23,15 +23,6 @@ def circularDiff(v0, v1, mask):
         d -= mask + 1
     return d
 
-def circularDiff(v0, v1, mask):
-    """Difference between v0 and v1 on a circle of 'size' mask.
-    Note: mask = 0xff or similar.
-    """
-    d = (v1-v0) & mask
-    if d > (mask >> 1):
-        d -= mask + 1
-    return d
-
 def circularAdjust(v0, v1, mask):
     """Returns adjusted v1 based on v0.
     Note: mask = 0xff or similar.
