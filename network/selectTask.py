@@ -54,12 +54,14 @@ class NetworkSelector(NetworkCommon):
         NetworkCommon.__init__(self)
         self.readables = set()
         self.writeables = set()
+        self.visitCollection = set()
 
     def add(self, selectable):
         self.verifySelectable(selectable, True)
         self.selectables.add(selectable)
         selectable.kvpub.add('needsRead', self._onReadable)(selectable)
         selectable.kvpub.add('needsWrite', self._onWritable)(selectable)
+        selectable.kvpub.add('needsVisit', self._onVisitChange)(selectable)
 
     def remove(self, selectable):
         self.selectables.remove(selectable)
@@ -80,6 +82,13 @@ class NetworkSelector(NetworkCommon):
             else: 
                 self.writeables.discard(selectable.yourself)
 
+    def _onVisitChange(self, selectable, key=None):
+        if bool(selectable.needsVisit) != bool(selectable in self.visitCollection):
+            if selectable.needsVisit:
+                self.visitCollection.add(selectable.yourself)
+            else: 
+                self.visitCollection.discard(selectable.yourself)
+
     #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     #~ Selectables verification
     #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -99,12 +108,14 @@ class NetworkSelector(NetworkCommon):
         self.filterWriteables()
 
     def verifySelectable(self, selectable, reraise=False):
-        items = [selectable]
-        try: self._select_(items, items, items, 0)
-        except Exception:
-            if reraise: raise
-            else: return False
-        else: return True
+        if selectable.needsSelect:
+            items = [selectable]
+            try: self._select_(items, items, items, 0)
+            except Exception:
+                if reraise: raise
+                return False
+
+        return True
 
     _select_ = staticmethod(select.select)
     _sleep_ = staticmethod(time.sleep)
@@ -140,6 +151,9 @@ class NetworkSelector(NetworkCommon):
 
         for w in writers:
             w.performWrite(tasks)
+
+        for v in list(self.visitCollection):
+            v.performVisit(tasks)
 
         for fn, items in tasks:
             fn(items)

@@ -74,16 +74,6 @@ class UDPBaseChannel(SocketChannel):
         self.sendQueue.put((packet, address, onNotify))
         self.needsWrite = True
 
-    def sendMulticast(self, packet, address, onNotify=None, interfaces=[]):
-        try:
-            # send it directly, if we can
-            self.sock.sendto(packet, address)
-            return 
-        except SocketError, err:
-            if onNotify is None:
-                reraise = self.reraiseSocketError(err, err.args[0])
-            else: reraise = onNotify('error', packet, address, err)
-
     def recvDefault(self, packet, address):
         print
         print self.sock.getsockname(), 'recvDefault:'

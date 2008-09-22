@@ -23,8 +23,10 @@ from .socketConfigTools import SocketConfigUtils
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 class NetworkChannel(NetworkCommon):
+    needsSelect = True
     needsRead = KVProperty(False)
     needsWrite = KVProperty(False)
+    needsVisit = KVProperty(False)
 
     def fileno(self):
         """Used by select.select so that we can use this class in a
@@ -41,6 +43,12 @@ class NetworkChannel(NetworkCommon):
         """Called by the selectable select/poll process when selectable is ready for
         writing.  Note that this is called during NetworkSelectTask's timeslice, and
         should not be used for intensive processing."""
+        pass
+
+    def performVisit(self, tasks):
+        """Called by the selectable select/poll process every pass when needsVisit
+        is True.  Note that this is called during NetworkSelectTask's timeslice,
+        and should not be used for intensive processing."""
         pass
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
