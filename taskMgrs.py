@@ -87,9 +87,16 @@ class BasicBlatherTaskMgr(BlatherObject):
         n = 0
         activeTasks = self.tasks
         e_task = self._e_tasks
-        while activeTasks:
+
+        if not activeTasks:
             e_task.clear()
-            self.kvpub.event('@process')
+            self.tasksleep(self.timeout)
+            return n
+
+        while activeTasks:
+            self.tasksleep(0)
+
+            e_task.clear()
             for task in list(activeTasks):
                 n += 1
                 activeTasks.discard(task)
@@ -99,12 +106,9 @@ class BasicBlatherTaskMgr(BlatherObject):
                 except Exception:
                     traceback.print_exc()
 
-            if allActive and n:
-                self.tasksleep(0)
-            else: break
-        if not n:
-            self.kvpub.event('@process_sleep')
-            self.tasksleep(self.timeout)
+            if not allActive:
+                break
+
         return n
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -171,8 +175,6 @@ class BasicBlatherTimerMgr(BasicBlatherTaskMgr):
             self.timersleep(self.minTimerFrequency)
 
     def _processFiredTimers(self, ts, firedTimers):
-        self.kvpub.event('@timer')
-
         timerEvents = []
         for task in firedTimers:
             tsNext = task(ts)
