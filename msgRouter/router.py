@@ -166,10 +166,14 @@ class BlatherMessageRouter(BlatherObject):
     def addMessageId(self, msgId):
         if msgId is None: return
         recent = self.recentMsgIdSets
-        if len(recent[0]) > 1000:
-            recent.pop()
-            recent.insert(0, set())
-        recent[0].add(msgId)
+
+        front = recent[0]
+        if len(front) > 1000:
+            front = recent.pop()
+            front.clear()
+            recent.insert(0, front)
+
+        front.add(msgId)
 
 MessageRouter = BlatherMessageRouter
 
