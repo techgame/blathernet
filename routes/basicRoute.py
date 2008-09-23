@@ -58,12 +58,10 @@ class BasicBlatherRoute(BlatherObject):
     def isOpenRoute(self): return False
     def isSendRoute(self): return True
 
-    def __init__(self, msgRouter=None):
+    def __init__(self):
         BlatherObject.__init__(self)
         self._wrRoute = self.asWeakRef()
         self._initStats()
-        if msgRouter is not None:
-            self.registerOn(msgRouter)
 
     def __cmp__(self, other):
         return cmp(self.rating, other.rating)
@@ -86,11 +84,14 @@ class BasicBlatherRoute(BlatherObject):
     def _sendDispatch(self, packet):
         raise NotImplementedError('Subclass Responsibility: %r' % (self,))
 
+    def recvDispatch(self, packet, addr):
+        raise NotImplementedError('Should be replaced by mode function')
     def _recvDispatch(self, packet, addr):
         ts = self._incRecvStats(len(packet))
         pinfo = {'addr': addr, 'recvRoute': self._wrRoute}
         self.recvPacket(packet, pinfo)
     recvDispatch = _recvDispatch
+
     def recvPacket(self, packet, pinfo):
         self.msgRouter.recvPacket(packet, pinfo)
 
@@ -98,16 +99,18 @@ class BasicBlatherRoute(BlatherObject):
 
     def matchPeerAddr(self, addr): 
         return False
-    def normPeerAddr(self, addr):
+    def normalizeAddr(self, addr):
         return addr
+    normalizePeerAddr = property(lambda self: self.normalizeAddr)
+
     def findPeerRoute(self, addr):
-        addr = self.normPeerAddr(addr)
+        addr = self.normalizePeerAddr(addr)
         for route in self.msgRouter.allRoutes:
             if route.matchPeerAddr(addr):
                 return route
         else: return None
     def addPeerRoute(self, addr, orExisting=False):
-        addr = self.normPeerAddr(addr)
+        addr = self.normalizePeerAddr(addr)
         route = self.findPeerRoute(addr)
         if route is None:
             return self.newPeerRoute(addr)

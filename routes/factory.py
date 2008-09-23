@@ -32,111 +32,84 @@ class BlatherRouteFactory(BlatherObject):
 
     #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-    def newDirectRoute(self):
-        return BlatherDirectRoute(self.msgRouter())
-    def connectDirect(self, otherHost):
-        route = self.newDirectRoute()
-        peer = otherHost.routeFactory.newDirectRoute()
-        route.setPeer(peer)
-        peer.setPeer(route)
-        return route
+    def connectDirect(self, otherHost, mirror=True):
+        addr = otherHost.networkMgr.inprocChannel.address
+        route = self.connectInproc(addr, addr)
+        if not mirror:
+            return route
 
-    def connectNamedGroup(self, groupName):
-        route = BlatherNamedGroupRoute(self.msgRouter())
-        route.joinGroup(groupName)
-        return route
+        myAddr = self.networkMgr.inprocChannel.address
+        oroute = otherHost.routeFactory.connectInproc(myAddr, myAddr)
+        return route, oroute
 
-    def newTestingRoute(self, cbIsPacketLost):
-        route = BlatherTestingRoute(self.msgRouter(), cbIsPacketLost)
-        route.registerOn(self.msgRouter())
-        return route
-    def connectTesting(self, otherHost, cbIsPacketLost, cbIsPacketLostOther=None):
-        if cbIsPacketLostOther is None:
-            cbIsPacketLostOther = cbIsPacketLost
+    def connectInproc(self, addrOutbound=None, addrInbound=None, routeKinds=None):
+        ch = self.networkMgr.inprocChannel
 
-        route = self.newTestingRoute(cbIsPacketLost)
-        peer = otherHost.routeFactory.newTestingRoute(cbIsPacketLostOther)
-
-        route.setPeer(peer)
-        peer.setPeer(route)
+        route = BlatherChannelRoute()
+        route.channel = ch.asWeakRef()
+        route.setAddrs(addrOutbound, addrInbound, routeKinds)
+        route.registerForInbound(self.msgRouter(), [ch])
         return route
 
     #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-    def connectMUDP(self):
-        mch = self.networkMgr.mudpChannel
+    def connectTesting(self, otherHost, cbIsPacketLost, cbIsPacketLostOther=None, mirror=True):
+        if cbIsPacketLostOther is None:
+            cbIsPacketLostOther = cbIsPacketLost
 
-        route = BlatherNetworkRoute()
-        route.setChannel(mch, mch.grpAddr, None)
-        route.registerOn(self.msgRouter())
+        addr = otherHost.networkMgr.inprocChannel.address
+        route = self.connectLossy(addr, addr, cbIsPacketLost)
+        if not mirror:
+            return route
+
+        myAddr = self.networkMgr.inprocChannel.address
+        oroute = otherHost.routeFactory.connectLossy(myAddr, myAddr, cbIsPacketLostOther)
+        return route, oroute
+
+    def connectLossy(self, addrOutbound, addrInbound, cbIsPacketLost=None):
+        ch = self.networkMgr.inprocChannel
+
+        route = LossyTestRoute()
+        route.setPacketLostCb(cbIsPacketLost)
+        route.channel = ch.asWeakRef()
+        route.setAddrs(addrOutbound, addrInbound)
+        route.registerForInbound(self.msgRouter(), [ch])
         return route
 
+    #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
     def connectDirectUDP(self, addr):
-        if addr is None:
+        if addr is None: 
             raise ValueError("Excpected a valid address")
-        return self.connectUDP(addr, addr, ['discovery'])
+
+        return self.connectUDP(addr, addr)
 
     def connectUDP(self, addrOutbound=None, addrInbound=None, routeKinds=None):
         ch = self.networkMgr.udpChannel
 
         route = BlatherNetworkRoute()
-        if routeKinds:
-            route.routeKinds = route.routeKinds + ['discovery']
-        route.setChannel(ch, addrOutbound, addrInbound)
-        route.registerOn(self.msgRouter())
+        route.channel = ch.asWeakRef()
+        route.setAddrs(addrOutbound, addrInbound, routeKinds)
+        route.registerForInbound(self.msgRouter(), [ch])
         return route
 
-    def connectSharedUDP(self, addrOutbound=None, addrInbound=None):
-        chIn = self.networkMgr.sudpChannel
-        chOut = self.networkMgr.udpChannel
+    def connectMUDP(self):
+        mch = self.networkMgr.mudpChannel
 
         route = BlatherNetworkRoute()
-        route.setChannel(chIn, addrOutbound, addrInbound)
-        chOut.register(None, route.recvDispatch)
-        route.channel = chOut.asWeakRef()
-        route.registerOn(self.msgRouter())
+        route.channel = mch.asWeakRef()
+        route.setAddrs(mch.grpAddr, None)
+        route.registerForInbound(self.msgRouter(), [mch])
         return route
-
-    def connectRecvMUDP(self):
-        ch = self.networkMgr.udpChannel
-        mch = self.networkMgr.mudpChannel
-        maddr = mch.grpAddr
-
-        route = BlatherNetworkRecvRoute()
-        route.setChannel(mch, maddr, None)
-        route.channel = ch.asWeakRef()
-        route.registerOn(self.msgRouter())
-        return route
-
-    def connectAutoUDP(self):
-        ch = self.networkMgr.udpChannel
-        mch = self.networkMgr.mudpChannel
-        maddr = mch.grpAddr
-
-        discRoute = BlatherNetworkDiscoveryRoute()
-        discRoute.setChannel(ch, maddr, None)
-        discRoute.registerOn(self.msgRouter())
-
-        return self.connectRecvMUDP()
-        
-    def connectAllUDP(self):
-        mch = self.networkMgr.mudpChannel
-        grpAddr = mch.grpAddr
-
-        for addr, ch in self.networkMgr.allUdpChannels():
-            route = BlatherNetworkDiscoveryRoute()
-            route.setAddrs(grpAddr, None)
-            route.channel = ch.asWeakRef()
-            route.registerForInbound(self.msgRouter(), [ch, mch])
 
     def connectDiscovery(self):
         ch = self.networkMgr.udpChannel
         mch = self.networkMgr.mudpChannel
         grpAddr = mch.grpAddr
 
-        route = BlatherNetworkDiscoveryRoute()
-        route.setAddrs(grpAddr, None)
+        route = BlatherNetworkRoute()
         route.channel = ch.asWeakRef()
+        route.setAddrs(grpAddr, None, ['discovery'])
         route.registerForInbound(self.msgRouter(), [ch, mch])
         return route
 
@@ -144,9 +117,9 @@ class BlatherRouteFactory(BlatherObject):
         ch = self.networkMgr.udpChannel
         bcastCh = self.networkMgr.sudpChannel
 
-        route = BlatherNetworkDiscoveryRoute()
-        route.setAddrs(bcastAddr, None)
+        route = BlatherNetworkRoute()
         route.channel = ch.asWeakRef()
+        route.setAddrs(bcastAddr, None, ['discovery'])
         route.registerForInbound(self.msgRouter(), [ch, bcastCh])
         return route
 
@@ -154,6 +127,7 @@ class BlatherRouteFactory(BlatherObject):
 #~ Imports 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-from .directRoutes import BlatherDirectRoute, BlatherTestingRoute, BlatherNamedGroupRoute
-from .networkRoutes import BlatherNetworkRoute, BlatherNetworkDiscoveryRoute, BlatherNetworkRecvRoute
+from .channelRoutes import BlatherChannelRoute
+from .networkRoutes import BlatherNetworkRoute
+from .testRoutes import LossyTestRoute
 
