@@ -40,8 +40,9 @@ class BlatherChannelRoute(BasicBlatherRoute):
     def peerFactory(klass):
         return klass
     def newPeerRoute(self, addr):
-        route = self.peerFactory()
-        route.channel = self.channel()
+        RouteFactory = self.peerFactory()
+        route = RouteFactory()
+        route.channel = self.channel
         route.setAddrs(addr, addr)
         route.registerForInbound(self.msgRouter)
         return route
@@ -58,7 +59,7 @@ class BlatherChannelRoute(BasicBlatherRoute):
         elif routeKinds:
             self.routeKinds = list(routeKinds)
 
-    def registerForInbound(self, msgRouter, channels):
+    def registerForInbound(self, msgRouter, channels=None):
         if channels is None:
             channels = [self.channel()]
 
