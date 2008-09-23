@@ -16,8 +16,6 @@ import Queue
 from socket import SOCK_DGRAM
 from socket import error as SocketError
 
-from TG.kvObserving import KVProperty, KVSet
-
 from .socketChannel import SocketChannel
 from .socketConfigTools import udpSocketErrorMap
 
@@ -137,11 +135,11 @@ class UDPBaseChannel(SocketChannel):
     #~ Socket processing
     #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-    def processRecvQueue(self, recvQueue):
+    def _dispatchPackets(self, packets):
         registry = self.registry
         default = registry.get(None) or self.recvDefault
 
-        for packet, address in recvQueue:
+        for packet, address in packets:
             recvFns = registry.get(address, default)
             if isinstance(recvFns, set):
                 for recv in recvFns:
@@ -153,16 +151,16 @@ class UDPBaseChannel(SocketChannel):
         sock = self.sock
         iterThrottle = xrange(self.recvThrottle)
 
-        recvQueue = []
+        packets = []
         try:
             for n in iterThrottle:
-                recvQueue.append(sock.recvfrom(65536))
+                packets.append(sock.recvfrom(65536))
         except SocketError, err:
             if self.reraiseSocketError(err, err.args[0]):
                 traceback.print_exc()
 
-        if recvQueue:
-            tasks.append((self.processRecvQueue, recvQueue))
+        if packets:
+            tasks.append((self._dispatchPackets, packets))
         return n
 
     def performWrite(self, tasks):

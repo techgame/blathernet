@@ -54,14 +54,12 @@ class NetworkSelector(NetworkCommon):
         NetworkCommon.__init__(self)
         self.readables = set()
         self.writeables = set()
-        self.visitCollection = set()
 
     def add(self, selectable):
         self.verifySelectable(selectable, True)
         self.selectables.add(selectable)
         selectable.kvpub.add('needsRead', self._onReadable)(selectable)
         selectable.kvpub.add('needsWrite', self._onWritable)(selectable)
-        selectable.kvpub.add('needsVisit', self._onVisitChange)(selectable)
 
     def remove(self, selectable):
         self.selectables.remove(selectable)
@@ -82,13 +80,6 @@ class NetworkSelector(NetworkCommon):
             else: 
                 self.writeables.discard(selectable.yourself)
 
-    def _onVisitChange(self, selectable, key=None):
-        if bool(selectable.needsVisit) != bool(selectable in self.visitCollection):
-            if selectable.needsVisit:
-                self.visitCollection.add(selectable.yourself)
-            else: 
-                self.visitCollection.discard(selectable.yourself)
-
     #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     #~ Selectables verification
     #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -99,6 +90,11 @@ class NetworkSelector(NetworkCommon):
     def filterWriteables(self, selectables):
         self.writeables = set(s for s in selectables if s.needsWrite)
         return self.writeables
+
+    def getVisitables(self):
+        selectables = self.selectables
+        return set(s for s in selectables if s.needsVisit)
+    visitables = property(getVisitables)
 
     def filterSelectables(self):
         selectables = self.selectables
@@ -121,12 +117,18 @@ class NetworkSelector(NetworkCommon):
     _sleep_ = staticmethod(time.sleep)
 
     def findSelected(self, readers, writers, timeout=0):
+        readers = self.readables
+        writers = self.writeables
+        visitables = self.visitables
         if not readers and not writers:
-            if timeout:
+            if timeout and not visitables:
                 # sleep manually, since all platform implementations are not
                 # consistent when there are no selectables present 
                 self._sleep_(timeout)
-            return ([], [])
+            return ([], [], visitables)
+
+        if visitables:
+            timeout = 0
 
         try:
             readers, writers, errors = self._select_(readers, writers, [], timeout)
@@ -136,14 +138,14 @@ class NetworkSelector(NetworkCommon):
         except SocketError, err:
             if err.args[0] == errno.EBADF:
                 self.filterSelectables()
-                return ([], [])
+                return ([], [], visitables)
             elif self.reraiseSocketError(err, err.args[0]) is err:
                 raise
 
-        return readers, writers
+        return readers, writers, visitables
 
     def processSelectable(self, timeout=0):
-        readers, writers = self.findSelected(self.readables, self.writeables, timeout)
+        readers, writers, visits = self.findSelected(self.readables, self.writeables, timeout)
 
         tasks = []
         for r in readers:
@@ -152,7 +154,7 @@ class NetworkSelector(NetworkCommon):
         for w in writers:
             w.performWrite(tasks)
 
-        for v in list(self.visitCollection):
+        for v in visits:
             v.performVisit(tasks)
 
         for fn, items in tasks:

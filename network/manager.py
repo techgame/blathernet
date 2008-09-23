@@ -15,6 +15,7 @@ from ..base import BlatherObject
 from .socketConfigTools import netif
 from .selectTask import NetworkSelector
 from . import udpChannel
+from . import inprocChannel
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 #~ Definitions 
@@ -89,6 +90,13 @@ class BlatherNetworkMgr(BlatherObject):
         self.checkMudpChannel(ch, assign)
         return ch
 
+    def addInprocChannel(self, address=None, interface=None, assign=None):
+        ch = inprocChannel.InprocChannel(address, interface)
+
+        self.selector.add(ch)
+        self.checkInprocChannel(ch, assign)
+        return ch
+
     #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
     _udpChannel = None
@@ -133,4 +141,21 @@ class BlatherNetworkMgr(BlatherObject):
         if assign: self.setMudpChannel(mudpChannel)
 
     mudpChannel = property(getMudpChannel, setMudpChannel)
+
+    #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+    _inprocChannel = None
+    def getInprocChannel(self):
+        if self._inprocChannel is None:
+            self._inprocChannel = self.addInprocChannel()
+        return self._inprocChannel
+    def setInprocChannel(self, inprocChannel):
+        self._inprocChannel = inprocChannel
+    def checkInprocChannel(self, inprocChannel, assign=None):
+        if self._inprocChannel is None and assign is None:
+            assign = True
+
+        if assign: self.setInprocChannel(inprocChannel)
+
+    inprocChannel = property(getInprocChannel, setInprocChannel)
 

@@ -61,7 +61,7 @@ class SocketChannel(NetworkChannel):
     sockType = None
 
     def __repr__(self):
-        return "<%s addr: %s>" % (self.__class__.__name__, self.sock.getsockname())
+        return "<%s %s>" % (self.__class__.__name__, self.sock.getsockname())
 
     def fileno(self):
         sock = self.sock
