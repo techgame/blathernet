@@ -92,12 +92,19 @@ class UDPBaseChannel(SocketChannel):
 
         self.needsRead = True
 
+    _allowBroadcast = True
+    _allowMulicastHops = 5
     def _socketConfig(self, sock, cfgUtils):
         SocketChannel._socketConfig(self, sock, cfgUtils)
         cfgUtils.disallowMixed()
-        cfgUtils.setBroadcast(True)
-        cfgUtils.setMulticastHops(5)
-        cfgUtils.setMulticastLoop(True)
+
+        if self._allowBroadcast:
+            cfgUtils.setBroadcast(True)
+
+        hops = self._allowMulicastHops
+        if hops is not None:
+            cfgUtils.setMulticastHops(hops)
+            cfgUtils.setMulticastLoop(True)
 
         cfgUtils.setMaxBufferSize(self.bufferSize)
 
