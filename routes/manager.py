@@ -10,14 +10,24 @@
 #~ Imports 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-from .channelRoutes import BlatherChannelRoute
-from ..network.socketConfigTools import asSockAddr
+from ..base import BlatherObject
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 #~ Definitions 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-class BlatherNetworkRoute(BlatherChannelRoute):
-    def normalizeAddr(self, addr):
-        return asSockAddr(addr)
+class BlatherRouteMgr(BlatherObject):
+    def __init__(self, host):
+        self.routes = set()
+        self.msgDispatch = host.msgDispatch
+
+    def registerOn(self, visitor):
+        visitor.registerRouteManager(self)
+
+    def registerRoute(self, route):
+        self.routes.add(route)
+        route.registerRouteManager(self)
+
+    def getDispatchForRoute(self, route):
+        return self.msgDispatch
 

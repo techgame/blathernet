@@ -40,7 +40,8 @@ class LossyTestRoute(BlatherChannelRoute):
     countTotal = 0
     countPassed = 0
 
-    def _recvDispatchLossy(self, packet, addr):
+    _onRecvDispatch_base = BlatherChannelRoute.onRecvDispatch
+    def onRecvDispatch(self, packet, addr):
         lost = self.isPacketLost(self, self.ri)
 
         countTotal = self.countTotal + 1
@@ -64,8 +65,7 @@ class LossyTestRoute(BlatherChannelRoute):
         if self.printPassed:
             print ('%s>>> %r%s - packet delivered: %2.1f%% (%d/%d)%s') % (ansiDkRed, self, ansiLtGreen, 100.0*countPassed/countTotal, countPassed, countTotal, ansiNormal)
 
-        return self._recvDispatch(packet, addr)
-    recvDispatch = _recvDispatchLossy
+        return self._onRecvDispatch_base(packet, addr)
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 #~ Debug Color definitions

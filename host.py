@@ -28,14 +28,13 @@ class BlatherHost(BlatherObject):
             TaskMgr = taskMgrs.BlatherTaskMgr,
             NetworkMgr = network.BlatherNetworkMgr,
             MessageRouter = msgRouter.MessageRouter,
+            RouteMgr = routes.BlatherRouteMgr,
             RouteFactory = routes.BlatherRouteFactory,
             )
-    taskMgr = None
+    tasks = None
+    net = None
+    routes = None
     msgRouter = None
-    networkMgr = None
-    routeFactory = None
-
-    def isBlatherHost(self): return True
 
     name = None
     def __init__(self, name=None):
@@ -44,43 +43,49 @@ class BlatherHost(BlatherObject):
             self.name = name
         self.initMgrs()
 
-    def initMgrs(self):
-        self.taskMgr = self._fm_.TaskMgr(self.name)
-        self.msgRouter = self._fm_.MessageRouter(self)
-        self.networkMgr = self._fm_.NetworkMgr(self)
-        self.routeFactory = self._fm_.RouteFactory(self)
-
     def __repr__(self):
         if self.name is None:
             return '<%s %s>' % (self.__class__.__name__, id(self))
         else: return '<%s "%s" %s>' % (self.__class__.__name__, self.name, id(self))
 
-    @kvobserve('networkMgr.selector.selectables.*')
-    def _onNetworkSelectorChange(self, selectables):
-        # if we have a network task, use the network's tasksleep mechanism.  Otherwise, use the taskMgr's default one
-        if len(selectables):
-            tasksleep = self.networkMgr.process
-        else: tasksleep = None
-        self.taskMgr.setTaskSleep(tasksleep)
+    def isBlatherHost(self): return True
 
-    def registerRoute(self, route):
-        self.msgRouter.registerOn(route)
-    def registerAdvert(self, advert):
-        self.msgRouter.registerOn(advert)
-    def registerClient(self, client):
-        self.msgRouter.registerOn(client)
-    def registerService(self, service):
-        self.msgRouter.registerOn(service)
+    #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+    def initMgrs(self):
+        self.tasks = self._fm_.TaskMgr(self.name)
+        self.net = self._fm_.NetworkMgr(self)
+        self.routes = self._fm_.RouteMgr(self)
+        self.routes.factory = self._fm_.RouteFactory(self)
+        #self.msgRouter = self._fm_.MessageRouter(self)
+        self.msgDispatch = self._msgDispatch_tmp
+
+    def _msgDispatch_tmp(self, packet, addr, wrRoute):
+        print 'msgDispatch:', (len(packet), addr, wrRoute)
+
+    routeFactory = property(lambda self: self.routes.factory)
+
+    #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    #~ Task and timer processing
+    #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
     def process(self, allActive=True):
-        return self.taskMgr.process(allActive)
+        return self.tasks.process(allActive)
     def run(self, threaded=False):
-        return self.taskMgr.run(threaded)
+        return self.tasks.run(threaded)
 
     def addTimer(self, tsStart, task):
-        return self.taskMgr.addTimer(tsStart, task)
+        return self.tasks.addTimer(tsStart, task)
     def addTask(self, task):
-        return self.taskMgr.addTask(task)
+        return self.tasks.addTask(task)
 
-Host = BlatherHost
+    #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+    @kvobserve('net.selector.selectables.*')
+    def _onNetworkSelectorChange(self, selectables):
+        # if we have a network task, use the network's tasksleep mechanism.  Otherwise, use the tasks' default one
+        if len(selectables):
+            tasksleep = self.net.process
+        else: tasksleep = None
+        self.tasks.setTaskSleep(tasksleep)
 

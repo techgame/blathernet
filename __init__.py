@@ -25,5 +25,5 @@ from .services import (
         )
         
 
-from .host import BlatherHost, Host
+from .host import BlatherHost
 

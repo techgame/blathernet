@@ -44,12 +44,13 @@ class RouteHeaderCodecBase(object):
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 class RouteHeaderCodec(RouteHeaderCodecBase):
+    """Packet Coding:
+        [0]         -> Packet Info
+            .7:4        Flags
+            .3:0        Packet Version 
+    """
+
     def decode(self, packet, pinfo):
-        """Packet Coding:
-            [0]         -> Packet Info
-                .4:7        Flags
-                .0:3        Version
-        """
         if not packet:
             return packet, None, pinfo
 
@@ -68,38 +69,38 @@ class RouteHeaderCodec(RouteHeaderCodecBase):
 
 class RouteHeaderCodecV1(RouteHeaderCodecBase):
     packetVersion = 0x1
+    """Packet Coding:
+        [0]         -> Packet Info
+            .7          <unused>
+            .6          <unused>
+            .5          Forwarded Advert IDs included
+            .4          Return Advert ID included
+
+            .3:0        Packet Version 
+        
+        [1]        -> Message Info
+            .7:4        Reserved
+            .3:0        Message Id Length (after Return AdvertId)
+        
+        [2]         -> Send Hops
+        [3]         -> Send Opt
+        [4:20]      -> Send Advert Id
+        
+        if 0.5:     -> Forward AdvertId List
+            [0]         Count => n
+            [1:1+n*16]  Packed 16 byte AdvertIds
+        
+        if 0.4:     -> Return AdvertId included
+            [0:16]      -> Return Advert Id
+        
+        [k:k+d]   -> Unique Message Id, supplied by protocol
+        
+        [doff:]     -> Data; 
+            doff = 36 if return advert present, 
+            doff = 20 otherwise
+    """
 
     def decode(self, packet, pinfo):
-        """Packet Coding:
-            [0]         -> Packet Info
-                .7          <unused>
-                .6          <unused>
-                .5          Forwarded Advert IDs included
-                .4          Return Advert ID included
-
-                .0:3        Packet Version 
-            
-            [1]        -> Message Info
-                .4:7        Reserved
-                .0:3        Message Id Length (after Return AdvertId)
-            
-            [2]         -> Send Hops
-            [3]         -> Send Opt
-            [4:20]      -> Send Advert Id
-            
-            if 0.5:     -> Forward AdvertId List
-                [0]         Count => n
-                [1:1+n*16]  Packed 16 byte AdvertIds
-            
-            if 0.4:     -> Return AdvertId included
-                [0:16]      -> Return Advert Id
-            
-            [k:k+d]   -> Unique Message Id, supplied by protocol
-            
-            [doff:]     -> Data; 
-                doff = 36 if return advert present, 
-                doff = 20 otherwise
-        """
         headerInfo = ord(packet[0])
 
         hops = ord(packet[1])
