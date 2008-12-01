@@ -17,17 +17,24 @@ from ..base import BlatherObject
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 class BlatherRouteMgr(BlatherObject):
-    def __init__(self, host):
+    def __init__(self, host, msgDispach):
+        if msgDispach is not None:
+            self.msgDispatch = msgDispach
         self.routes = set()
-        self.msgDispatch = host.msgDispatch
 
-    def registerOn(self, visitor):
-        visitor.registerRouteManager(self)
-
-    def registerRoute(self, route):
+    def addRoute(self, route):
+        route.assignRouteManager(self)
         self.routes.add(route)
-        route.registerRouteManager(self)
 
     def getDispatchForRoute(self, route):
         return self.msgDispatch
+
+    def msgDispatch(self, packet, rinfo):
+        raise NotImplementedError('Method override responsibility: %r' % (self,))
+
+    def findPeerRoute(self, addr):
+        for route in self.routes:
+            if route.matchPeerAddr(addr):
+                return route
+        else: return None
 

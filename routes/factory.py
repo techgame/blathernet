@@ -17,10 +17,10 @@ import itertools
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 class BlatherRouteFactory(object):
-    def __init__(self, host, net=None, routes=None):
-        if net is None:
-            net = host.net
-        self.net = net.asWeakProxy()
+    def __init__(self, host, network=None, routes=None):
+        if network is None:
+            network = host.network
+        self.network = network.asWeakProxy()
 
         if routes is None:
             routes = host.routes
@@ -29,17 +29,17 @@ class BlatherRouteFactory(object):
     #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
     def connectDirect(self, otherHost, mirror=True):
-        addr = otherHost.net.inprocChannel.address
+        addr = otherHost.network.inprocChannel.address
         route = self.connectInproc(addr, addr)
         if not mirror:
             return route
 
-        myAddr = self.net.inprocChannel.address
+        myAddr = self.network.inprocChannel.address
         oroute = otherHost.routeFactory.connectInproc(myAddr, myAddr)
         return route, oroute
 
     def connectInproc(self, addrOutbound=None, addrInbound=None, routeKinds=None):
-        ch = self.net.inprocChannel
+        ch = self.network.inprocChannel
 
         route = BlatherChannelRoute()
         route.channel = ch.asWeakRef()
@@ -53,17 +53,17 @@ class BlatherRouteFactory(object):
         if cbIsPacketLostOther is None:
             cbIsPacketLostOther = cbIsPacketLost
 
-        addr = otherHost.net.inprocChannel.address
+        addr = otherHost.network.inprocChannel.address
         route = self.connectLossy(addr, addr, cbIsPacketLost)
         if not mirror:
             return route
 
-        myAddr = self.net.inprocChannel.address
+        myAddr = self.network.inprocChannel.address
         oroute = otherHost.routeFactory.connectLossy(myAddr, myAddr, cbIsPacketLostOther)
         return route, oroute
 
     def connectLossy(self, addrOutbound, addrInbound, cbIsPacketLost=None):
-        ch = self.net.inprocChannel
+        ch = self.network.inprocChannel
 
         route = LossyTestRoute()
         route.setPacketLostCb(cbIsPacketLost)
@@ -81,7 +81,7 @@ class BlatherRouteFactory(object):
         return self.connectUDP(addr, addr)
 
     def connectUDP(self, addrOutbound=None, addrInbound=None, routeKinds=None):
-        ch = self.net.udpChannel
+        ch = self.network.udpChannel
 
         route = BlatherNetworkRoute()
         route.channel = ch.asWeakRef()
@@ -90,7 +90,7 @@ class BlatherRouteFactory(object):
         return route
 
     def connectMUDP(self):
-        mch = self.net.mudpChannel
+        mch = self.network.mudpChannel
 
         route = BlatherNetworkRoute()
         route.channel = mch.asWeakRef()
@@ -99,8 +99,8 @@ class BlatherRouteFactory(object):
         return route
 
     def connectDiscovery(self):
-        ch = self.net.udpChannel
-        mch = self.net.mudpChannel
+        ch = self.network.udpChannel
+        mch = self.network.mudpChannel
         grpAddr = mch.grpAddr
 
         route = BlatherNetworkRoute()
@@ -110,8 +110,8 @@ class BlatherRouteFactory(object):
         return route
 
     def connectBroadcast(self, bcastAddr=('255.255.255.255', 8468)):
-        ch = self.net.udpChannel
-        bcastCh = self.net.sudpChannel
+        ch = self.network.udpChannel
+        bcastCh = self.network.sudpChannel
 
         route = BlatherNetworkRoute()
         route.channel = ch.asWeakRef()

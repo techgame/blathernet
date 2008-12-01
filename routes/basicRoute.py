@@ -13,7 +13,7 @@
 import time
 import weakref
 
-from ..base import BlatherObject
+from ..base import BlatherObject, objectns
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 #~ Routes
@@ -28,9 +28,7 @@ class BasicBlatherRoute(BlatherObject):
         self.wrRoute = weakref.ref(self)
         self.dispatch = dispatch
 
-    def registerOn(self, visitor):
-        visitor.registerRoute(self)
-    def registerRouteManager(self, routeMgr):
+    def assignRouteManager(self, routeMgr):
         routeMgr = routeMgr.asWeakProxy()
         self.routeMgr = routeMgr
         if self.dispatch is None:
@@ -47,11 +45,16 @@ class BasicBlatherRoute(BlatherObject):
     def sendDispatch(self, packet):
         raise NotImplementedError('Subclass Responsibility: %r' % (self,))
 
+    newRecvInfo = objectns
     def onRecvDispatch(self, packet, addr):
-        pinfo = dict(addr=addr, recvRoute=self.wrRoute)
-        self.dispatch(packet, pinfo)
+        route = self.findReturnRouteFor(addr)
+        rinfo = self.newRecvInfo(addr=addr, srcRoute=self.wrRoute, route=route)
+        self.dispatch(packet, rinfo)
 
     #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+    def findReturnRouteFor(self, addr):
+        return self.wrRoute
 
     def matchPeerAddr(self, addr): 
         return False
@@ -61,14 +64,12 @@ class BasicBlatherRoute(BlatherObject):
 
     def findPeerRoute(self, addr):
         addr = self.normalizePeerAddr(addr)
-        for route in self.routeMgr.allRoutes:
-            if route.matchPeerAddr(addr):
-                return route
-        else: return None
+        self.routeMgr.findPeerRoute(addr)
+
     def addPeerRoute(self, addr, orExisting=False):
-        addr = self.normalizePeerAddr(addr)
         route = self.findPeerRoute(addr)
         if route is None:
+            addr = self.normalizePeerAddr(addr)
             return self.newPeerRoute(addr)
         elif orExisting:
             return route

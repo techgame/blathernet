@@ -41,6 +41,13 @@ class BlatherChannelRoute(BasicBlatherRoute):
 
     #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
+    def findReturnRouteFor(self, addr):
+        if addr != self.addrOutbound:
+            return None
+        if self.addrInbound is None:
+            return None
+        return self.wrRoute
+
     def matchPeerAddr(self, addr): 
         return (addr == self.addrInbound and addr == self.addrOutbound)
 
@@ -49,6 +56,7 @@ class BlatherChannelRoute(BasicBlatherRoute):
         return klass
     def newPeerRoute(self, addr):
         RouteFactory = self.peerFactory()
+
         route = RouteFactory()
         route.channel = self.channel
         route.setAddrs(addr, addr)
@@ -74,5 +82,5 @@ class BlatherChannelRoute(BasicBlatherRoute):
         for ch in channels:
             ch.register(self.addrInbound, self.onRecvDispatch)
 
-        self.registerOn(routeMgr)
+        routeMgr.addRoute(self)
 
