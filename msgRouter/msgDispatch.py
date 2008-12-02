@@ -25,12 +25,15 @@ class MsgDispatch(object):
     _mobj = None
     _packet = None
 
-    def sourceMsgObject(self, version, mobj):
+    def 
+    #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+    def sourceMsgObject(self, mobj):
         self.rinfo = mobj.rinfo
         self._mobj = mobj
         return self
 
-    def sourcePacket(self, version, packet, rinfo):
+    def sourcePacket(self, packet, rinfo):
         self.rinfo = rinfo
         self._packet = packet
         return self

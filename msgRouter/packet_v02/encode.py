@@ -17,7 +17,7 @@ from StringIO import StringIO
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 class MsgEncoder_v02(object):
-    msgVersion = 0x02
+    msgVersion = '\x02'
 
     def getPacket(self):
         packet = self.tip.getvalue()

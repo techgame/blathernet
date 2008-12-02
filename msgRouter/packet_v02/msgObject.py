@@ -10,7 +10,7 @@
 #~ Imports 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-from ..msgObjectBase import MsgObjectBase, iterMsgId
+from ..msgObjectBase import MsgObjectListBase, iterMsgId
 
 from . import encode, decode
 
@@ -18,17 +18,11 @@ from . import encode, decode
 #~ Message Object, v02
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-class MsgObject_v02(MsgObjectBase):
-    msgVersion = 0x02
+class MsgObject_v02(MsgObjectListBase):
+    msgVersion = '\x02'
     newMsgId = iterMsgId(4).next
     Encoder = encode.MsgEncoder_v02
     Decoder = decode.MsgDecoder_v02
-
-    def advertMsgId(self, advertId, msgId=None):
-        self.advertId = advertId
-        self.msgId = msgId
-
-        self._cmdList = []
 
     #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     #~ Routing and Delivery Commands
@@ -55,32 +49,4 @@ class MsgObject_v02(MsgObjectBase):
     
     def metaMsg(self, body, fmt=0):
         return self.msg(body, fmt, topic)
-
-    #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-    #~ Utility and Playback
-    #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-    def executeOn(self, mxRoot):
-        mx = mxRoot.sourceMsgObject(self.msgVersion, self)
-        if mx is None:
-            return None
-
-        if mx.advertMsgId(self.advertId, self.msgId) is False:
-            return None
-
-        for cmdFn, args in self._cmdList
-            mxCmdFn = getattr(mx, cmdFn)
-            if mxCmdFn(*args) is False:
-                return None
-        return mx
-
-    #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-    def _cmd_(self, name, *args):
-        self._cmdList.append((name, args))
-        self._packet = None
-    
-    def _clear_cmd_(self, name):
-        self._cmdList[:] = [(n,a) for n,a in self._cmdList if n != name]
-        self._packet = None
 

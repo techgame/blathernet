@@ -6,14 +6,20 @@
 ##~ found in the LICENSE file included with this distribution.    ##
 ##~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~##
 
-"""MsgCommand Packet Format
-
-Packet Coding:
-    [0:1]  ( 1 byte ) -> Packet Version 
-    [1:end] version dependent 
-"""
-    
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 #~ Imports 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+import packet_v02
+
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+#~ Mapping Values
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+msgDecoderList = [
+    packet_v02.MsgObject,
+    ]
+
+MsgObject = msgDecoderList[-1]
+msgDecoderMap = dict((e.msgVersion: e.newDecoder) for e in msgDecoderList)
 

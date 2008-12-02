@@ -10,20 +10,13 @@
 #~ Imports 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-from ..adverts import advertIdForNS
-
-#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-#~ Constants / Variiables / Etc. 
-#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-AckAdvertId = advertIdForNS('blather.msg.ackAdvertMsgId')
-
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 #~ Definitions 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 class MsgContext(object):
-    def __init__(self):
+    def __init__(self, addMsgObj):
+        self.sendMsgObj = addMsgObj
         self.msgFilter = MsgAdvertIdBloomFilter()
         self.advertDB = AdvertDB()
         self.findAdvert = self.advertDB.find
@@ -46,11 +39,6 @@ class MsgContext(object):
             ae = self.findAdvert(adId, True)
             ae.addRoute(route)
 
-    #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-    def newAck(self, advertId=None):
-        if advertId is None:
-            advertId = AckAdvertId
-
-        raise NotImplementedError('TODO')
+    def send(self, mobj):
+        pass
 

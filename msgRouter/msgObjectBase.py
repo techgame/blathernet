@@ -45,7 +45,7 @@ class MsgObjectBase(object):
     def newMsgId(self):
         raise NotImplementedError('Subclass Responsibility: %r' % (self,))
 
-    def sourceMsgObject(self, version, mobj):
+    def sourceMsgObject(self, mobj):
         if mobj is self: 
             return None
 
@@ -53,7 +53,7 @@ class MsgObjectBase(object):
         self._packet = mobj._packet
         return self
 
-    def sourcePacket(self, version, packet, rinfo):
+    def sourcePacket(self, packet, rinfo):
         self.rinfo = rinfo
         self._packet = packet
         return self.decode(packet, rinfo)
@@ -76,16 +76,16 @@ class MsgObjectBase(object):
             raise ValueError("Cannot encode a message without a valid advertId")
         pass
 
-    Decoder = nullDecoder
-    def decode(self, packet, rinfo):
-        decoder = self.Decoder(packet, rinfo)
-        self.decodePrepare(encoder)
-        mx = decoder.executeOn(self)
-        if mx is not None:
-            return self
+    #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-    def decodePrepare(self):
-        pass
+    Decoder = nullDecoder
+    @classmethod
+    def newDecoder(klass):
+        return klass.Decoder(packet, rinfo)
+
+    def decode(self, packet, rinfo):
+        decoder = self.newDecoder(packet, rinfo)
+        return decoder.executeOn(self)
 
     #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -105,4 +105,53 @@ class MsgObjectBase(object):
 
     def executeOn(self, mxRoot):
         raise NotImplementedError('Subclass Responsibility: %r' % (self,))
+
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+#~ MsgObjectListBase
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+class MsgObjectListBase(MsgObjectBase):
+    def advertMsgId(self, advertId, msgId=None):
+        self.advertId = advertId
+        self.msgId = msgId
+
+        self._cmdList = []
+
+    @classmethod
+    def new(klass):
+        return klass()
+
+    def copy(self):
+        r = self.new()
+        r.advertMsgId(self.advertId, None)
+        r._cmdList = self._cmdList[:]
+        return r
+
+    #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    #~ Utility and Playback
+    #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+    def executeOn(self, mxRoot):
+        mx = mxRoot.sourceMsgObject(self.msgVersion, self)
+        if mx is None:
+            return None
+
+        if mx.advertMsgId(self.advertId, self.msgId) is False:
+            return None
+
+        for cmdFn, args in self._cmdList
+            mxCmdFn = getattr(mx, cmdFn)
+            if mxCmdFn(*args) is False:
+                return None
+        return mx
+
+    #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+    def _cmd_(self, name, *args):
+        self._cmdList.append((name, args))
+        self._packet = None
+    
+    def _clear_cmd_(self, name):
+        self._cmdList[:] = [(n,a) for n,a in self._cmdList if n != name]
+        self._packet = None
 

@@ -27,7 +27,7 @@ class CommamdDispatch(dict):
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 class MsgDecoder_v02(object):
-    msgVersion = 0x02
+    msgVersion = '\x02'
 
     def __init__(self, packet, rinfo):
         self.packet = packet
@@ -117,11 +117,11 @@ class MsgDecoder_v02(object):
     def executeOn(self, mxRoot):
         tip = StringIO(self.packet)
 
-        version = ord(tip.read(1))
+        version = tip.read(1)
         if version != self.msgVersion:
             raise ValueError("Version mismatch! packet: %s class: %s" % (version, self.msgVersion))
 
-        mx = mxRoot.sourcePacket(version, self.packet, self.rinfo)
+        mx = mxRoot.sourcePacket(self.packet, self.rinfo)
         if mx is None:
             return None
 
