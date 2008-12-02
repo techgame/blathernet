@@ -16,9 +16,6 @@ from StringIO import StringIO
 #~ Definitions 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-def nullEncoder():
-    raise NotImplementedError('Invalid encoder')
-
 class MsgEncoder_v02(object):
     msgVersion = 0x02
 

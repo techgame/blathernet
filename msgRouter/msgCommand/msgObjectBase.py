@@ -19,6 +19,12 @@ from . import encode, decode
 #~ Definitions 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
+def nullDecoder():
+    raise NotImplementedError('Invalid decoder')
+
+def nullEncoder():
+    raise NotImplementedError('Invalid encoder')
+
 def iterMsgId(count, seed=None):
     if seed is None:
         seed = os.urandom(16)
@@ -54,7 +60,7 @@ class MsgObjectBase(object):
 
     #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-    Encoder = encode.nullEncoder
+    Encoder = nullEncoder
     def encode(self):
         encoder = self.Encoder()
         self.encodePrepare(encoder)
@@ -70,7 +76,7 @@ class MsgObjectBase(object):
             raise ValueError("Cannot encode a message without a valid advertId")
         pass
 
-    Decoder = decode.nullDecoder
+    Decoder = nullDecoder
     def decode(self, packet, rinfo):
         decoder = self.Decoder(packet, rinfo)
         self.decodePrepare(encoder)
@@ -90,75 +96,13 @@ class MsgObjectBase(object):
             self._packet = fwdPacket
         return fwdPacket
 
-#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-#~ Message Object, v02
-#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-class MsgObject_v02(MsgObjectBase):
-    msgVersion = 0x02
-    newMsgId = iterMsgId(4).next
-    Encoder = encode.MsgEncoder_v02
-    Decoder = decode.MsgDecoder_v02
+    #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    #~ Methods to be overridden
+    #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
     def advertMsgId(self, advertId, msgId=None):
-        self.advertId = advertId
-        self.msgId = msgId
-
-        self._cmdList = []
-
-    #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-    #~ Routing and Delivery Commands
-    #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-    def clearAdvertRefs(self):
-        self._clear_cmd_('advertIdRefs')
-    def advertIdRefs(self, advertIds, key):
-        self._cmd_('advertIdRefs', advertIds, key)
-
-    def clearForwards(self):
-        self._clear_cmd_('forward')
-    def forward(self, breadthLimit=1, whenUnhandled=True, fwdAdvertId=None):
-        self._cmd_('forward', breadthLimit, whenUnhandled, fwdAdvertId)
-
-    #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-    #~ Message and Topic Commands
-    #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-    def clearMsgs(self):
-        self._clear_cmd_('msg')
-    def msg(self, body, fmt=0, topic=None):
-        self._cmd_('msg', body, fmt, topic)
-    
-    def metaMsg(self, body, fmt=0):
-        return self.msg(body, fmt, topic)
-
-    #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-    #~ Utility and Playback
-    #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+        raise NotImplementedError('Subclass Responsibility: %r' % (self,))
 
     def executeOn(self, mxRoot):
-        mx = mxRoot.sourceMsgObject(self.msgVersion, self)
-        if mx is None:
-            return None
-
-        if mx.advertMsgId(self.advertId, self.msgId) is False:
-            return None
-
-        for cmdFn, args in self._cmdList
-            mxCmdFn = getattr(mx, cmdFn)
-            if mxCmdFn(*args) is False:
-                return None
-        return mx
-
-    #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-    def _cmd_(self, name, *args):
-        self._cmdList.append((name, args))
-        self._packet = None
-    
-    def _clear_cmd_(self, name):
-        self._cmdList[:] = [(n,a) for n,a in self._cmdList if n != name]
-        self._packet = None
-
-MsgObject = MsgObject_v02
+        raise NotImplementedError('Subclass Responsibility: %r' % (self,))
 

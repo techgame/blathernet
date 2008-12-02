@@ -16,9 +16,6 @@ from StringIO import StringIO
 #~ Definitions 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-def nullDecoder():
-    raise NotImplementedError('Invalid decoder')
-
 class CommamdDispatch(dict):
     def add(self, *args):
         cmdIds = [int(a, 2) for a in args]

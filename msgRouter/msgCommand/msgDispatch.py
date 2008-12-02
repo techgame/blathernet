@@ -110,13 +110,3 @@ class MsgDispatch(object):
 
         self.meta.handled += handled
 
-#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-class MsgExecutionFactory(object):
-    def newPacket(self, version, packet, pinfo):
-        assert version == 0x04
-
-        mx = self.MsgDispatch()
-        mx.recvPacketFrom(packet, pinfo)
-        return mx
-
