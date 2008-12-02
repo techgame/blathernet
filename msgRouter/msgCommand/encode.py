@@ -16,8 +16,16 @@ from StringIO import StringIO
 #~ Definitions 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-class MsgCommandEncoder_v04(object):
-    msgVersion = 0x04
+def nullEncoder():
+    raise NotImplementedError('Invalid encoder')
+
+class MsgEncoder_v02(object):
+    msgVersion = 0x02
+
+    def getPacket(self):
+        packet = self.tip.getvalue()
+        self.tip = None
+        return packet
 
     def advertMsgId(self, advertId, msgId):
         tip = StringIO()
@@ -37,36 +45,49 @@ class MsgCommandEncoder_v04(object):
     #~ Routing and Delivery Commands
     #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-    def control(self, XXX):
-        cmd = 0x0; flags = 0
-        self._writeCmd(cmd, flags)
-
-    def forward(self, XXX):
-        cmd = 0x3; flags = 0
-        self._writeCmd(cmd, flags)
-
-    def ack(self, advertId=None):
-        cmd = 0x1; flags = 0
-
-        if advertId is not None:
-            advertId, = self._verifyAdvertIds([advertId])
-            flags |= 8
-
-        self._writeCmd(cmd, flags, advertId or '')
-
-    def advertRefs(self, advertIds, key=None):
+    def advertIdRefs(self, advertIds, key=None):
         cmd = 0x2; flags = 0
         if key is not None:
             flags |= 0x8
             key = chr(key)
+        else: key = ''
 
         advertIds = self._verifyAdvertIds(advertIds)
         if len(advertIds) > 8
             raise ValueError("AdvertIds list must not contain more than 8 references")
 
         if advertIds:
-            flags |= len(advertIds)-1
+            flags |= len(advertIds)-1 # [1..8] => [0..7]
             self._writeCmd(cmd, flags, key, ''.join(advertIds))
+
+    def forward(self, breadthLimit=1, whenUnhandled=True, fwdAdvertId=None):
+        cmd = 0x3; flags = 0
+
+        fwdBreadth = ''
+        if breadthLimit in (0,1):
+            # 0: all
+            # 1: best route
+            flags |= breadthLimit
+        elif not isinstance(breadthLimit, int):
+            if breadthLimit not in (None, 'all', '*'):
+                raise ValueError("Invalid breadth limit value: %r" % (breadthLimit)
+            #else: flags |= 0x0
+        else:
+            # 2: best n routes, where n = 2+(next byte & 0xf); upper nibble is unused/reserved
+            if not (0 <= breadthLimit-2 <= 15):
+                raise ValueError("Invalid breadth limit value: %r" % (breadthLimit)
+            flags |= 0x2
+            fwdBreadth = chr((breadthLimit-2) & 0xf)
+
+        if whenUnhandled:
+            flags |= 0x4
+
+        if fwdAdvertId is not None:
+            flags |= 0x8
+            fwdAdvertId, = self._verifyAdvertIds(fwdAdvertId)
+        else: fwdAdvertId = ''
+
+        self._writeCmd(cmd, flags, fwdBreadth, fwdAdvertId)
 
     #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     #~ Message and Topic Commands
@@ -121,7 +142,7 @@ class MsgCommandEncoder_v04(object):
             if a: 
                 tip.write(a)
         return tip
-
+    
     def _verifyAdvertIds(self, advertIds):
         r = []
         for adId in advertIds:
@@ -130,4 +151,6 @@ class MsgCommandEncoder_v04(object):
                 raise ValueError("Invalid advertId: %r" % (adId,))
             r.append(adId)
         return r
+
+MsgEncoder = MsgEncoder_v02
 

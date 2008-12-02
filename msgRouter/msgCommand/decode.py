@@ -16,6 +16,9 @@ from StringIO import StringIO
 #~ Definitions 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
+def nullDecoder():
+    raise NotImplementedError('Invalid decoder')
+
 class CommamdDispatch(dict):
     def add(self, *args):
         cmdIds = [int(a, 2) for a in args]
@@ -26,8 +29,8 @@ class CommamdDispatch(dict):
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-class MsgCommandDecoder_v04(object):
-    msgVersion = 0x04
+class MsgDecoder_v02(object):
+    msgVersion = 0x02
 
     def __init__(self, packet, rinfo):
         self.packet = packet
@@ -39,30 +42,40 @@ class MsgCommandDecoder_v04(object):
 
     cmds = CommamdDispatch()
 
-    @cmds.add('0000')
-    def cmd_sendControl(self, cmd, flags, tip, mx):
-        return mx.control(XXX)
-
-    @cmds.add('0001')
-    def cmd_forward(self, cmd, flags, tip, mx):
-        return mx.forward(XXX)
+    @cmds.add('0000', '0001')
+    def cmd_unused(self, cmd, flags, tip, mx):
+        raise NotImplementedError('Unused')
 
     @cmds.add('0010')
-    def cmd_ack(self, cmd, flags, tip, mx):
-        if flags & 0x8:
-            ackAdvertId = tip.read(16)
-        else: ackAdvertId = None
-        return mx.ack(ackAdvertId)
-
-    @cmds.add('0011')
-    def cmd_advertRefs(self, cmd, flags, tip, mx):
+    def cmd_advertIdRefs(self, cmd, flags, tip, mx):
         if flags & 0x8: 
             key = ord(tip.read(1))
         else: key = None
 
-        count = (flags & 0x7) + 1 # [0..7]=>[1..8]
+        count = (flags & 0x7) + 1 # [0..7] => [1..8]
         advertIds = [tip.read(16) for e in xrange(count)]
-        return mx.advertRefs(advertIds, key)
+        mx.advertIdRefs(advertIds, key)
+
+    @cmds.add('0011')
+    def cmd_forward(self, cmd, flags, tip, mx):
+        breadthLimit = (flags & 0x3)
+        # 0: all
+        # 1: best route
+        # 2: best n routes, where n = 2+ (next byte & 0xf); upper nibble is unused/reserved
+        # 3: unused/reserved
+        if breadthLimit == 2:
+            breadthLimit = 2+(ord(tip.read(1)) & 0xf)
+        else:
+            breadthLimit = 1 if breadthLimit else None
+
+        whenUnhandled = bool(flags & 0x4):
+
+        if flags & 0x8:
+            # includes advertId to forward toward
+            fwdAdvertId = tip.read(16)
+        else: fwdAdvertId = None
+
+        mx.forward(breadthLimit, whenUnhandled, fwdAdvertId)
 
     @cmds.add('0100', '0101', '0110', '0111')
     def cmd_unused(self, cmd, flags, tip, mx):
@@ -72,7 +85,7 @@ class MsgCommandDecoder_v04(object):
     #~ Message and Topic Commands
     #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-    _msg_unpack = {
+    _msgUnpackFmt = {
         '1000': ('!B', 1, None),
         '1001': ('!H', 2, None),
         '1010': ('!B', 1, 'meta'),
@@ -86,41 +99,47 @@ class MsgCommandDecoder_v04(object):
 
     @cmds.add('1000', '1001', '1010', '1011')
     def cmd_message(self, cmd, flags, tip, mx):
-        cfmt, clen, topic = self._msg_unpack[cmd]
+        cfmt, clen, topic = self._msgUnpackFmt[cmd]
         n, = unpack(cfmt, tip.read(clen))
         body = tip.read(n)
 
-        return mx.msg(body, fmt, topic)
+        mx.msg(body, fmt, topic)
 
     @cmds.add('1100', '1101', '1110', '1111')
     def cmd_topicMessage(self, cmd, flags, tip, mx):
-        cfmt, clen = self._msg_unpack[cmd]
+        cfmt, clen = self._msgUnpackFmt[cmd]
         topic, n = unpack(cfmt, tip.read(clen))
         body = tip.read(n)
 
-        return mx.msg(body, fmt, topic)
+        mx.msg(body, fmt, topic)
 
     #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     #~ Utility and Playback
     #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-    def executeOn(self, mxHost):
+    def executeOn(self, mxRoot):
         tip = StringIO(self.packet)
 
         version = ord(tip.read(1))
         if version != self.msgVersion:
             raise ValueError("Version mismatch! packet: %s class: %s" % (version, self.msgVersion))
 
-        mx = mxHost.fromPacket(version, self.packet, self.rinfo)
-        yield mx, mx
+        mx = mxRoot.sourcePacket(version, self.packet, self.rinfo)
+        if mx is None:
+            return None
 
         msgId = tip.read(5)
         advertId = tip.read(16)
-        yield mx, mx.advertMsgId(advertId, msgId)
+        if mx.advertMsgId(advertId, msgId) is False:
+            return None
 
         for cmdFn, cmdId, flags in self.iterCmds(tip)
-            yield mx, cmdFn(cmdId, flags, tip, mx)
+            if cmdFn(cmdId, flags, tip, mx) is False:
+                return None
+        return mx
         
+    #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
     def iterCmd(self, tip):
         while 1:
             e = self.nextCmd(tip)
@@ -140,5 +159,5 @@ class MsgCommandDecoder_v04(object):
         cmdFn = self.cmds[cmdId]
         return cmdFn, cmdId, flags
 
-MsgCommandDecoder = MsgCommandDecoder_v04
+MsgDecoder = MsgDecoder_v02
 

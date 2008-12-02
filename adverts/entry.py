@@ -10,32 +10,47 @@
 #~ Imports 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
+from collections import defaultdict
+
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 #~ Definitions 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 class AdvertEntry(object):
-    __slots__ = ('routes', 'fns')
+    __slots__ = ('_routes', '_fns')
 
     def __init__(self, adKey):
-        self.routes = None
-        self.fns = None
+        self._routes = None
+        self._fns = None
 
     def isAdvertEntry(self): 
         return True
 
+    #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
     def addRoute(self, wrRoute):
-        routes = self.routes 
+        routes = self._routes 
         if routes is None:
-            routes = set()
-            self.routes = routes
-        routes.add(wrRoute)
+            routes = defaultdict(int)
+            self._routes = routes
+        routes[wrRoute] += 1
+
+    def getRoutes(self, limit=None):
+        routes = self._routes or []
+        if routes:
+            routes = routes.items()
+            if limit:
+                routes.sort(key=lambda (r,i): i)
+                routes = [r for r,i in routes[:limit]]
+        return routes
+
+    #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
     def addFn(self, fn=None):
-        fns = self.fns
+        fns = self._fns
         if fns is None:
             fns = set()
-            self.fns = fns
+            self._fns = fns
         fns.add(fn)
     add = addFn
 
@@ -45,4 +60,7 @@ class AdvertEntry(object):
             return fn
         else:
             return self.on
+
+    def iterHandlers(self):
+        return iter(self._fns or [])
 

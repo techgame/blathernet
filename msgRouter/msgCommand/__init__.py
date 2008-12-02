@@ -28,10 +28,11 @@ Routing and Delivery Commands:
     Upper nibble (1rrr) => 
     Lower nibble (ffff) => 
 
-    0bR000 ffff :: Send control, including hops, cost
-    0bR001 ffff :: Forward msg
-    0bR010 ???? :: Ack msg
-    0bR011 ffff :: AdvertId references; flags indicate kind and count
+    0bR000 ---- :: XXX Unused
+    0bR001 ---- :: XXX Unused
+    0bR010 fnnn :: AdvertId references; flag indicate key byte following, and
+                    nnn is the number of adverts referenced
+    0bR011 ffff :: Forward msg
 
     0bR100 ---- :: XXX Unused
     0bR101 ---- :: XXX Unused
@@ -42,8 +43,8 @@ Messaging Commands:
     Upper nibble (1mmm) => body length and topic
     Lower nibble (ffff) => data format, receiver interpreted
 
-    0bM000 ffff :: no topic id, body length is next byte
-    0bM001 ffff :: no topic id, body length is next two bytes
+    0bM000 ffff :: none topic id, body length is next byte
+    0bM001 ffff :: none topic id, body length is next two bytes
     0bM010 ffff :: meta topic id, body length is next byte
     0bM011 ffff :: meta topic id, body length is next two bytes
 

@@ -20,65 +20,95 @@ class MsgDispatch(object):
     advertId = None
     msgId = None
     rinfo = None
+    meta = None
+
+    _mobj = None
+    _packet = None
 
     def sourceMsgObject(self, version, mobj):
         self.rinfo = mobj.rinfo
+        self._mobj = mobj
         return self
 
     def sourcePacket(self, version, packet, rinfo):
         self.rinfo = rinfo
+        self._packet = packet
         return self
+
+    def getFwdPacket(self):
+        fwdPacket = self._packet
+        if fwdPacket is None:
+            fwdPacket = self._mobj.getFwdPacket()
+            self._packet = fwdPacket
+        return fwdPacket
 
     #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
     def advertMsgId(self, advertId, msgId):
-        adEntry = self.ctx.findAdvert(advertId, False)
+        adEntry = self.advertMsgEntry(advertId, msgId)
         if adEntry is None:
-            return None
-        if self.ctx.msgFilter(advertId, msgId):
-            return None
+            return False
 
-        self.advertId = advertId
         self.adEntry = adEntry
-        return self
+        
+        self.meta = meta = objectns()
+        meta.rinfo = self.rinfo
+        meta.advertId = advertId
+        meta.msgId = msgId
+        meta.adRefs = {}
+        meta.handled = False
 
     #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     #~ Routing and Delivery Commands ~~~~~~~~~~~~~~~~~~~~
     #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-    def control(self, XXX):
-        pass
-
-    def forward(self, XXX):
-        pass
-
-    def ack(self, ackAdvertId=None, flags=0):
+    def advertIdRefs(self, advertIds, key=None):
         rinfo = self.rinfo
         if rinfo is None: return
-
-        ack = self.ctx.newAck()
-        ack.msg(self.msgId+self.advertId)
-        ack.sendTo(rinfo.route)
-
-    def advertRefs(self, advertIds, key):
-        rinfo = self.rinfo
-        if rinfo is None: return
+        if rinfo.route is None: return
 
         self.ctx.addRouteForAdverts(rinfo.route, advertIds)
+        self.meta.adRefs[key] = advertIds
+
+    def forward(self, breadthLimit=1, whenUnhandled=True, fwdAdvertId=None):
+        if whenUnhandled and self.meta.handled:
+            return
+
+        if fwdAdvertId is not None:
+            adEntry = self.ctx.findAdvert(fwdAdvertId, False)
+            if adEntry is None:
+                return
+        else: 
+            adEntry = self.adEntry
+
+        fwdPacket = self.fwdPacket
+        if fwdPacket is None:
+            return
+
+        for route in adEntry.getRoutes(breadthLimit):
+            route.sendDispatch(fwdPacket)
 
     #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     #~ Message Commands with fmt and topic ~~~~~~~~~~~~~~
     #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
     def msg(self, body, fmt=0, topic=None):
-        iterFns = iter(self.adEntry.fns)
-        while iterFns is not None:
+        iterFns = iter(self.adEntry.iterHandlers())
+
+        handled = 0
+        while True:
             try:
                 for fn in iterFns:
-                    r = fn(body, fmt, topic, self)
+                    r = fn(body, fmt, topic, meta)
+                    if r is not False:
+                        handled += 1
             except Exception, e:
                 traceback.print_exc()
-            else: iterFns = None
+            else:
+                # complete, break out
+                break
+
+        self.meta.handled += handled
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -86,7 +116,7 @@ class MsgExecutionFactory(object):
     def newPacket(self, version, packet, pinfo):
         assert version == 0x04
 
-        mx = self.MsgExecution()
+        mx = self.MsgDispatch()
         mx.recvPacketFrom(packet, pinfo)
         return mx
 

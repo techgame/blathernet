@@ -28,6 +28,14 @@ class MsgContext(object):
         self.advertDB = AdvertDB()
         self.findAdvert = self.advertDB.find
 
+    def advertMsgEntry(self, advertId, msgId):
+        adEntry = self.findAdvert(advertId, False)
+        if adEntry is None:
+            return None
+        if self.msgFilter(advertId, msgId):
+            return None
+        return adEntry
+
     def findAdvert(self, advertId, orAdd=True):
         return self.advertDB.find(advertId, orAdd)
 
