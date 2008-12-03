@@ -28,36 +28,36 @@ Routing and Delivery Commands:
     Upper nibble (1rrr) => 
     Lower nibble (ffff) => 
 
-    0bR000 ---- :: XXX Unused
+    0bR000 ffff :: Forward msg
     0bR001 ---- :: XXX Unused
-    0bR010 fnnn :: AdvertId references; flag indicate key byte following, and
-                    nnn is the number of adverts referenced
-    0bR011 ffff :: Forward msg
+    0bR010 ---- :: XXX Unused
+    0bR011 ---- :: XXX Unused
 
-    0bR100 ---- :: XXX Unused
-    0bR101 ---- :: XXX Unused
+    0bR100 nnnn :: AdvertId references, nnnn+1 references
+    0bR101 nnnn :: AdvertId references, followed by variable length key (pascal style), and nnnn+1 references
     0bR110 ---- :: XXX Unused
     0bR111 ---- :: XXX Unused
 
 Messaging Commands:
-    Upper nibble (1mmm) => body length and topic
+    Upper nibble (1mmm) => topic encoding
     Lower nibble (ffff) => data format, receiver interpreted
 
-    0bM000 ffff :: none topic id, body length is next byte
-    0bM001 ffff :: none topic id, body length is next two bytes
-    0bM010 ffff :: meta topic id, body length is next byte
-    0bM011 ffff :: meta topic id, body length is next two bytes
+    0bM000 ffff :: no topic
+    0bM001 ffff :: variable length topic, length is next byte (pascal style)
+    0bM010 ---- :: XXX Unused
+    0bM011 ---- :: XXX Unused
 
-    0bM100 ffff :: 1 byte topic id, body length is next byte
-    0bM101 ffff :: 1 byte topic id, body length is next two bytes
-    0bM110 ffff :: 2 byte topic id, body length is next byte
-    0bM111 ffff :: 2 byte topic id, body length is next two bytes
+    0bM100 ffff :: 32-bit uint topic
+    0bM101 ffff :: 4 byte topic id
+    0bM110 ffff :: 8 byte topic id
+    0bM111 ffff :: 16 byte topic id - advertId length
 """
     
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 #~ Imports 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-from .msgObject import MsgObject_v02
-MsgObject = MsgObject_v02
+from .msgObject import MsgObject_v02, MsgObject
+from .encode import MsgEncoder_v02, MsgEncoder
+from .decode import MsgDecoder_v02, MsgDecoder
 

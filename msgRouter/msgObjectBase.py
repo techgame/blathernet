@@ -13,7 +13,7 @@
 import os
 from hashlib import md5
 
-from . import encode, decode
+from ..adverts import advertIdForNS
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 #~ Definitions 
@@ -40,7 +40,11 @@ class MsgObjectBase(object):
     msgId = None
 
     rinfo = None
-    _packet = None
+    _srcPacket = None
+
+    def __init__(self, packet=None, rinfo=None):
+        if packet is not None:
+            self.decode(packet, rinfo)
 
     def newMsgId(self):
         raise NotImplementedError('Subclass Responsibility: %r' % (self,))
@@ -50,13 +54,13 @@ class MsgObjectBase(object):
             return None
 
         self.rinfo = mobj.rinfo
-        self._packet = mobj._packet
+        self._srcPacket = mobj._srcPacket
         return self
 
     def sourcePacket(self, packet, rinfo):
         self.rinfo = rinfo
-        self._packet = packet
-        return self.decode(packet, rinfo)
+        self._srcPacket = packet
+        return self
 
     #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -73,32 +77,36 @@ class MsgObjectBase(object):
             raise ValueError("Cannot encode a message without a valid advertId")
         if self.msgId is None:
             self.msgId = self.newMsgId()
-            raise ValueError("Cannot encode a message without a valid advertId")
-        pass
 
     #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
     Decoder = nullDecoder
     @classmethod
-    def newDecoder(klass):
+    def newDecoder(klass, packet, rinfo=None):
         return klass.Decoder(packet, rinfo)
 
-    def decode(self, packet, rinfo):
+    def decode(self, packet, rinfo=None):
         decoder = self.newDecoder(packet, rinfo)
         return decoder.executeOn(self)
 
     #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
     def getFwdPacket(self):
-        fwdPacket = self._packet
+        fwdPacket = self._srcPacket
         if fwdPacket is None:
-            fwdPacket = self.encode()
-            self._packet = fwdPacket
+            fwdPacket = self._genPacket
+            if fwdPacket is None:
+                fwdPacket = self.encode()
+                self._genPacket = fwdPacket
         return fwdPacket
 
     #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     #~ Methods to be overridden
     #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+    def advertNS(self, advertNS, msgId=None):
+        advertId = advertIdForNS(advertNS)
+        return self.advertMsgId(advertId, msgId)
 
     def advertMsgId(self, advertId, msgId=None):
         raise NotImplementedError('Subclass Responsibility: %r' % (self,))
@@ -112,10 +120,10 @@ class MsgObjectBase(object):
 
 class MsgObjectListBase(MsgObjectBase):
     def advertMsgId(self, advertId, msgId=None):
+        self._clear_cmd_(None)
+
         self.advertId = advertId
         self.msgId = msgId
-
-        self._cmdList = []
 
     @classmethod
     def new(klass):
@@ -124,7 +132,7 @@ class MsgObjectListBase(MsgObjectBase):
     def copy(self):
         r = self.new()
         r.advertMsgId(self.advertId, None)
-        r._cmdList = self._cmdList[:]
+        r.cmdList = self.cmdList[:]
         return r
 
     #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -139,7 +147,7 @@ class MsgObjectListBase(MsgObjectBase):
         if mx.advertMsgId(self.advertId, self.msgId) is False:
             return None
 
-        for cmdFn, args in self._cmdList
+        for cmdFn, args in self.cmdList:
             mxCmdFn = getattr(mx, cmdFn)
             if mxCmdFn(*args) is False:
                 return None
@@ -148,10 +156,15 @@ class MsgObjectListBase(MsgObjectBase):
     #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
     def _cmd_(self, name, *args):
-        self._cmdList.append((name, args))
-        self._packet = None
+        self._genPacket = None
+        ce = (name, args)
+        self.cmdList.append(ce)
+        return ce
     
     def _clear_cmd_(self, name):
-        self._cmdList[:] = [(n,a) for n,a in self._cmdList if n != name]
-        self._packet = None
+        self._genPacket = None
+        if name is None:
+            self.cmdList = []
+        else:
+            self.cmdList[:] = [(n,a) for n,a in self.cmdList if n != name]
 

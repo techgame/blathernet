@@ -10,6 +10,7 @@
 #~ Imports 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
+from struct import pack, unpack, calcsize
 from StringIO import StringIO
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -28,8 +29,9 @@ class CommamdDispatch(dict):
 
 class MsgDecoder_v02(object):
     msgVersion = '\x02'
+    msgIdLen = 4
 
-    def __init__(self, packet, rinfo):
+    def __init__(self, packet, rinfo=None):
         self.packet = packet
         self.rinfo = rinfo
 
@@ -39,33 +41,20 @@ class MsgDecoder_v02(object):
 
     cmds = CommamdDispatch()
 
-    @cmds.add('0000', '0001')
-    def cmd_unused(self, cmd, flags, tip, mx):
-        raise NotImplementedError('Unused')
-
-    @cmds.add('0010')
-    def cmd_advertIdRefs(self, cmd, flags, tip, mx):
-        if flags & 0x8: 
-            key = ord(tip.read(1))
-        else: key = None
-
-        count = (flags & 0x7) + 1 # [0..7] => [1..8]
-        advertIds = [tip.read(16) for e in xrange(count)]
-        mx.advertIdRefs(advertIds, key)
-
-    @cmds.add('0011')
+    @cmds.add('0000')
     def cmd_forward(self, cmd, flags, tip, mx):
         breadthLimit = (flags & 0x3)
         # 0: all
         # 1: best route
-        # 2: best n routes, where n = 2+ (next byte & 0xf); upper nibble is unused/reserved
-        # 3: unused/reserved
-        if breadthLimit == 2:
-            breadthLimit = 2+(ord(tip.read(1)) & 0xf)
+        # 2: unused/reserved
+        # 3: best n routes [1..16]; n = next byte, high nibble is unused/reserved
+        if breadthLimit == 3:
+            breadthLimit = ord(tip.read(1))
+            breadthLimit = (breadthLimit&0xf) + 1
         else:
             breadthLimit = 1 if breadthLimit else None
 
-        whenUnhandled = bool(flags & 0x4):
+        whenUnhandled = bool(flags & 0x4)
 
         if flags & 0x8:
             # includes advertId to forward toward
@@ -74,41 +63,83 @@ class MsgDecoder_v02(object):
 
         mx.forward(breadthLimit, whenUnhandled, fwdAdvertId)
 
-    @cmds.add('0100', '0101', '0110', '0111')
+    @cmds.add('0001', '0010', '0011')
     def cmd_unused(self, cmd, flags, tip, mx):
-        raise NotImplementedError('Unused')
+        raise NotImplementedError('Unused: %r' % ((cmd, flags, tip, mx),))
+
+    @cmds.add('0100', '0101')
+    def cmd_advertIdRefs(self, cmd, flags, tip, mx):
+        if cmd & 0x1:
+            key = ord(tip.read(1))
+            key = tip.read(key)
+        else: key = None
+
+        count = flags + 1 # [0..15] => [1..16]
+        advertIds = [tip.read(16) for e in xrange(count)]
+        mx.advertIdRefs(advertIds, key)
+
+    @cmds.add('0110', '0111')
+    def cmd_unused(self, cmd, flags, tip, mx):
+        raise NotImplementedError('Unused: %r' % ((cmd, flags, tip, mx),))
 
     #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     #~ Message and Topic Commands
     #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
     _msgUnpackFmt = {
-        '1000': ('!B', 1, None),
-        '1001': ('!H', 2, None),
-        '1010': ('!B', 1, 'meta'),
-        '1011': ('!H', 2, 'meta'),
+        # msgs with no topic
+        '1000': '!H',
 
-        '1100': ('!BB', 2),
-        '1101': ('!BH', 3),
-        '1110': ('!HB', 3),
-        '1111': ('!HH', 4),
+        # msgs with variable length str topic
+        '1001': '!HB',
+
+        # XXX: UNUSED
+        '1010': '!H9q',
+        '1011': '!H9q',
+
+        # msgs with integer as topicId
+        '1100': '!HI',
+
+        # msg with 4-byte topic
+        '1101': '!H4s',
+
+        # msg with 8-byte topic
+        '1110': '!H8s',
+
+        # msgs with advertId-length string as topicId
+        '1111': '!H16s',
     }
+    _msgUnpackFmt.update(
+        (int(k, 2), (fmt, lambda tip,fmt=fmt,n=calcsize(fmt): unpack(fmt, tip.read(n))))
+            for k,fmt in _msgUnpackFmt.items())
 
-    @cmds.add('1000', '1001', '1010', '1011')
-    def cmd_message(self, cmd, flags, tip, mx):
-        cfmt, clen, topic = self._msgUnpackFmt[cmd]
-        n, = unpack(cfmt, tip.read(clen))
-        body = tip.read(n)
-
+    @cmds.add('1000')
+    def cmd_msg(self, cmd, fmt, tip, mx):
+        msgFmt, msgFmtUnpack = self._msgUnpackFmt[cmd]
+        bodyLen, = msgFmtUnpack(tip)
+        topic = None
+        body = tip.read(bodyLen)
         mx.msg(body, fmt, topic)
+
+    @cmds.add('1001')
+    def cmd_msgTopicStr(self, cmd, fmt, tip, mx):
+        msgFmt, msgFmtUnpack = self._msgUnpackFmt[cmd]
+        bodyLen, topicLen = msgFmtUnpack(tip)
+        topic = tip.read(topicLen)
+        body = tip.read(bodyLen)
+        mx.msg(body, fmt, topic)
+
+    @cmds.add('1010', '1011')
+    def cmd_msgUnused(self, cmd, fmt, tip, mx):
+        raise NotImplementedError('Unused: %r' % ((cmd, fmt, tip, mx),))
 
     @cmds.add('1100', '1101', '1110', '1111')
-    def cmd_topicMessage(self, cmd, flags, tip, mx):
-        cfmt, clen = self._msgUnpackFmt[cmd]
-        topic, n = unpack(cfmt, tip.read(clen))
-        body = tip.read(n)
-
+    def cmd_msgTopicId(self, cmd, fmt, tip, mx):
+        msgFmt, msgFmtUnpack = self._msgUnpackFmt[cmd]
+        bodyLen, topic = msgFmtUnpack(tip)
+        body = tip.read(bodyLen)
         mx.msg(body, fmt, topic)
+
 
     #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     #~ Utility and Playback
@@ -125,19 +156,19 @@ class MsgDecoder_v02(object):
         if mx is None:
             return None
 
-        msgId = tip.read(5)
+        msgId = tip.read(self.msgIdLen)
         advertId = tip.read(16)
         if mx.advertMsgId(advertId, msgId) is False:
             return None
 
-        for cmdFn, cmdId, flags in self.iterCmds(tip)
-            if cmdFn(cmdId, flags, tip, mx) is False:
+        for cmdFn, cmdId, flags in self.iterCmds(tip):
+            if cmdFn(self, cmdId, flags, tip, mx) is False:
                 return None
         return mx
         
     #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-    def iterCmd(self, tip):
+    def iterCmds(self, tip):
         while 1:
             e = self.nextCmd(tip)
             if e is not None:

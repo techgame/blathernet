@@ -10,7 +10,11 @@
 #~ Imports 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
+from functools import partial
+from struct import pack, unpack, calcsize
 from StringIO import StringIO
+
+from ..msgObjectBase import iterMsgId, advertIdForNS
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 #~ Definitions 
@@ -18,19 +22,27 @@ from StringIO import StringIO
 
 class MsgEncoder_v02(object):
     msgVersion = '\x02'
+    msgIdLen = 4
+    newMsgId = iterMsgId(msgIdLen).next
 
     def getPacket(self):
-        packet = self.tip.getvalue()
-        self.tip = None
-        return packet
+        return self.tip.getvalue()
+    packet = property(getPacket)
 
-    def advertMsgId(self, advertId, msgId):
+    def advertNS(self, advertNS, msgId=None):
+        advertId = advertIdForNS(advertNS)
+        return self.advertMsgId(advertId, msgId)
+
+    def advertMsgId(self, advertId, msgId=None):
         tip = StringIO()
-        tip.write(chr(self.msgVersion))
+        tip.write(self.msgVersion)
 
-        if len(msgId) < 4:
-            raise ValueError("MsgId must have a least 4 bytes")
-        tip.write(msgId[:4])
+        msgIdLen = self.msgIdLen
+        if msgId is None:
+            msgId = self.newMsgId()
+        elif len(msgId) < msgIdLen:
+            raise ValueError("MsgId must have a least %s bytes" % (msgIdLen,))
+        tip.write(msgId[:msgIdLen])
 
         if len(advertId) != 16:
             raise ValueError("AdvertId must be 16 bytes long")
@@ -43,22 +55,22 @@ class MsgEncoder_v02(object):
     #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
     def advertIdRefs(self, advertIds, key=None):
-        cmd = 0x2; flags = 0
+        cmd = 0x4; flags = 0
         if key is not None:
-            flags |= 0x8
-            key = chr(key)
+            cmd |= 0x1
+            key = chr(len(key))+key
         else: key = ''
 
         advertIds = self._verifyAdvertIds(advertIds)
-        if len(advertIds) > 8
+        if len(advertIds) > 16:
             raise ValueError("AdvertIds list must not contain more than 8 references")
 
         if advertIds:
-            flags |= len(advertIds)-1 # [1..8] => [0..7]
+            flags = len(advertIds)-1 # [1..16] => [0..15]
             self._writeCmd(cmd, flags, key, ''.join(advertIds))
 
     def forward(self, breadthLimit=1, whenUnhandled=True, fwdAdvertId=None):
-        cmd = 0x3; flags = 0
+        cmd = 0x0; flags = 0
 
         fwdBreadth = ''
         if breadthLimit in (0,1):
@@ -67,21 +79,20 @@ class MsgEncoder_v02(object):
             flags |= breadthLimit
         elif not isinstance(breadthLimit, int):
             if breadthLimit not in (None, 'all', '*'):
-                raise ValueError("Invalid breadth limit value: %r" % (breadthLimit)
+                raise ValueError("Invalid breadth limit value: %r" % (breadthLimit))
             #else: flags |= 0x0
         else:
-            # 2: best n routes, where n = 2+(next byte & 0xf); upper nibble is unused/reserved
-            if not (0 <= breadthLimit-2 <= 15):
-                raise ValueError("Invalid breadth limit value: %r" % (breadthLimit)
-            flags |= 0x2
-            fwdBreadth = chr((breadthLimit-2) & 0xf)
+            # 3: best n routes [1..16]; high nibble is unused/reserved
+            flags |= 0x3
+            fwdBreadth = max(min(breadthLimit, 16), 1) - 1
+            fwdBreadth = chr(fwdBreadth)
 
         if whenUnhandled:
             flags |= 0x4
 
         if fwdAdvertId is not None:
             flags |= 0x8
-            fwdAdvertId, = self._verifyAdvertIds(fwdAdvertId)
+            fwdAdvertId, = self._verifyAdvertIds([fwdAdvertId])
         else: fwdAdvertId = ''
 
         self._writeCmd(cmd, flags, fwdBreadth, fwdAdvertId)
@@ -90,35 +101,63 @@ class MsgEncoder_v02(object):
     #~ Message and Topic Commands
     #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-    def _msgCmdPrefix(self, topic, lenBody):
-        prefix = ''
+    _msgPackFmt = {
+        # msgs with no topic
+        '1000': '!H0s',
 
-        cmd = 0x8 # msg command prefix
-        if topic is not None:
-            if topic == 'meta':
-                cmd |= 0x2
-            elif (0 <= topic < 256):
-                cmd |= 0x4
-                prefix += pack('!B', topic)
-            elif (256 <= topic < 65536):
-                cmd |= 0x6
-                prefix += pack('!H', topic)
-            else:
-                raise ValueError("Invalid topic value: %r" % (topic,))
+        # msgs with variable length str topic
+        '1001': '!HB',
 
-        if lenBody < 256:
-            prefix += pack('!B', lenBody)
+        # XXX: UNUSED
+        '1010': '!H9q',
+        '1011': '!H9q',
+
+        # msgs with integer as topicId
+        '1100': '!HI',
+
+        # msg with 4-byte topic
+        '1101': '!H4s',
+
+        # msg with 8-byte topic
+        '1110': '!H8s',
+
+        # msgs with advertId-length string as topicId
+        '1111': '!H16s',
+    }
+    _msgPackFmt.update(
+        (int(k, 2), (fmt, partial(pack, fmt)))
+            for k,fmt in _msgPackFmt.items())
+
+    _cmdByTopicLen = {4: 0xd, 8: 0xe, 16: 0xf}
+
+    def _msgCmdPrefix(self, lenBody, topic=''):
+        topicEx = ''
+        if not topic: 
+            if topic != 0:
+                topic = ''
+                cmd = 0x8
+            else: cmd = 0xc
+        elif isinstance(topic, str):
+            cmd = self._cmdByTopicLen.get(len(topic))
         else:
-            cmd |= 0x1
-            prefix += pack('!H', lenBody)
+            cmd = 0xc
+            topic = int(topic)
 
-        return cmd, prefix
+        if cmd is None:
+            topicEx = topic
+            topic = len(topic)
+            cmd = 0x9
+
+        fmt, fmtPack = self._msgPackFmt[cmd]
+        #print (cmd, fmt, topic, topicEx)
+        prefix = fmtPack(lenBody, topic)
+        return cmd, prefix+topicEx
 
     def msg(self, body, fmt=0, topic=None):
         if not (0 <= fmt <= 0xf):
             raise ValueError("Invalid format value: %r" % (fmt,))
 
-        cmd, prefix = self._msgCmdPrefix(topic, len(body))
+        cmd, prefix = self._msgCmdPrefix(len(body), topic)
         self._writeCmd(cmd, fmt, prefix, body)
 
     #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

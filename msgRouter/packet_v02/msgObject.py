@@ -28,15 +28,15 @@ class MsgObject_v02(MsgObjectListBase):
     #~ Routing and Delivery Commands
     #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-    def clearAdvertRefs(self):
-        self._clear_cmd_('advertIdRefs')
-    def advertIdRefs(self, advertIds, key):
-        self._cmd_('advertIdRefs', advertIds, key)
-
     def clearForwards(self):
         self._clear_cmd_('forward')
     def forward(self, breadthLimit=1, whenUnhandled=True, fwdAdvertId=None):
         self._cmd_('forward', breadthLimit, whenUnhandled, fwdAdvertId)
+
+    def clearAdvertRefs(self):
+        self._clear_cmd_('advertIdRefs')
+    def advertIdRefs(self, advertIds, key=None):
+        self._cmd_('advertIdRefs', advertIds, key)
 
     #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     #~ Message and Topic Commands
@@ -49,4 +49,6 @@ class MsgObject_v02(MsgObjectListBase):
     
     def metaMsg(self, body, fmt=0):
         return self.msg(body, fmt, topic)
+
+MsgObject = MsgObject_v02
 

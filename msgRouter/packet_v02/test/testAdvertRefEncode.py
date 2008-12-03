@@ -85,7 +85,7 @@ class TestAdvertRefEncode(unittest.TestCase):
             enc = self.buildEnc()
 
         enc.advertIdRefs(adIdList, key)
-        r = enc.packet; rx = r[21:]
+        rx = enc.packet[21:]
 
         if not key:
             self.assertEqual(ord(rx[:1]), 0x40|(len(adIdList)-1))

@@ -27,7 +27,6 @@ class BlatherHost(BlatherObject):
     _fm_ = BlatherObject._fm_.branch(
             TaskMgr = taskMgrs.BlatherTaskMgr,
             NetworkMgr = network.BlatherNetworkMgr,
-            MessageRouter = msgRouter.MessageRouter,
             RouteMgr = routes.BlatherRouteMgr,
             RouteFactory = routes.BlatherRouteFactory,
             )
