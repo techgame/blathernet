@@ -17,7 +17,7 @@ import packet_v02
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 msgDecoderList = [
-    packet_v02.MsgObject,
+    packet_v02.MsgObject.fromPacket,
     ]
 
 MsgObject = msgDecoderList[-1]

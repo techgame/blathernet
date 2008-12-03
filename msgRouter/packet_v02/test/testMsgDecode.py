@@ -24,7 +24,7 @@ class TestMsgDecode(unittest.TestCase):
     msgId = '1234'
 
     def buildMsgObj(self, data, nCmds):
-        mobj = packet.MsgObject(data)
+        mobj = packet.MsgObject.fromPacket(data)
         r = list(mobj.cmdList)
         self.assertEqual(len(r),  nCmds)
         return mobj, r

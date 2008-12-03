@@ -25,7 +25,6 @@ class MsgDispatch(object):
     _mobj = None
     _packet = None
 
-    def 
     #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
     def sourceMsgObject(self, mobj):
@@ -58,6 +57,7 @@ class MsgDispatch(object):
         meta.rinfo = self.rinfo
         meta.advertId = advertId
         meta.msgId = msgId
+        meta.replyId = None
         meta.adRefs = {}
         meta.handled = False
 
@@ -65,6 +65,15 @@ class MsgDispatch(object):
     #~ Routing and Delivery Commands ~~~~~~~~~~~~~~~~~~~~
     #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
+    def reply(self, replyAdvertIds):
+        if isinstance(replyAdvertIds, str):
+            replyAdvertIds = [replyAdvertIds]
+
+        self.meta.replyId = replyAdvertIds[0] if replyAdvertIds else None
+        self.advertIdRefs(replyAdvertIds, True)
+
+    def refs(self, advertIds, key=None):
+        return self.advertIdRefs(advertIds, key)
     def advertIdRefs(self, advertIds, key=None):
         rinfo = self.rinfo
         if rinfo is None: return
@@ -72,6 +81,7 @@ class MsgDispatch(object):
 
         self.ctx.addRouteForAdverts(rinfo.route, advertIds)
         self.meta.adRefs[key] = advertIds
+        return advertIds
 
     def forward(self, breadthLimit=1, whenUnhandled=True, fwdAdvertId=None):
         if whenUnhandled and self.meta.handled:

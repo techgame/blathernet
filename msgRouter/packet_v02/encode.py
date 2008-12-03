@@ -33,6 +33,15 @@ class MsgEncoder_v02(object):
         advertId = advertIdForNS(advertNS)
         return self.advertMsgId(advertId, msgId)
 
+    #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+    def sourceMsgObject(self, mobj):
+        return self
+    def sourcePacket(self, packet, rinfo):
+        return self
+
+    #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
     def advertMsgId(self, advertId, msgId=None):
         tip = StringIO()
         tip.write(self.msgVersion)
@@ -54,11 +63,22 @@ class MsgEncoder_v02(object):
     #~ Routing and Delivery Commands
     #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
+    def reply(self, replyAdvertIds):
+        if isinstance(replyAdvertIds, str):
+            replyAdvertIds = [replyAdvertIds]
+        return self.advertIdRefs(replyAdvertIds, True)
+
+    def refs(self, advertIds, key=None):
+        return self.advertIdRefs(advertIds, key)
     def advertIdRefs(self, advertIds, key=None):
         cmd = 0x4; flags = 0
         if key is not None:
-            cmd |= 0x1
-            key = chr(len(key))+key
+            if key == True:
+                cmd |= 0x2
+                key = ''
+            else:
+                cmd |= 0x1
+                key = chr(len(key))+key
         else: key = ''
 
         advertIds = self._verifyAdvertIds(advertIds)
@@ -184,7 +204,7 @@ class MsgEncoder_v02(object):
         for adId in advertIds:
             adId = str(adId)
             if len(adId) != 16:
-                raise ValueError("Invalid advertId: %r" % (adId,))
+                raise ValueError("Invalid advertId len: %r" % (len(adId),))
             r.append(adId)
         return r
 

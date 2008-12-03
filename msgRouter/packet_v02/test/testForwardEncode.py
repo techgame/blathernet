@@ -141,7 +141,7 @@ if __name__=='__main__':
     ts = unittest.TestSuite()
     ts.addTest(tl.loadTestsFromTestCase(TestForwardEncode))
 
-    tests = []
+    tests = None #[]
 
     tr = ts.run(unittest.TestResult())
     if not tr.wasSuccessful():

@@ -35,7 +35,7 @@ Routing and Delivery Commands:
 
     0bR100 nnnn :: AdvertId references, nnnn+1 references
     0bR101 nnnn :: AdvertId references, followed by variable length key (pascal style), and nnnn+1 references
-    0bR110 ---- :: XXX Unused
+    0bR110 nnnn :: Reply AdvertId references, and nnnn+1 references
     0bR111 ---- :: XXX Unused
 
 Messaging Commands:

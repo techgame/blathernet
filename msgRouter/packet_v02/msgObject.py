@@ -35,6 +35,13 @@ class MsgObject_v02(MsgObjectListBase):
 
     def clearAdvertRefs(self):
         self._clear_cmd_('advertIdRefs')
+
+    def reply(self, replyAdvertIds):
+        if isinstance(replyAdvertIds, str):
+            replyAdvertIds = [replyAdvertIds]
+        self._cmd_('reply', replyAdvertIds)
+    def refs(self, advertIds, key=None):
+        return self.advertIdRefs(advertIds, key)
     def advertIdRefs(self, advertIds, key=None):
         self._cmd_('advertIdRefs', advertIds, key)
 

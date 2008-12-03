@@ -36,18 +36,23 @@ def iterMsgId(count, seed=None):
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 class MsgObjectBase(object):
-    advertId = None
-    msgId = None
-
     rinfo = None
     _srcPacket = None
 
-    def __init__(self, packet=None, rinfo=None):
-        if packet is not None:
-            self.decode(packet, rinfo)
+    def __init__(self, advertId=None):
+        if advertId is not None:
+            self.advertId = advertId
 
     def newMsgId(self):
         raise NotImplementedError('Subclass Responsibility: %r' % (self,))
+
+    #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+    @classmethod
+    def fromMsgObject(klass, mobj):
+        self = klass()
+        mobj.executeOn(self)
+        return self
 
     def sourceMsgObject(self, mobj):
         if mobj is self: 
@@ -57,7 +62,13 @@ class MsgObjectBase(object):
         self._srcPacket = mobj._srcPacket
         return self
 
-    def sourcePacket(self, packet, rinfo):
+    @classmethod
+    def fromPacket(klass, packet, rinfo=None):
+        self = klass()
+        self.decode(packet, rinfo)
+        return self
+
+    def sourcePacket(self, packet, rinfo=None):
         self.rinfo = rinfo
         self._srcPacket = packet
         return self
@@ -72,7 +83,7 @@ class MsgObjectBase(object):
         if mx is not None:
             return mx.getPacket()
 
-    def encodePrepare(self):
+    def encodePrepare(self, encoder):
         if self.advertId is None:
             raise ValueError("Cannot encode a message without a valid advertId")
         if self.msgId is None:
@@ -100,16 +111,41 @@ class MsgObjectBase(object):
                 self._genPacket = fwdPacket
         return fwdPacket
 
+    def advertMsgId(self, advertId, msgId=None):
+        raise NotImplementedError('Subclass Responsibility: %r' % (self,))
+
+    #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    #~ Advert and Msg ID
+    #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+    msgId = None
+    _advertId = None
+    def getAdvertId(self):
+        return self._advertId
+    def setAdvertId(self, advertId):
+        if advertId == self._advertId:
+            return
+        if len(advertId) != 16:
+            raise ValueError("Invalid advertId length: %r" % (len(advertId),))
+        self._advertId = advertId
+        self.advertMsgId(advertId, self.msgId)
+    advertId = property(getAdvertId, setAdvertId)
+
+    def advertNS(self, advertNS, msgId=None):
+        advertId = self.advertIdForNS(advertNS)
+        return self.advertMsgId(advertId, msgId)
+
+    advertIdForNS = staticmethod(advertIdForNS)
+
+    #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+    def advertMsgId(self, advertId, msgId=None):
+        self.advertId = advertId
+        self.msgId = msgId
+
     #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     #~ Methods to be overridden
     #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-    def advertNS(self, advertNS, msgId=None):
-        advertId = advertIdForNS(advertNS)
-        return self.advertMsgId(advertId, msgId)
-
-    def advertMsgId(self, advertId, msgId=None):
-        raise NotImplementedError('Subclass Responsibility: %r' % (self,))
 
     def executeOn(self, mxRoot):
         raise NotImplementedError('Subclass Responsibility: %r' % (self,))
@@ -140,7 +176,7 @@ class MsgObjectListBase(MsgObjectBase):
     #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
     def executeOn(self, mxRoot):
-        mx = mxRoot.sourceMsgObject(self.msgVersion, self)
+        mx = mxRoot.sourceMsgObject(self)
         if mx is None:
             return None
 

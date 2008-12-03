@@ -78,7 +78,13 @@ class MsgDecoder_v02(object):
         advertIds = [tip.read(16) for e in xrange(count)]
         mx.advertIdRefs(advertIds, key)
 
-    @cmds.add('0110', '0111')
+    @cmds.add('0110')
+    def cmd_reply(self, cmd, flags, tip, mx):
+        count = flags + 1 # [0..15] => [1..16]
+        advertIds = [tip.read(16) for e in xrange(count)]
+        mx.reply(advertIds)
+
+    @cmds.add('0111')
     def cmd_unused(self, cmd, flags, tip, mx):
         raise NotImplementedError('Unused: %r' % ((cmd, flags, tip, mx),))
 
