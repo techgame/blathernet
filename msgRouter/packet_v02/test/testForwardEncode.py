@@ -22,9 +22,9 @@ from TG.blathernet.msgRouter import packet_v02 as packet
 #~ Definitions 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-class TestMsgEncode(unittest.TestCase):
+class TestForwardEncode(unittest.TestCase):
     advertId = advertIdForNS('testForward')
-    fwdAdvertId = advertIdForNS('testForwardToward')
+    fwdAdvertId = '0123456789abcdef'
     msgId = '2468'
 
     def _printTest(self, method, data, nCmds, cmdTests=()):
@@ -39,11 +39,13 @@ class TestMsgEncode(unittest.TestCase):
         print >> sf, '        data = ("%s").decode("hex")' % (hexDataLines,)
         print >> sf
         print >> sf, '        mobj, r = self.buildMsgObj(data, %s)' % (nCmds,)
-        print >> sf, '        print "%s cmds:", [e[0] for e in r]' % (method,)
         for idx, tst in enumerate(cmdTests):
             if tst[0] != True:
                 # test, verbatim
-                print >> sf, '        self.assertEqual(r[%d], (%r, %r))' % (i, tst[:1], tst[1:])
+                print >> sf, '        self.assertEqual(r[%d], (%r, %r))' % (idx, tst[0], tst[1:])
+
+        if not cmdTests:
+            print >> sf, '        print "%s cmds:", [e[0] for e in r]' % (method,)
 
         line = sys._getframe(1).f_lineno
         tests.append((line, method, sf.getvalue()))
@@ -84,30 +86,51 @@ class TestMsgEncode(unittest.TestCase):
             self.assertEqual((byte1 & 0x0f)+1, breadth)
 
         self.assertEqual(rr, fwdAdvertId or '')
+        return enc.packet
 
     def testForwardBestRoute(self):
-        self.dynTest(1, True)
-        self.dynTest(1, False)
+        r = self.dynTest(1, True)
+        self._printTest('testForwardBestRoute', r, 1, [('forward', 1, True, None)])
+    def testForwardBestRouteEx(self):
+        r = self.dynTest(1, False)
+        self._printTest('testForwardBestRouteEx', r, 1, [('forward', 1, False, None)])
 
     def testForwardAllRoutes(self):
-        self.dynTest(None, True)
-        self.dynTest(None, False)
+        r = self.dynTest(None, True)
+        self._printTest('testForwardAllRoutes', r, 1, [('forward', None, True, None)])
+    def testForwardAllRoutesEx(self):
+        r = self.dynTest(None, False)
+        self._printTest('testForwardAllRoutesEx', r, 1, [('forward', None, False, None)])
 
     def testForwardBest3Routes(self):
-        self.dynTest(3, True)
-        self.dynTest(3, False)
+        r = self.dynTest(3, True)
+        self._printTest('testForwardBest3Routes', r, 1, [('forward', 3, True, None)])
+    def testForwardBest3RoutesEx(self):
+        r = self.dynTest(3, False)
+        self._printTest('testForwardBest3RoutesEx', r, 1, [('forward', 3, False, None)])
+
+    #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
     def testForwardBestRouteFwdAdId(self):
-        self.dynTest(1, True, self.fwdAdvertId)
-        self.dynTest(1, False, self.fwdAdvertId)
+        r = self.dynTest(1, True, self.fwdAdvertId)
+        self._printTest('testForwardBestRouteFwdAdId', r, 1, [('forward', 1, True, self.fwdAdvertId)])
+    def testForwardBestRouteFwdAdIdEx(self):
+        r = self.dynTest(1, False, self.fwdAdvertId)
+        self._printTest('testForwardBestRouteFwdAdIdEx', r, 1, [('forward', 1, False, self.fwdAdvertId)])
 
     def testForwardAllRoutesFwdAdId(self):
-        self.dynTest(None, True, self.fwdAdvertId)
-        self.dynTest(None, False, self.fwdAdvertId)
+        r = self.dynTest(None, True, self.fwdAdvertId)
+        self._printTest('testForwardAllRoutesFwdAdId', r, 1, [('forward', None, True, self.fwdAdvertId)])
+    def testForwardAllRoutesFwdAdIdEx(self):
+        r = self.dynTest(None, False, self.fwdAdvertId)
+        self._printTest('testForwardAllRoutesFwdAdIdEx', r, 1, [('forward', None, False, self.fwdAdvertId)])
 
     def testForwardBest3RoutesFwdAdId(self):
-        self.dynTest(3, True, self.fwdAdvertId)
-        self.dynTest(3, False, self.fwdAdvertId)
+        r = self.dynTest(3, True, self.fwdAdvertId)
+        self._printTest('testForwardBest3RoutesFwdAdId', r, 1, [('forward', 3, True, self.fwdAdvertId)])
+    def testForwardBest3RoutesFwdAdIdEx(self):
+        r = self.dynTest(3, False, self.fwdAdvertId)
+        self._printTest('testForwardBest3RoutesFwdAdIdEx', r, 1, [('forward', 3, False, self.fwdAdvertId)])
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 #~ Unittest Main  
@@ -116,9 +139,9 @@ class TestMsgEncode(unittest.TestCase):
 if __name__=='__main__':
     tl = unittest.defaultTestLoader
     ts = unittest.TestSuite()
-    ts.addTest(tl.loadTestsFromTestCase(TestMsgEncode))
+    ts.addTest(tl.loadTestsFromTestCase(TestForwardEncode))
 
-    tests = None #[]
+    tests = []
 
     tr = ts.run(unittest.TestResult())
     if not tr.wasSuccessful():

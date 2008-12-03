@@ -38,11 +38,13 @@ class TestMsgEncode(unittest.TestCase):
         print >> sf, '        data = ("%s").decode("hex")' % (hexDataLines,)
         print >> sf
         print >> sf, '        mobj, r = self.buildMsgObj(data, %s)' % (nCmds,)
-        print >> sf, '        print "%s cmds:", [e[0] for e in r]' % (method,)
         for idx, tst in enumerate(cmdTests):
             if tst[0] != True:
                 # test, verbatim
-                print >> sf, '        self.assertEqual(r[%d], (%r, %r))' % (i, tst[:1], tst[1:])
+                print >> sf, '        self.assertEqual(r[%d], (%r, %r))' % (idx, tst[0], tst[1:])
+
+        if not cmdTests:
+            print >> sf, '        print "%s cmds:", [e[0] for e in r]' % (method,)
 
         line = sys._getframe(1).f_lineno
         tests.append((line, method, sf.getvalue()))

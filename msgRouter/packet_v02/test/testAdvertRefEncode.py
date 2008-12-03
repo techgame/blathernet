@@ -61,7 +61,7 @@ class TestAdvertRefEncode(unittest.TestCase):
         for idx, tst in enumerate(cmdTests):
             if tst[0] != True:
                 # test, verbatim
-                print >> sf, '        self.assertEqual(r[%d], (%r, %r))' % (i, tst[:1], tst[1:])
+                print >> sf, '        self.assertEqual(r[%d], (%r, %r))' % (idx, tst[:1], tst[1:])
             else:
                 print >> sf, '        adCmd, (adRefs, adRefKey) = r[%d]' % (idx,)
                 print >> sf, '        self.assertEqual(adCmd, %r)' % ('advertIdRefs',)
@@ -97,31 +97,31 @@ class TestAdvertRefEncode(unittest.TestCase):
             rr = rx[2+len(key):]
 
         self.assertEqual(rr, ''.join(adIdList))
-        return enc, adIdList, key
+        return enc.packet, adIdList, key
 
     def testOneRef(self):
-        enc, adIdList, key = self.dynTest(self.advertIdRefs[:1])
-        self._printTest('testOneRef', enc.packet, 1, [(True, len(adIdList), key)])
+        r, adIdList, key = self.dynTest(self.advertIdRefs[:1])
+        self._printTest('testOneRef', r, 1, [(True, len(adIdList), key)])
 
     def testOneRefKey(self):
-        enc, adIdList, key = self.dynTest(self.advertIdRefs[:1], 'akey')
-        self._printTest('testOneRefKey', enc.packet, 1, [(True, len(adIdList), key)])
+        r, adIdList, key = self.dynTest(self.advertIdRefs[:1], 'akey')
+        self._printTest('testOneRefKey', r, 1, [(True, len(adIdList), key)])
 
     def test5Ref(self):
-        enc, adIdList, key = self.dynTest(self.advertIdRefs[:5])
-        self._printTest('test5Ref', enc.packet, 1, [(True, len(adIdList), key)])
+        r, adIdList, key = self.dynTest(self.advertIdRefs[:5])
+        self._printTest('test5Ref', r, 1, [(True, len(adIdList), key)])
 
     def test5RefKey(self):
-        enc, adIdList, key = self.dynTest(self.advertIdRefs[:5], 'five')
-        self._printTest('test5RefKey', enc.packet, 1, [(True, len(adIdList), key)])
+        r, adIdList, key = self.dynTest(self.advertIdRefs[:5], 'five')
+        self._printTest('test5RefKey', r, 1, [(True, len(adIdList), key)])
 
     def test16Ref(self):
-        enc, adIdList, key = self.dynTest(self.advertIdRefs[:16])
-        self._printTest('test16Ref', enc.packet, 1, [(True, len(adIdList), key)])
+        r, adIdList, key = self.dynTest(self.advertIdRefs[:16])
+        self._printTest('test16Ref', r, 1, [(True, len(adIdList), key)])
 
     def test16RefKey(self):
-        enc, adIdList, key = self.dynTest(self.advertIdRefs[:16], 'sixteen')
-        self._printTest('test16RefKey', enc.packet, 1, [(True, len(adIdList), key)])
+        r, adIdList, key = self.dynTest(self.advertIdRefs[:16], 'sixteen')
+        self._printTest('test16RefKey', r, 1, [(True, len(adIdList), key)])
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 #~ Unittest Main  
