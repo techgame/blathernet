@@ -83,6 +83,8 @@ class MsgDispatch(object):
         self.meta.adRefs[key] = advertIds
         return advertIds
 
+    def end(self):
+        pass
     def forward(self, breadthLimit=1, whenUnhandled=True, fwdAdvertId=None):
         if whenUnhandled and self.meta.handled:
             return

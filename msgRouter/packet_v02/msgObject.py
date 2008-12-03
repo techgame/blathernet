@@ -45,6 +45,9 @@ class MsgObject_v02(MsgObjectListBase):
     def advertIdRefs(self, advertIds, key=None):
         self._cmd_('advertIdRefs', advertIds, key)
 
+    def end(self):
+        self._cmd_('end')
+
     #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     #~ Message and Topic Commands
     #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

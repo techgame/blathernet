@@ -28,8 +28,8 @@ Routing and Delivery Commands:
     Upper nibble (1rrr) => 
     Lower nibble (ffff) => 
 
-    0bR000 ffff :: Forward msg
-    0bR001 ---- :: XXX Unused
+    0bR000 ---- :: End msg boundry
+    0bR001 ffff :: Forward msg
     0bR010 ---- :: XXX Unused
     0bR011 ---- :: XXX Unused
 

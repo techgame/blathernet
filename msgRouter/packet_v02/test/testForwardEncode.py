@@ -69,7 +69,7 @@ class TestForwardEncode(unittest.TestCase):
         rx = enc.packet[21:]
 
         byte0 = ord(rx[:1])
-        self.assertEqual(byte0>>4, 0x0)
+        self.assertEqual(byte0>>4, 0x1)
         self.assertEqual(byte0 & 0x8, 0x8 if fwdAdvertId else 0x0)
         self.assertEqual(byte0 & 0x4, 0x4 if whenUnhandled else 0x0)
 

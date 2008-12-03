@@ -42,6 +42,11 @@ class MsgDecoder_v02(object):
     cmds = CommamdDispatch()
 
     @cmds.add('0000')
+    def cmd_end(self, cmd, flags, tip, mx):
+        mx.end()
+        return False
+
+    @cmds.add('0001')
     def cmd_forward(self, cmd, flags, tip, mx):
         breadthLimit = (flags & 0x3)
         # 0: all
@@ -63,7 +68,7 @@ class MsgDecoder_v02(object):
 
         mx.forward(breadthLimit, whenUnhandled, fwdAdvertId)
 
-    @cmds.add('0001', '0010', '0011')
+    @cmds.add('0010', '0011')
     def cmd_unused(self, cmd, flags, tip, mx):
         raise NotImplementedError('Unused: %r' % ((cmd, flags, tip, mx),))
 

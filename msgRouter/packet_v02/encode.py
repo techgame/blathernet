@@ -89,8 +89,11 @@ class MsgEncoder_v02(object):
             flags = len(advertIds)-1 # [1..16] => [0..15]
             self._writeCmd(cmd, flags, key, ''.join(advertIds))
 
+    def end(self):
+        self._writeCmd(0, 0)
+
     def forward(self, breadthLimit=1, whenUnhandled=True, fwdAdvertId=None):
-        cmd = 0x0; flags = 0
+        cmd = 0x1; flags = 0
 
         fwdBreadth = ''
         if breadthLimit in (0,1):

@@ -66,6 +66,7 @@ class TestMsgObject(unittest.TestCase):
         mobj.reply('0123456789abcdef')
         mobj.msg('a test')
         self.dynTestRoundtrip(mobj)
+        print mobj.cmdList
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 #~ Unittest Main  
