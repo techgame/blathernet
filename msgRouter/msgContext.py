@@ -18,6 +18,7 @@ class MsgContext(object):
     def __init__(self, addMsgObj):
         self.sendMsgObj = addMsgObj
         self.msgFilter = MsgAdvertIdBloomFilter()
+
         self.advertDB = AdvertDB()
         self.findAdvert = self.advertDB.find
 

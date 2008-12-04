@@ -26,15 +26,16 @@ class MsgQueue(object):
     def addMsgObj(self, mobj):
         self._dispQueue.append(mobj)
 
-    packetVersionDecoders = {}
-    packetVersionDecoders.update(msgDecoderMap)
+    pktDecoders = {}
+    pktDecoders.update(msgDecoderMap)
     def addPacket(self, packet, rinfo):
-        decoder = self.packetVersionDecoders.get(packet[:1])
-        if decoder is None:
-            return # unsupported packet, drop it
+        decoder = self.pktDecoders.get(packet[:1])
+        if decoder is not None:
+            mobj = decoder(packet, rinfo)
+            self._dispQueue.append(mobj)
 
-        mobj = decoder(packet, rinfo)
-        self._dispQueue.append(mobj)
+        else: # unsupported packet, drop it
+            return
 
     #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 

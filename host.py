@@ -29,6 +29,7 @@ class BlatherHost(BlatherObject):
             NetworkMgr = network.BlatherNetworkMgr,
             RouteMgr = routes.BlatherRouteMgr,
             RouteFactory = routes.BlatherRouteFactory,
+            MsgQueue = msgRouter.MsgQueue,
             )
     tasks = None
     network = None
@@ -54,15 +55,15 @@ class BlatherHost(BlatherObject):
         self.tasks = self._fm_.TaskMgr(self.name)
         self.network = self._fm_.NetworkMgr(self)
 
-        self.msgr = self._msgDispatch_tmp
+        self.msgQueue = self._fm_.MsgQueue(self)
 
-        self.routes = self._fm_.RouteMgr(self, self.msgr)
+        self.routes = self._fm_.RouteMgr(self, self.msgQueue.addPacket)
         self.routes.factory = self._fm_.RouteFactory(self)
 
-    def _msgDispatch_tmp(self, packet, addr, wrRoute):
-        print 'msgDispatch:', (len(packet), addr, wrRoute)
-
-    routeFactory = property(lambda self: self.routes.factory)
+    @property
+    def routeFactory(self):
+        warnings.warn('routeFactory is deprecated.  Use route.factory instead')
+        return self.routes.factory
 
     #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     #~ Task and timer processing
