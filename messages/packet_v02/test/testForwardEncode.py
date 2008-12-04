@@ -15,8 +15,7 @@ import unittest
 import textwrap
 import StringIO
 
-from TG.blathernet.adverts import advertIdForNS
-from TG.blathernet.msgRouter import packet_v02 as packet
+from TG.blathernet.messages import advertIdForNS, packet_v02 as packet
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 #~ Definitions 
@@ -136,12 +135,11 @@ class TestForwardEncode(unittest.TestCase):
 #~ Unittest Main  
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
+tests = None #[]
 if __name__=='__main__':
     tl = unittest.defaultTestLoader
     ts = unittest.TestSuite()
     ts.addTest(tl.loadTestsFromTestCase(TestForwardEncode))
-
-    tests = None #[]
 
     tr = ts.run(unittest.TestResult())
     if not tr.wasSuccessful():

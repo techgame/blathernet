@@ -10,7 +10,8 @@
 #~ Imports 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-import packet_v02
+from .adverts import advertIdForNS
+from . import packet_v02
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 #~ Mapping Values
@@ -21,5 +22,5 @@ msgDecoderList = [
     ]
 
 MsgObject = msgDecoderList[-1]
-msgDecoderMap = dict((e.msgVersion: e.newDecoder) for e in msgDecoderList)
+msgDecoderMap = dict((e.msgVersion, e.newDecoder) for e in msgDecoderList)
 

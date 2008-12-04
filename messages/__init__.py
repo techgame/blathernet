@@ -17,6 +17,8 @@ Packet Coding:
 #~ Imports 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
+from .adverts import advertIdForNS
+
 from .msgQueue import MsgQueue
 from .msgObject import MsgObject
 

@@ -14,10 +14,10 @@ import uuid
 import md5
 
 from .base import BlatherObject, kvobserve
-from . import msgRouter
-from . import routes 
-from . import network
 from . import taskMgrs
+from . import network
+from . import routes 
+from . import messages
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 #~ Definitions 
@@ -29,7 +29,7 @@ class BlatherHost(BlatherObject):
             NetworkMgr = network.BlatherNetworkMgr,
             RouteMgr = routes.BlatherRouteMgr,
             RouteFactory = routes.BlatherRouteFactory,
-            MsgQueue = msgRouter.MsgQueue,
+            MsgQueue = messages.MsgQueue,
             )
     tasks = None
     network = None

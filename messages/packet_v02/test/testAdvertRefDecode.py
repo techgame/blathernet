@@ -12,8 +12,7 @@
 
 import unittest
 
-from TG.blathernet.adverts import advertIdForNS
-from TG.blathernet.msgRouter import packet_v02 as packet
+from TG.blathernet.messages import advertIdForNS, packet_v02 as packet
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 #~ Definitions 

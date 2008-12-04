@@ -13,7 +13,7 @@
 import os
 from hashlib import md5
 
-from ..adverts import advertIdForNS
+from .adverts import advertIdForNS
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 #~ Definitions 
