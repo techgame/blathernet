@@ -32,9 +32,16 @@ class AdvertLookup(dict):
 class AdvertDB(object):
     AdvertEntry = AdvertEntry
     AdvertLookup = AdvertLookup
+
     def __init__(self):
         self._entries = self.AdvertLookup(self.AdvertEntry)
 
+    #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    #~ Dictionary-like interface
+    #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+    def __len__(self):
+        return len(self._entries)
     def __contains__(self, adKey):
         return adKey in self._entries
     def __getitem__(self, adKey):
@@ -59,19 +66,33 @@ class AdvertDB(object):
         return e
 
     #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    #~ Routes
+    #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-    def addRoute(self, adKey, wrRoute):
+    def addRoute(self, adKey, route):
         e = self[adKey]
-        e.addRoute(wrRoute)
+        e.addRoute(route)
+        return e
+    def removeRoute(self, adKey, route):
+        e = self[adKey]
+        e.removeRoute(route)
         return e
 
-    def addFn(self, adKey, fn):
-        e = self[adKey]
-        e.addFn(fn)
-        return e
-    add = addFn
+    def addRouteForAdverts(self, route, advertIds):
+        if route is not None:
+            for adId in advertIds:
+                self.addRoute(adId, route)
 
-    def on(self, adKey, fn=None):
-        e = self[adKey]
-        return e.on(fn)
+    #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    #~ Responders
+    #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+    def addResponder(self, adKey, advertResponder):
+        return self[adKey].addResponder(advertResponder)
+
+    def removeResponder(self, adKey, advertResponder):
+        return self[adKey].removeResponder(advertResponder)
+
+    def addResponderFn(self, adKey, msgfn):
+        return self[adKey].addResponderFn(msgfn)
 

@@ -12,20 +12,24 @@
 
 from collections import defaultdict
 
+from .responder import FunctionAdvertResponder, AdvertResponderList
+
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 #~ Definitions 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 class AdvertEntry(object):
-    __slots__ = ('_routes', '_fns')
+    __slots__ = ('_routes', '_responder')
 
     def __init__(self, adKey):
         self._routes = None
-        self._fns = None
+        self._responder = None
 
     def isAdvertEntry(self): 
         return True
 
+    #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    #~ Routes
     #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
     def addRoute(self, wrRoute):
@@ -34,6 +38,9 @@ class AdvertEntry(object):
             routes = defaultdict(int)
             self._routes = routes
         routes[wrRoute] += 1
+
+    def removeRoute(self, wrRoute):
+        return routes.pop(wrRoute, False)
 
     def getRoutes(self, limit=None):
         routes = self._routes or []
@@ -45,22 +52,43 @@ class AdvertEntry(object):
         return routes
 
     #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    #~ Responders
+    #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-    def addFn(self, fn=None):
-        fns = self._fns
-        if fns is None:
-            fns = set()
-            self._fns = fns
-        fns.add(fn)
-    add = addFn
+    def addResponderFn(self, msgfn):
+        fnResponder = FunctionAdvertResponder(msgfn)
+        return self.addResponder(fnResponder)
 
-    def on(self, fn=None):
-        if fn is not None:
-            self.addFn(fn)
-            return fn
+    def addResponder(self, aResponder):
+        if not aResponder.isAdvertResponder():
+            raise ValueError("Can only add advert responders that comply with IAdvertResponder")
+
+        current = self._responder
+        if current is None:
+            self._responder = aResponder
         else:
-            return self.on
+            if current.isAdvertResponderCollection():
+                current.addResponder(aResponder)
+            else: # promote it to be a collection
+                self._responder = AdvertResponderList(current, aResponder)
 
-    def iterHandlers(self):
-        return iter(self._fns or [])
+        return aResponder
+
+    def removeResponder(self, aResponder):
+        current = self._responder
+        if current is None: 
+            return False
+
+        elif current is aResponder: 
+            self._responder = None
+            return True
+
+        elif current.isAdvertResponderCollection():
+            return current.removeResponder(aResponder)
+
+        else: return False
+
+    def getResponder(self):
+        return self._responder
+    responder = property(getResponder)
 
