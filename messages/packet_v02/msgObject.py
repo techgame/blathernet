@@ -10,55 +10,27 @@
 #~ Imports 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-from ..msgObjectBase import MsgObjectListBase, iterMsgId
+from ..packet_base import MsgCodecBase, iterMsgId
+from ..msgCommand import MsgCommandObject
 
-from . import encode, decode
+from .encode import MsgEncoder_v02
+from .decode import MsgDecoder_v02
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 #~ Message Object, v02
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-class MsgObject_v02(MsgObjectListBase):
+class MsgCodec_v02(MsgCodecBase):
+    newEncoder = MsgEncoder_v02
+    newDecoder = MsgDecoder_v02
+
+class MsgObject_v02(MsgCommandObject):
     msgVersion = '\x02'
-    newMsgId = iterMsgId(4).next
-    Encoder = encode.MsgEncoder_v02
-    Decoder = decode.MsgDecoder_v02
+    msgIdLen = 4
+    newMsgId = iterMsgId(msgIdLen).next
 
-    #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-    #~ Routing and Delivery Commands
-    #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+MsgCodec_v02().assignTo(MsgObject_v02)
 
-    def clearForwards(self):
-        self._clear_cmd_('forward')
-    def forward(self, breadthLimit=1, whenUnhandled=True, fwdAdvertId=None):
-        self._cmd_('forward', breadthLimit, whenUnhandled, fwdAdvertId)
-
-    def clearAdvertRefs(self):
-        self._clear_cmd_('advertIdRefs')
-
-    def reply(self, replyAdvertIds):
-        if isinstance(replyAdvertIds, str):
-            replyAdvertIds = [replyAdvertIds]
-        self._cmd_('reply', replyAdvertIds)
-    def refs(self, advertIds, key=None):
-        return self.advertIdRefs(advertIds, key)
-    def advertIdRefs(self, advertIds, key=None):
-        self._cmd_('advertIdRefs', advertIds, key)
-
-    def end(self):
-        self._cmd_('end')
-
-    #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-    #~ Message and Topic Commands
-    #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-    def clearMsgs(self):
-        self._clear_cmd_('msg')
-    def msg(self, body, fmt=0, topic=None):
-        self._cmd_('msg', body, fmt, topic)
-    
-    def metaMsg(self, body, fmt=0):
-        return self.msg(body, fmt, topic)
-
+MsgCodec = MsgCodec_v02
 MsgObject = MsgObject_v02
 

@@ -14,114 +14,119 @@
 #~ Definitions 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-class MsgDispatch(object):
-    ctx = None # flyweighted
-
+class MsgMetaData(object):
     advertId = None
     msgId = None
-    rinfo = None
+    adRefs = None
+
+    src = None
+    fwd = None
+
+    handled = False
+    
+    def __init__(self, advertId, msgId, src):
+        src = PacketNS(src)
+
+        self.advertId = advertId
+        self.msgId = msgId
+        self.src = src
+
+    _fwdPacket = None
+    def getFwdPacket(self):
+        pkt = self._fwdPacket
+        if pkt is None:
+            raise NotImplementedError("TODO")
+        return pkt
+    fwdPacket = property(getFwdPacket)
+
+    def replyObj(self, replyId=None):
+        if replyId is None:
+            replyId = self.advertId
+
+        raise NotImplementedError("TODO")
+
+    def forwarded(self, fwdAdvertId):
+        pass
+
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+class MsgDispatch(object):
+    MsgMetaData = MsgMetaData 
+    ctx = None
     meta = None
 
-    _mobj = None
-    _packet = None
-
+    #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    #~ Msg Builder Interface
     #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-    def sourceMsgObject(self, mobj):
-        self.rinfo = mobj.rinfo
-        self._mobj = mobj
-        return self
-
-    def sourcePacket(self, packet, rinfo):
-        self.rinfo = rinfo
-        self._packet = packet
-        return self
-
-    def getFwdPacket(self):
-        fwdPacket = self._packet
-        if fwdPacket is None:
-            fwdPacket = self._mobj.getFwdPacket()
-            self._packet = fwdPacket
-        return fwdPacket
-
-    #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-    def advertMsgId(self, advertId, msgId):
+    def advertMsgId(self, advertId, msgId, src=None):
         adEntry = self.advertMsgEntry(advertId, msgId)
         if adEntry is None:
             return False
 
         self.adEntry = adEntry
-        
-        self.meta = meta = objectns()
-        meta.rinfo = self.rinfo
-        meta.advertId = advertId
-        meta.msgId = msgId
-        meta.replyId = None
-        meta.adRefs = {}
-        meta.handled = False
-
-    #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-    #~ Routing and Delivery Commands ~~~~~~~~~~~~~~~~~~~~
-    #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-    def reply(self, replyAdvertIds):
-        if isinstance(replyAdvertIds, str):
-            replyAdvertIds = [replyAdvertIds]
-
-        self.meta.replyId = replyAdvertIds[0] if replyAdvertIds else None
-        self.advertIdRefs(replyAdvertIds, True)
-
-    def refs(self, advertIds, key=None):
-        return self.advertIdRefs(advertIds, key)
-    def advertIdRefs(self, advertIds, key=None):
-        rinfo = self.rinfo
-        if rinfo is None: return
-        if rinfo.route is None: return
-
-        self.ctx.addRouteForAdverts(rinfo.route, advertIds)
-        self.meta.adRefs[key] = advertIds
-        return advertIds
+        self.meta = self.MsgMetaData(advertId, msgId, src)
+        return self
 
     def end(self):
-        pass
+        return False
+
     def forward(self, breadthLimit=1, whenUnhandled=True, fwdAdvertId=None):
-        if whenUnhandled and self.meta.handled:
+        meta = self.meta
+        meta.forwarded(fwdAdvertId)
+
+        if whenUnhandled and meta.handled:
             return
 
         if fwdAdvertId is not None:
-            adEntry = self.ctx.findAdvert(fwdAdvertId, False)
-            if adEntry is None:
-                return
-        else: 
-            adEntry = self.adEntry
+            fwdAdEntry = self.ctx.findAdvert(fwdAdvertId, False)
+        else: fwdAdEntry = self.adEntry
+        if fwdAdEntry is None: 
+            return
 
-        fwdPacket = self.fwdPacket
+        fwdPacket = meta.fwd.packet
         if fwdPacket is None:
             return
 
-        for route in adEntry.getRoutes(breadthLimit):
+        for route in fwdAdEntry.getRoutes(breadthLimit):
             route.sendDispatch(fwdPacket)
 
-    #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-    #~ Message Commands with fmt and topic ~~~~~~~~~~~~~~
-    #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    def replyRef(self, replyAdvertIds):
+        if isinstance(replyAdvertIds, str):
+            replyAdvertIds = [replyAdvertIds]
+
+        meta = self.meta
+        meta.adIds[True] = replyAdvertIds
+        meta.replyId = replyAdvertIds[0] if replyAdvertIds else None
+        route = meta.src.route
+        if route is not None:
+            self.ctx.addRouteForAdverts(route, replyAdvertIds)
+
+    def adRefs(self, advertIds, key=None):
+        meta = self.meta
+        meta.adIds[key] = replyAdvertIds
+
+        route = meta.src.route
+        if route is not None:
+            self.ctx.addRouteForAdverts(route, advertIds)
+        return advertIds
 
     def msg(self, body, fmt=0, topic=None):
+        meta = self.meta
         iterFns = iter(self.adEntry.iterHandlers())
 
-        handled = 0
         while True:
             try:
                 for fn in iterFns:
                     r = fn(body, fmt, topic, meta)
                     if r is not False:
-                        handled += 1
+                        meta.handled += 1
             except Exception, e:
                 traceback.print_exc()
             else:
                 # complete, break out
                 break
 
-        self.meta.handled += handled
+    def complete(self):
+        pass
 

@@ -28,14 +28,14 @@ class TestMsgObject(unittest.TestCase):
     def dynTestRoundtrip(self, mobj):
         mpkt = mobj.encode()
 
-        newMobj = packet.MsgObject.fromPacket(mpkt)
+        newMobj = packet.MsgObject.fromData(mpkt)
         newMpkt = newMobj.encode()
 
         self.assertEqual(len(mobj.cmdList), len(newMobj.cmdList))
         for idx, (sc, nc) in enumerate(zip(mobj.cmdList, newMobj.cmdList)):
             self.assertEqual(sc, nc)
 
-        self.assertEqual(mpkt, newMpkt)
+        self.assertEqual(mpkt.packet, newMpkt.packet)
         return newMobj
 
     def testEmpty(self):
@@ -55,14 +55,14 @@ class TestMsgObject(unittest.TestCase):
 
     def testAdvertRef(self):
         mobj = packet.MsgObject(self.advertId)
-        mobj.refs(['0123456789abcdef'])
+        mobj.adRefs(['0123456789abcdef'])
         mobj.msg('a test')
         self.dynTestRoundtrip(mobj)
 
     def testStd(self):
         mobj = packet.MsgObject(self.advertId)
         mobj.forward()
-        mobj.reply('0123456789abcdef')
+        mobj.replyRef('0123456789abcdef')
         mobj.msg('a test')
         self.dynTestRoundtrip(mobj)
 

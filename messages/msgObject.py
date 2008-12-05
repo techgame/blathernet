@@ -21,6 +21,7 @@ msgDecoderList = [
     packet_v02.MsgObject,
     ]
 
+msgDecoderMap = dict((e.msgVersion, e.codec.newDecoder) for e in msgDecoderList)
+
 MsgObject = msgDecoderList[-1]
-msgDecoderMap = dict((e.msgVersion, e.newDecoder) for e in msgDecoderList)
 

@@ -31,9 +31,11 @@ class MsgDecoder_v02(object):
     msgVersion = '\x02'
     msgIdLen = 4
 
-    def __init__(self, packet, rinfo=None):
-        self.packet = packet
-        self.rinfo = rinfo
+    def __init__(self, src):
+        if not isinstance(src.packet, str):
+            kname = src.packet.__class__.__name__
+            raise ValueError("Parameter src.packet is not a str: %s" % kname)
+        self.src = src
 
     #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     #~ Routing and Delivery Commands
@@ -73,7 +75,7 @@ class MsgDecoder_v02(object):
         raise NotImplementedError('Unused: %r' % ((cmd, flags, tip, mx),))
 
     @cmds.add('0100', '0101')
-    def cmd_advertIdRefs(self, cmd, flags, tip, mx):
+    def cmd_adRefs(self, cmd, flags, tip, mx):
         if cmd & 0x1:
             key = ord(tip.read(1))
             key = tip.read(key)
@@ -81,13 +83,13 @@ class MsgDecoder_v02(object):
 
         count = flags + 1 # [0..15] => [1..16]
         advertIds = [tip.read(16) for e in xrange(count)]
-        mx.advertIdRefs(advertIds, key)
+        mx.adRefs(advertIds, key)
 
     @cmds.add('0110')
-    def cmd_reply(self, cmd, flags, tip, mx):
+    def cmd_replyRef(self, cmd, flags, tip, mx):
         count = flags + 1 # [0..15] => [1..16]
         advertIds = [tip.read(16) for e in xrange(count)]
-        mx.reply(advertIds)
+        mx.replyRef(advertIds)
 
     @cmds.add('0111')
     def cmd_unused(self, cmd, flags, tip, mx):
@@ -157,25 +159,23 @@ class MsgDecoder_v02(object):
     #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
     def executeOn(self, mxRoot):
-        tip = StringIO(self.packet)
+        tip = StringIO(self.src.packet)
 
-        version = tip.read(1)
-        if version != self.msgVersion:
-            raise ValueError("Version mismatch! packet: %s class: %s" % (version, self.msgVersion))
-
-        mx = mxRoot.sourcePacket(self.packet, self.rinfo)
-        if mx is None:
-            return None
+        pktVersion = tip.read(1)
+        if pktVersion != self.msgVersion:
+            raise ValueError("Version mismatch! packet: %x class: %x" % (ord(pktVersion), ord(self.msgVersion)))
 
         msgId = tip.read(self.msgIdLen)
         advertId = tip.read(16)
-        if mx.advertMsgId(advertId, msgId) is False:
-            return None
 
-        for cmdFn, cmdId, flags in self.iterCmds(tip):
-            if cmdFn(self, cmdId, flags, tip, mx) is False:
-                return None
-        return mx
+        mx = mxRoot.advertMsgId(advertId, msgId, self.src)
+        if mx:
+            for cmdFn, cmdId, flags in self.iterCmds(tip):
+                r = cmdFn(self, cmdId, flags, tip, mx)
+                if r is False:
+                    break
+
+            return mx.complete()
         
     #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 

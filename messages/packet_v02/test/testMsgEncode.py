@@ -57,7 +57,7 @@ class TestMsgEncode(unittest.TestCase):
         if body is not None:
             enc.msg(body, fmt, topic)
 
-        return enc.packet
+        return enc.complete().packet
 
     def testEmpty(self):
         r = self.buildMsg(None)

@@ -18,36 +18,35 @@ from .msgObject import msgDecoderMap
 
 class MsgQueue(object):
     def __init__(self):
-        self._dispQueue = []
+        self._fifo = []
         self.msgCtx = MsgContext(self.addMsgObj)
 
     #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-    def addMsgObj(self, mobj):
-        self._dispQueue.append(mobj)
+    def add(self, mobj):
+        self._fifo.append(mobj)
 
     pktDecoders = {}
     pktDecoders.update(msgDecoderMap)
-    def addPacket(self, packet, rinfo):
-        decoder = self.pktDecoders.get(packet[:1])
-        if decoder is not None:
-            mobj = decoder(packet, rinfo)
-            self._dispQueue.append(mobj)
-
-        else: # unsupported packet, drop it
+    def addPacket(self, pkt):
+        pktDecoder = self.pktDecoders.get(packet[:1])
+        if pktDecoder is None:
+            # unsupported packet, drop it
             return
+
+        mobj = pktDecoder(pkt)
+        self.add(mobj)
 
     #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
     def process(self):
-        dispQueue = self._dispQueue
-        self._dispQueue = []
+        queue = self._fifo
+        self._fifo = []
 
         ctx = self.msgCtx
-        while recvQueue:
-            mobj = dispQueue.pop()
+        while queue:
+            mobj = queue.pop()
 
             mx = self.MsgDispatch(ctx)
             mobj.executeOn(mx)
-
 

@@ -25,7 +25,7 @@ class TestAdvertRefEncode(unittest.TestCase):
     advertId = advertIdForNS('testAdvertRefs')
     msgId = '5678'
 
-    advertIdRefs = [
+    adRefList = [
         "098f6bcd4621d373cade4e832627b4f6",
         "b6f1208de7a06b650e0e502dec1a0421",
         "88c9f875b7cb417e8a6ed65fc3596aeb",
@@ -43,7 +43,7 @@ class TestAdvertRefEncode(unittest.TestCase):
         "b2a6c44eba3dbc99f4fb386c60b996c0",
         "0197961ffce1c3b7a9ef7e50f447e27d",
         ]
-    advertIdRefs = [e.decode('hex') for e in advertIdRefs]
+    adRefList = [e.decode('hex') for e in adRefList]
 
     def _printTest(self, method, data, nCmds, cmdTests=()):
         if tests is None: return
@@ -63,7 +63,7 @@ class TestAdvertRefEncode(unittest.TestCase):
                 print >> sf, '        self.assertEqual(r[%d], (%r, %r))' % (idx, tst[:1], tst[1:])
             else:
                 print >> sf, '        adCmd, (adRefs, adRefKey) = r[%d]' % (idx,)
-                print >> sf, '        self.assertEqual(adCmd, %r)' % ('advertIdRefs',)
+                print >> sf, '        self.assertEqual(adCmd, %r)' % ('adRefs',)
                 print >> sf, '        self.assertEqual(len(adRefs), %r)' % (tst[1],)
                 print >> sf, '        self.assertEqual(adRefKey, %r)' % (tst[2],)
             print >> sf
@@ -83,7 +83,7 @@ class TestAdvertRefEncode(unittest.TestCase):
         if enc is None:
             enc = self.buildEnc()
 
-        enc.advertIdRefs(adIdList, key)
+        enc.adRefs(adIdList, key)
         rx = enc.packet[21:]
 
         if not key:
@@ -99,27 +99,27 @@ class TestAdvertRefEncode(unittest.TestCase):
         return enc.packet, adIdList, key
 
     def testOneRef(self):
-        r, adIdList, key = self.dynTest(self.advertIdRefs[:1])
+        r, adIdList, key = self.dynTest(self.adRefList[:1])
         self._printTest('testOneRef', r, 1, [(True, len(adIdList), key)])
 
     def testOneRefKey(self):
-        r, adIdList, key = self.dynTest(self.advertIdRefs[:1], 'akey')
+        r, adIdList, key = self.dynTest(self.adRefList[:1], 'akey')
         self._printTest('testOneRefKey', r, 1, [(True, len(adIdList), key)])
 
     def test5Ref(self):
-        r, adIdList, key = self.dynTest(self.advertIdRefs[:5])
+        r, adIdList, key = self.dynTest(self.adRefList[:5])
         self._printTest('test5Ref', r, 1, [(True, len(adIdList), key)])
 
     def test5RefKey(self):
-        r, adIdList, key = self.dynTest(self.advertIdRefs[:5], 'five')
+        r, adIdList, key = self.dynTest(self.adRefList[:5], 'five')
         self._printTest('test5RefKey', r, 1, [(True, len(adIdList), key)])
 
     def test16Ref(self):
-        r, adIdList, key = self.dynTest(self.advertIdRefs[:16])
+        r, adIdList, key = self.dynTest(self.adRefList[:16])
         self._printTest('test16Ref', r, 1, [(True, len(adIdList), key)])
 
     def test16RefKey(self):
-        r, adIdList, key = self.dynTest(self.advertIdRefs[:16], 'sixteen')
+        r, adIdList, key = self.dynTest(self.adRefList[:16], 'sixteen')
         self._printTest('test16RefKey', r, 1, [(True, len(adIdList), key)])
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

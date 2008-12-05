@@ -57,7 +57,11 @@ Messaging Commands:
 #~ Imports 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-from .msgObject import MsgObject_v02, MsgObject
+from .msgObject import MsgObject_v02, MsgObject, MsgCodec
 from .encode import MsgEncoder_v02, MsgEncoder
 from .decode import MsgDecoder_v02, MsgDecoder
+
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+#~ Definitions 
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 

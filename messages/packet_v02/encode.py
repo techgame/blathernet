@@ -14,13 +14,13 @@ from functools import partial
 from struct import pack, unpack, calcsize
 from StringIO import StringIO
 
-from ..msgObjectBase import iterMsgId, advertIdForNS
+from ..packet_base import MsgEncoderBase, iterMsgId
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 #~ Definitions 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-class MsgEncoder_v02(object):
+class MsgEncoder_v02(MsgEncoderBase):
     msgVersion = '\x02'
     msgIdLen = 4
     newMsgId = iterMsgId(msgIdLen).next
@@ -29,20 +29,15 @@ class MsgEncoder_v02(object):
         return self.tip.getvalue()
     packet = property(getPacket)
 
-    def advertNS(self, advertNS, msgId=None):
-        advertId = advertIdForNS(advertNS)
-        return self.advertMsgId(advertId, msgId)
+    def getPacketNS(self):
+        return self.newPacketNS(self.packet)
+    pkt = property(getPacketNS)
 
     #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-    def sourceMsgObject(self, mobj):
-        return self
-    def sourcePacket(self, packet, rinfo):
-        return self
-
+    #~ Msg Builder Interface
     #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-    def advertMsgId(self, advertId, msgId=None):
+    def advertMsgId(self, advertId, msgId=None, src=None):
         tip = StringIO()
         tip.write(self.msgVersion)
 
@@ -51,46 +46,23 @@ class MsgEncoder_v02(object):
             msgId = self.newMsgId()
         elif len(msgId) < msgIdLen:
             raise ValueError("MsgId must have a least %s bytes" % (msgIdLen,))
-        tip.write(msgId[:msgIdLen])
+
+        msgId = msgId[:msgIdLen]
+        self.msgId = msgId
+        tip.write(msgId)
 
         if len(advertId) != 16:
             raise ValueError("AdvertId must be 16 bytes long")
         tip.write(advertId)
 
         self.tip = tip
+        return self
 
     #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-    #~ Routing and Delivery Commands
-    #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-    def reply(self, replyAdvertIds):
-        if isinstance(replyAdvertIds, str):
-            replyAdvertIds = [replyAdvertIds]
-        return self.advertIdRefs(replyAdvertIds, True)
-
-    def refs(self, advertIds, key=None):
-        return self.advertIdRefs(advertIds, key)
-    def advertIdRefs(self, advertIds, key=None):
-        cmd = 0x4; flags = 0
-        if key is not None:
-            if key == True:
-                cmd |= 0x2
-                key = ''
-            else:
-                cmd |= 0x1
-                key = chr(len(key))+key
-        else: key = ''
-
-        advertIds = self._verifyAdvertIds(advertIds)
-        if len(advertIds) > 16:
-            raise ValueError("AdvertIds list must not contain more than 8 references")
-
-        if advertIds:
-            flags = len(advertIds)-1 # [1..16] => [0..15]
-            self._writeCmd(cmd, flags, key, ''.join(advertIds))
 
     def end(self):
         self._writeCmd(0, 0)
+        return False
 
     def forward(self, breadthLimit=1, whenUnhandled=True, fwdAdvertId=None):
         cmd = 0x1; flags = 0
@@ -119,6 +91,30 @@ class MsgEncoder_v02(object):
         else: fwdAdvertId = ''
 
         self._writeCmd(cmd, flags, fwdBreadth, fwdAdvertId)
+
+    def replyRef(self, replyAdvertIds):
+        if isinstance(replyAdvertIds, str):
+            replyAdvertIds = [replyAdvertIds]
+        return self.adRefs(replyAdvertIds, True)
+
+    def adRefs(self, advertIds, key=None):
+        cmd = 0x4; flags = 0
+        if key is not None:
+            if key == True:
+                cmd |= 0x2
+                key = ''
+            else:
+                cmd |= 0x1
+                key = chr(len(key))+key
+        else: key = ''
+
+        advertIds = self._verifyAdvertIds(advertIds)
+        if len(advertIds) > 16:
+            raise ValueError("AdvertIds list must not contain more than 8 references")
+
+        if advertIds:
+            flags = len(advertIds)-1 # [1..16] => [0..15]
+            self._writeCmd(cmd, flags, key, ''.join(advertIds))
 
     #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     #~ Message and Topic Commands
@@ -172,7 +168,6 @@ class MsgEncoder_v02(object):
             cmd = 0x9
 
         fmt, fmtPack = self._msgPackFmt[cmd]
-        #print (cmd, fmt, topic, topicEx)
         prefix = fmtPack(lenBody, topic)
         return cmd, prefix+topicEx
 
@@ -182,6 +177,9 @@ class MsgEncoder_v02(object):
 
         cmd, prefix = self._msgCmdPrefix(len(body), topic)
         self._writeCmd(cmd, fmt, prefix, body)
+
+    def complete(self):
+        return self.getPacketNS()
 
     #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     #~ Utils

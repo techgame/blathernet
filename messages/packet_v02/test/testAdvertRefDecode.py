@@ -22,7 +22,7 @@ class TestAdvertRefDecode(unittest.TestCase):
     advertId = advertIdForNS('testAdvertRefs')
     msgId = '5678'
 
-    advertIdRefs = [
+    adRefList = [
         "098f6bcd4621d373cade4e832627b4f6",
         "b6f1208de7a06b650e0e502dec1a0421",
         "88c9f875b7cb417e8a6ed65fc3596aeb",
@@ -40,10 +40,10 @@ class TestAdvertRefDecode(unittest.TestCase):
         "b2a6c44eba3dbc99f4fb386c60b996c0",
         "0197961ffce1c3b7a9ef7e50f447e27d",
         ]
-    advertIdRefs = [e.decode('hex') for e in advertIdRefs]
+    adRefList = [e.decode('hex') for e in adRefList]
 
     def buildMsgObj(self, data, nCmds):
-        mobj = packet.MsgObject.fromPacket(data)
+        mobj = packet.MsgObject.fromData(data)
         r = list(mobj.cmdList)
         self.assertEqual(len(r),  nCmds)
         return mobj, r
@@ -53,9 +53,9 @@ class TestAdvertRefDecode(unittest.TestCase):
         mobj, r = self.buildMsgObj(data, 1)
 
         adCmd, (adRefs, adRefKey) = r[0]
-        self.assertEqual(adCmd, "advertIdRefs")
+        self.assertEqual(adCmd, "adRefs")
         self.assertEqual(len(adRefs), 1)
-        self.assertEqual(adRefs, self.advertIdRefs[:1])
+        self.assertEqual(adRefs, self.adRefList[:1])
         self.assertEqual(adRefKey, None)
 
 
@@ -64,9 +64,9 @@ class TestAdvertRefDecode(unittest.TestCase):
         mobj, r = self.buildMsgObj(data, 1)
 
         adCmd, (adRefs, adRefKey) = r[0]
-        self.assertEqual(adCmd, "advertIdRefs")
+        self.assertEqual(adCmd, "adRefs")
         self.assertEqual(len(adRefs), 1)
-        self.assertEqual(adRefs, self.advertIdRefs[:1])
+        self.assertEqual(adRefs, self.adRefList[:1])
         self.assertEqual(adRefKey, 'akey')
 
 
@@ -76,9 +76,9 @@ class TestAdvertRefDecode(unittest.TestCase):
         mobj, r = self.buildMsgObj(data, 1)
 
         adCmd, (adRefs, adRefKey) = r[0]
-        self.assertEqual(adCmd, "advertIdRefs")
+        self.assertEqual(adCmd, "adRefs")
         self.assertEqual(len(adRefs), 5)
-        self.assertEqual(adRefs, self.advertIdRefs[:5])
+        self.assertEqual(adRefs, self.adRefList[:5])
         self.assertEqual(adRefKey, None)
 
 
@@ -88,9 +88,9 @@ class TestAdvertRefDecode(unittest.TestCase):
         mobj, r = self.buildMsgObj(data, 1)
 
         adCmd, (adRefs, adRefKey) = r[0]
-        self.assertEqual(adCmd, "advertIdRefs")
+        self.assertEqual(adCmd, "adRefs")
         self.assertEqual(len(adRefs), 5)
-        self.assertEqual(adRefs, self.advertIdRefs[:5])
+        self.assertEqual(adRefs, self.adRefList[:5])
         self.assertEqual(adRefKey, 'five')
 
 
@@ -103,9 +103,9 @@ class TestAdvertRefDecode(unittest.TestCase):
         mobj, r = self.buildMsgObj(data, 1)
 
         adCmd, (adRefs, adRefKey) = r[0]
-        self.assertEqual(adCmd, "advertIdRefs")
+        self.assertEqual(adCmd, "adRefs")
         self.assertEqual(len(adRefs), 16)
-        self.assertEqual(adRefs, self.advertIdRefs[:16])
+        self.assertEqual(adRefs, self.adRefList[:16])
         self.assertEqual(adRefKey, None)
 
 
@@ -118,9 +118,9 @@ class TestAdvertRefDecode(unittest.TestCase):
         mobj, r = self.buildMsgObj(data, 1)
 
         adCmd, (adRefs, adRefKey) = r[0]
-        self.assertEqual(adCmd, "advertIdRefs")
+        self.assertEqual(adCmd, "adRefs")
         self.assertEqual(len(adRefs), 16)
-        self.assertEqual(adRefs, self.advertIdRefs[:16])
+        self.assertEqual(adRefs, self.adRefList[:16])
         self.assertEqual(adRefKey, 'sixteen')
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
