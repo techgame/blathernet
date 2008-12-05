@@ -18,17 +18,7 @@ from TG.kvObserving import KVObject, KVProperty, OBFactoryMap, kvobserve
 #~ Definitions 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-class BlatherObject(KVObject):
-    _fm_ = OBFactoryMap()
-
-    def asStrongProxy(self, cb=None): return self
-    def asStrongRef(self, cb=None): return (lambda: self)
-    def asWeakProxy(self, cb=None): return weakref.proxy(self, cb)
-    def asWeakRef(self, cb=None): return weakref.ref(self, cb)
-
-#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-class objectns(object):
+class ObjectNS(object):
     def __init__(self, *args, **kw):
         self.update(*args, **kw)
 
@@ -72,7 +62,7 @@ class objectns(object):
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-class PacketNS(objectns):
+class PacketNS(ObjectNS):
     packet = None
 
     def __init__(self, packet=None, **kw):
