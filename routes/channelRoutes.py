@@ -33,10 +33,10 @@ class BlatherChannelRoute(BasicBlatherRoute):
 
     #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-    def sendDispatch(self, packet):
-        self.channel().send(packet, self.addrOutbound)
+    def sendDispatch(self, data):
+        self.channel().send(data, self.addrOutbound)
 
-    def _sendDispatchNoop(self, packet):
+    def _sendDispatchNoop(self, data):
         return False
 
     #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

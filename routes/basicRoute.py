@@ -13,7 +13,7 @@
 import time
 import weakref
 
-from ..base import BlatherObject, objectns
+from ..base import BlatherObject, PacketNS
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 #~ Routes
@@ -22,17 +22,17 @@ from ..base import BlatherObject, objectns
 class BasicBlatherRoute(BlatherObject):
     wrRoute = None
     routeMgr = None
-    dispatch = None
+    dispatchPacket = None
 
-    def __init__(self, dispatch=None):
+    def __init__(self, dispatchPacket=None):
         self.wrRoute = weakref.ref(self)
-        self.dispatch = dispatch
+        self.dispatchPacket = dispatchPacket
 
     def assignRouteManager(self, routeMgr):
         routeMgr = routeMgr.asWeakProxy()
         self.routeMgr = routeMgr
-        if self.dispatch is None:
-            self.dispatch = routeMgr.getDispatchForRoute(self)
+        if self.dispatchPacket is None:
+            self.dispatchPacket = routeMgr.getDispatchForRoute(self)
 
     #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -42,14 +42,16 @@ class BasicBlatherRoute(BlatherObject):
 
     #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-    def sendDispatch(self, packet):
+    def sendDispatch(self, data):
         raise NotImplementedError('Subclass Responsibility: %r' % (self,))
 
-    newRecvInfo = objectns
-    def onRecvDispatch(self, packet, addr):
-        route = self.findReturnRouteFor(addr)
-        rinfo = self.newRecvInfo(addr=addr, srcRoute=self.wrRoute, route=route)
-        self.dispatch(packet, rinfo)
+    newPacketNS = PacketNS.new
+    def onRecvDispatch(self, data, addr):
+        pkt = self.newPacketNS(data, addr=addr)
+        pkt.route = self.findReturnRouteFor(addr)
+        pkt.recvRoute = self.wrRoute
+
+        self.dispatchPacket(pkt)
 
     #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 

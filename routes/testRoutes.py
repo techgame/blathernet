@@ -41,7 +41,7 @@ class LossyTestRoute(BlatherChannelRoute):
     countPassed = 0
 
     _onRecvDispatch_base = BlatherChannelRoute.onRecvDispatch
-    def onRecvDispatch(self, packet, addr):
+    def onRecvDispatch(self, data, addr):
         lost = self.isPacketLost(self, self.ri)
 
         countTotal = self.countTotal + 1
@@ -54,18 +54,18 @@ class LossyTestRoute(BlatherChannelRoute):
 
         count = self.printSummaryCount
         if count and 0 == (countTotal % count):
-            print ('%s>>> %r%s - packets delivered: %2.1f%% (%d/%d)%s') % (ansiDkRed, self, ansiLtCyan, 100.0*countPassed/countTotal, countPassed, countTotal, ansiNormal)
+            print ('%s>>> %r%s - data delivered: %2.1f%% (%d/%d)%s') % (ansiDkRed, self, ansiLtCyan, 100.0*countPassed/countTotal, countPassed, countTotal, ansiNormal)
 
         if lost:
             if self.printLost:
-                print ('%s>>> %r%s - packet delivered: %2.1f%% (%d/%d)%s') % (ansiDkRed, self, ansiDkRed, 100.0*countPassed/countTotal, countPassed, countTotal, ansiNormal)
+                print ('%s>>> %r%s - data delivered: %2.1f%% (%d/%d)%s') % (ansiDkRed, self, ansiDkRed, 100.0*countPassed/countTotal, countPassed, countTotal, ansiNormal)
 
             return # Do not deliver
 
         if self.printPassed:
-            print ('%s>>> %r%s - packet delivered: %2.1f%% (%d/%d)%s') % (ansiDkRed, self, ansiLtGreen, 100.0*countPassed/countTotal, countPassed, countTotal, ansiNormal)
+            print ('%s>>> %r%s - data delivered: %2.1f%% (%d/%d)%s') % (ansiDkRed, self, ansiLtGreen, 100.0*countPassed/countTotal, countPassed, countTotal, ansiNormal)
 
-        return self._onRecvDispatch_base(packet, addr)
+        return self._onRecvDispatch_base(data, addr)
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 #~ Debug Color definitions
