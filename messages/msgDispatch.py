@@ -11,10 +11,10 @@
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-#~ Definitions 
+#~ Msg Meta
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-class MsgMetaData(object):
+class MsgCtx(object):
     advertId = None
     msgId = None
     adRefs = None
@@ -48,85 +48,127 @@ class MsgMetaData(object):
     def forwarded(self, fwdAdvertId):
         pass
 
+    #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+    @classmethod
+    def newFlyweight(klass, mq, advertDb, **ns):
+        ns.update(mq=mq, advertDb=advertDb)
+        bklass = getattr(klass, '__flyweight__', klass)
+        ns['__flyweight__'] = bklass
+        return type(bklass)("%s_%s"%(bklass.__name__, id(ns)), (bklass,), ns)
+
+    @classmethod
+    def sendMsg(klass, mobj):
+        return klass.mq.addMsg(mobj)
+
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+#~ Message Dispatching
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 class MsgDispatch(object):
-    MsgMetaData = MsgMetaData 
-    ctx = None
-    meta = None
+    mq = None
+    msgFilter = None # flyweighted
+    advertDb = None # flyweighted
+
+    MsgCtx = MsgCtx 
+    mctx = None
+
+    #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    #~ Sending Facilities
+    #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+    @classmethod
+    def newFlyweight(klass, mq, msgFilter, advertDb, **ns):
+        MsgCtx = klass.MsgCtx.newFlyweight(mq, advertDb)
+        ns.update(mq=mq, msgFilter=msgFilter, advertDb=advertDb, MsgCtx=MsgCtx)
+
+        bklass = getattr(klass, '__flyweight__', klass)
+        ns['__flyweight__'] = bklass
+        return type(bklass)("%s_%s"%(bklass.__name__, id(ns)), (bklass,), ns)
+
+    @classmethod
+    def sendPacket(klass, mobj):
+        return klass.mq.addPacket(mobj)
 
     #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     #~ Msg Builder Interface
     #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
     def advertMsgId(self, advertId, msgId, src=None):
-        adEntry = self.advertMsgEntry(advertId, msgId)
-        if adEntry is None:
+        if self.msgFilter(advertId, msgId):
             return False
 
+        adEntry = self.advertDb[advertId]
         self.adEntry = adEntry
-        self.meta = self.MsgMetaData(advertId, msgId, src)
+
+        mctx = self.MsgCtx(advertId, msgId, src)
+        self.mctx = mctx
+
+        r = self.adEntry.responder
+        if r is not None:
+            r.beginResponse(mctx)
         return self
 
     def end(self):
         return False
 
     def forward(self, breadthLimit=1, whenUnhandled=True, fwdAdvertId=None):
-        meta = self.meta
-        meta.forwarded(fwdAdvertId)
-
-        if whenUnhandled and meta.handled:
+        # let mctx know that it was intended to be forwarded...
+        mctx = self.mctx
+        mctx.forwarded(fwdAdvertId)
+        if whenUnhandled and mctx.handled:
+            # we were handled, so don't forward
             return
 
         if fwdAdvertId is not None:
-            fwdAdEntry = self.ctx.findAdvert(fwdAdvertId, False)
-        else: fwdAdEntry = self.adEntry
+            # lookup entry for specified adEntry
+            fwdAdEntry = self.advertDb.get(fwdAdvertId)
+        else: 
+            # not specified, so forward toward our implied adEntry
+            fwdAdEntry = self.adEntry
+
         if fwdAdEntry is None: 
             return
 
-        fwdPacket = meta.fwd.packet
+        fwdPacket = mctx.fwd.packet
         if fwdPacket is None:
             return
 
-        for route in fwdAdEntry.getRoutes(breadthLimit):
+        r = fwdAdEntry.responder
+        if r is not None:
+            # notify fwdAdEntry that we are sending through
+            if r.forwarding(fwdAdvertId, mctx) is False:
+                return
+
+        # actually accomplish the forward!
+        fwdRoutes = fwdAdEntry.getRoutes(breadthLimit)
+        for route in fwdRoutes:
             route.sendDispatch(fwdPacket)
 
     def replyRef(self, replyAdvertIds):
         if isinstance(replyAdvertIds, str):
             replyAdvertIds = [replyAdvertIds]
 
-        meta = self.meta
-        meta.adIds[True] = replyAdvertIds
-        meta.replyId = replyAdvertIds[0] if replyAdvertIds else None
-        route = meta.src.route
-        if route is not None:
-            self.ctx.addRouteForAdverts(route, replyAdvertIds)
+        mctx = self.mctx
+        mctx.adIds[True] = replyAdvertIds
+        mctx.replyId = replyAdvertIds[0] if replyAdvertIds else None
+
+        self.advertDb.addRouteForAdverts(mctx.src.route, replyAdvertIds)
 
     def adRefs(self, advertIds, key=None):
-        meta = self.meta
-        meta.adIds[key] = replyAdvertIds
+        mctx = self.mctx
+        mctx.adIds[key] = replyAdvertIds
 
-        route = meta.src.route
-        if route is not None:
-            self.ctx.addRouteForAdverts(route, advertIds)
+        self.advertDB.addRouteForAdverts(mctx.src.route, advertIds)
         return advertIds
 
     def msg(self, body, fmt=0, topic=None):
-        meta = self.meta
-        iterFns = iter(self.adEntry.iterHandlers())
-
-        while True:
-            try:
-                for fn in iterFns:
-                    r = fn(body, fmt, topic, meta)
-                    if r is not False:
-                        meta.handled += 1
-            except Exception, e:
-                traceback.print_exc()
-            else:
-                # complete, break out
-                break
+        r = self.adEntry.responder
+        if r is not None:
+            r.msg(body, fmt, topic, self.mctx)
 
     def complete(self):
-        pass
+        r = self.adEntry.responder
+        if r is not None:
+            r.finishResponse(self.mctx)
 

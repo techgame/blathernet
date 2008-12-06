@@ -13,7 +13,7 @@
 import weakref
 
 from TG.kvObserving import KVObject, KVProperty, OBFactoryMap, kvobserve
-from .nsObjects import ObjectNS, PacketNS, 
+from .nsObjects import ObjectNS, PacketNS
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 #~ Definitions 

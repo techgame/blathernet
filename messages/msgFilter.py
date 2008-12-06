@@ -47,7 +47,7 @@ class MsgAdvertIdBloomFilter(object):
         return found
 
     def update(self, advertId, msgId, entry):
-        entry.add(advertId[:self.nAdvertId)
+        entry.add(advertId[:self.nAdvertId])
 
         tip = msgIdSets[0]
         tip[msgId] = entry

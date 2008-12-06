@@ -12,7 +12,7 @@
 
 from collections import defaultdict
 
-from .responder import FunctionAdvertResponder, AdvertResponderList
+from .responder import IAdvertResponder, FunctionAdvertResponder, AdvertResponderList
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 #~ Definitions 

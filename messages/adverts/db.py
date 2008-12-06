@@ -46,13 +46,13 @@ class AdvertDB(object):
         return adKey in self._entries
     def __getitem__(self, adKey):
         return self._entries[adKey]
-    def __setitem__(self, adKey, antEntry):
-        if not antEntry.isAdvertEntry():
-            raise ValueError("Parameter antEntry does not support antEntry protocol")
+    def __setitem__(self, adKey, adEntry):
+        if not adEntry.isAdvertEntry():
+            raise ValueError("Parameter adEntry does not support AdvertEntry protocol")
         existing = self.get(adKey)
         if existing is not None:
-            antEntry.merge(existing)
-        self._entries[adKey] = antEntry
+            adEntry.merge(existing)
+        self._entries[adKey] = adEntry
     def __delitem__(self, adKey):
         return self._entries.popitem(adKey)
     def get(self, adKey, default=None):
@@ -60,10 +60,8 @@ class AdvertDB(object):
 
     def find(self, adKey, orAdd=True):
         entries = self._entries
-        if orAdd:
-            e = entries[adKey]
-        else: e = entries.get(adKey)
-        return e
+        if orAdd: return entries[adKey]
+        else: return entries.get(adKey)
 
     #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     #~ Routes

@@ -10,24 +10,30 @@
 #~ Imports 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-from .msgObject import msgDecoderMap
+from . import msgDispatch, msgObject 
+from .msgFilter import MsgAdvertIdBloomFilter
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 #~ Definitions 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 class MsgQueue(object):
-    def __init__(self):
+    def __init__(self, host):
         self._fifo = []
-        self.msgCtx = MsgContext(self.addMsgObj)
+        self.msgFilter = MsgAdvertIdBloomFilter()
+        self.advertDB = host.advertDB
+        self._cfgMsgDispatch()
+
+        host.addTask(self.processQueue)
 
     #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-    def add(self, mobj):
+    def addMsg(self, mobj):
         self._fifo.append(mobj)
+    add = addMsg
 
     pktDecoders = {}
-    pktDecoders.update(msgDecoderMap)
+    pktDecoders.update(msgObject.msgDecoderMap)
     def addPacket(self, pkt):
         pktDecoder = self.pktDecoders.get(packet[:1])
         if pktDecoder is None:
@@ -39,7 +45,7 @@ class MsgQueue(object):
 
     #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-    def process(self):
+    def processQueue(self):
         queue = self._fifo
         self._fifo = []
 
@@ -47,6 +53,17 @@ class MsgQueue(object):
         while queue:
             mobj = queue.pop()
 
-            mx = self.MsgDispatch(ctx)
+            mx = self.MsgQDispatch()
             mobj.executeOn(mx)
+    process = processQueue
+
+    #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+    MsgQDispatch = msgDispatch.MsgDispatch
+    def _cfgMsgDispatch(self):
+        ns = dict(mq = self, 
+                msgFilter = self.msgFilter,
+                advertDB = self.advertDB)
+
+        self.MsgQDispatch = self.MsgQDispatch.newFlyweight(**ns)
 

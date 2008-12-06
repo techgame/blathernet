@@ -29,8 +29,8 @@ class IAdvertResponder(object):
     def finishResponse(self, meta):
         pass
 
-    def forward(self, fwdAdvertId, meta):
-        pass
+    def forwarding(self, fwdAdvertId, meta):
+        return True
 
     def msg(self, msg, fmt, topic, meta):
         pass
@@ -42,7 +42,7 @@ class FunctionAdvertResponder(IAdvertResponder):
         if msgfn is not None:
             self.msg = msgfn
         if forwardfn is not None:
-            self.forward = forwardfn
+            self.forwarding = forwardfn
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 #~ Advert Responder List
@@ -81,10 +81,13 @@ class AdvertResponderList(IAdvertResponder):
             with localtb:
                 ar.finishResponse(meta)
 
-    def forward(self, fwdAdvertId, meta):
+    def forwarding(self, fwdAdvertId, meta):
+        r = True
         for ar in self._responders:
             with localtb:
-                ar.forward(fwdAdvertId, meta)
+                if ar.forwarding(fwdAdvertId, meta) is False:
+                    r = False
+        return r
 
     def msg(self, msg, fmt, topic, meta):
         for ar in self._responders:
