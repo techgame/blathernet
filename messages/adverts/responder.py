@@ -21,15 +21,13 @@ from ...base.tracebackBoundry import localtb
 class IAdvertResponder(object):
     def isAdvertResponder(self):
         return True
-    def isAdvertResponderCollection(self):
-        return False
 
     def beginResponse(self, meta):
         pass
     def finishResponse(self, meta):
         pass
 
-    def forwarding(self, fwdAdvertId, meta):
+    def forwarding(self, fwdAdvertId, fwdAdEntry, meta):
         return True
 
     def msg(self, msg, fmt, topic, meta):
@@ -51,9 +49,6 @@ class FunctionAdvertResponder(IAdvertResponder):
 class AdvertResponderList(IAdvertResponder):
     def __init__(self, *reponders):
         self._responders = list(reponders)
-
-    def isAdvertResponderCollection(self):
-        return True
 
     def addResponder(self, aResponder):
         lst = self._responders
@@ -81,11 +76,11 @@ class AdvertResponderList(IAdvertResponder):
             with localtb:
                 ar.finishResponse(meta)
 
-    def forwarding(self, fwdAdvertId, meta):
+    def forwarding(self, fwdAdvertId, , fwdAdEntrymeta):
         r = True
         for ar in self._responders:
             with localtb:
-                if ar.forwarding(fwdAdvertId, meta) is False:
+                if ar.forwarding(fwdAdvertId, fwdAdEntry, meta) is False:
                     r = False
         return r
 

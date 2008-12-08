@@ -10,6 +10,8 @@
 #~ Imports 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
+import weakref
+
 from . import msgDispatch, msgObject 
 from .msgFilter import MsgAdvertIdBloomFilter
 
@@ -61,7 +63,7 @@ class MsgQueue(object):
 
     MsgQDispatch = msgDispatch.MsgDispatch
     def _cfgMsgDispatch(self):
-        ns = dict(mq = self, 
+        ns = dict(mq=weakref.proxy(self),
                 msgFilter = self.msgFilter,
                 advertDB = self.advertDB)
 

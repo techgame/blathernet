@@ -10,11 +10,13 @@
 #~ Imports 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
+from ..base.tracebackBoundry import localtb
+
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-#~ Msg Meta
+#~ Msg Context
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-class MsgCtx(object):
+class MsgContext(object):
     advertId = None
     msgId = None
     adRefs = None
@@ -70,7 +72,7 @@ class MsgDispatch(object):
     msgFilter = None # flyweighted
     advertDb = None # flyweighted
 
-    MsgCtx = MsgCtx 
+    MsgContext = MsgContext 
     mctx = None
 
     #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -79,16 +81,12 @@ class MsgDispatch(object):
 
     @classmethod
     def newFlyweight(klass, mq, msgFilter, advertDb, **ns):
-        MsgCtx = klass.MsgCtx.newFlyweight(mq, advertDb)
-        ns.update(mq=mq, msgFilter=msgFilter, advertDb=advertDb, MsgCtx=MsgCtx)
+        MsgContext = klass.MsgContext.newFlyweight(mq, advertDb)
+        ns.update(mq=mq, msgFilter=msgFilter, advertDb=advertDb, MsgContext=MsgContext)
 
         bklass = getattr(klass, '__flyweight__', klass)
         ns['__flyweight__'] = bklass
         return type(bklass)("%s_%s"%(bklass.__name__, id(ns)), (bklass,), ns)
-
-    @classmethod
-    def sendPacket(klass, mobj):
-        return klass.mq.addPacket(mobj)
 
     #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     #~ Msg Builder Interface
@@ -102,11 +100,14 @@ class MsgDispatch(object):
         self.adEntry = adEntry
 
         mctx = self.MsgCtx(advertId, msgId, src)
+        mctx.adEntry = adEntry
         self.mctx = mctx
 
-        r = self.adEntry.responder
-        if r is not None:
-            r.beginResponse(mctx)
+        self.adResponders = self.adEntry.allResponders()
+        for r in self.adResponders:
+            with localtb:
+                r.beginResponse(mctx)
+
         return self
 
     def end(self):
@@ -130,15 +131,15 @@ class MsgDispatch(object):
         if fwdAdEntry is None: 
             return
 
-        fwdPacket = mctx.fwd.packet
+        fwdPacket = mctx.fwdPacket
         if fwdPacket is None:
             return
 
         r = fwdAdEntry.responder
-        if r is not None:
-            # notify fwdAdEntry that we are sending through
-            if r.forwarding(fwdAdvertId, mctx) is False:
-                return
+        # notify fwdAdEntry reponders that we are sending through
+        for r in self.fwdAdEntry.allResponders:
+            with localtb:
+                r.forwarding(fwdAdvertId, fwdAdEntry, mctx)
 
         # actually accomplish the forward!
         fwdRoutes = fwdAdEntry.getRoutes(breadthLimit)
@@ -149,11 +150,8 @@ class MsgDispatch(object):
         if isinstance(replyAdvertIds, str):
             replyAdvertIds = [replyAdvertIds]
 
-        mctx = self.mctx
-        mctx.adIds[True] = replyAdvertIds
         mctx.replyId = replyAdvertIds[0] if replyAdvertIds else None
-
-        self.advertDb.addRouteForAdverts(mctx.src.route, replyAdvertIds)
+        self.adRefs(replyAdvertIds, True)
 
     def adRefs(self, advertIds, key=None):
         mctx = self.mctx
@@ -163,12 +161,14 @@ class MsgDispatch(object):
         return advertIds
 
     def msg(self, body, fmt=0, topic=None):
-        r = self.adEntry.responder
-        if r is not None:
-            r.msg(body, fmt, topic, self.mctx)
+        mctx = self.mctx
+        for r in self.adResponders:
+            with localtb:
+                r.msg(body, fmt, topic, mctx)
 
     def complete(self):
-        r = self.adEntry.responder
-        if r is not None:
-            r.finishResponse(self.mctx)
+        mctx = self.mctx
+        for r in self.adResponders:
+            with localtb:
+                r.finishResponse(mctx)
 

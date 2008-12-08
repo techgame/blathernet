@@ -19,11 +19,11 @@ from .responder import IAdvertResponder, FunctionAdvertResponder, AdvertResponde
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 class AdvertEntry(object):
-    __slots__ = ('_routes', '_responder')
+    __slots__ = ('_routes', '_responders')
 
     def __init__(self, adKey):
         self._routes = None
-        self._responder = None
+        self._responders = None
 
     def isAdvertEntry(self): 
         return True
@@ -63,32 +63,24 @@ class AdvertEntry(object):
         if not aResponder.isAdvertResponder():
             raise ValueError("Can only add advert responders that comply with IAdvertResponder")
 
-        current = self._responder
-        if current is None:
-            self._responder = aResponder
-        else:
-            if current.isAdvertResponderCollection():
-                current.addResponder(aResponder)
-            else: # promote it to be a collection
-                self._responder = AdvertResponderList(current, aResponder)
+        responders = self._responders
+        if responders is None:
+            self._responders = []
 
+        responders.append(aResponder)
         return aResponder
 
     def removeResponder(self, aResponder):
-        current = self._responder
-        if current is None: 
+        responders = self._responder
+        if responders is None: 
             return False
 
-        elif current is aResponder: 
-            self._responder = None
-            return True
+        elif responders not in aResponder: 
+            return False
 
-        elif current.isAdvertResponderCollection():
-            return current.removeResponder(aResponder)
+        repsonders.remove(aResponder)
+        return False
 
-        else: return False
-
-    def getResponder(self):
-        return self._responder
-    responder = property(getResponder)
+    def allResponders(self):
+        return list(self._responder or ())
 
