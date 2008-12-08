@@ -12,7 +12,7 @@
 
 from collections import defaultdict
 
-from .responder import IAdvertResponder, FunctionAdvertResponder, AdvertResponderList
+from .responder import AdvertResponder, FunctionAdvertResponder, AdvertResponderList
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 #~ Definitions 
@@ -61,7 +61,7 @@ class AdvertEntry(object):
 
     def addResponder(self, aResponder):
         if not aResponder.isAdvertResponder():
-            raise ValueError("Can only add advert responders that comply with IAdvertResponder")
+            raise ValueError("Can only add advert responders that comply with AdvertResponder")
 
         responders = self._responders
         if responders is None:

@@ -18,7 +18,7 @@ from ...base.tracebackBoundry import localtb
 #~ Definitions 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-class IAdvertResponder(object):
+class AdvertResponder(object):
     def isAdvertResponder(self):
         return True
 
@@ -30,12 +30,12 @@ class IAdvertResponder(object):
     def forwarding(self, fwdAdvertId, fwdAdEntry, mctx):
         return True
 
-    def msg(self, msg, fmt, topic, mctx):
+    def msg(self, body, fmt, topic, mctx):
         pass
         
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-class FunctionAdvertResponder(IAdvertResponder):
+class FunctionAdvertResponder(AdvertResponder):
     def __init__(self, msgfn, forwardfn=None):
         if msgfn is not None:
             self.msg = msgfn
@@ -46,7 +46,7 @@ class FunctionAdvertResponder(IAdvertResponder):
 #~ Advert Responder List
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-class AdvertResponderList(IAdvertResponder):
+class AdvertResponderList(AdvertResponder):
     def __init__(self, *reponders):
         self._responders = list(reponders)
 
@@ -84,8 +84,8 @@ class AdvertResponderList(IAdvertResponder):
                     r = False
         return r
 
-    def msg(self, msg, fmt, topic, mctx):
+    def msg(self, body, fmt, topic, mctx):
         for ar in self._responders:
             with localtb:
-                ar.msg(msg, fmt, topic, mctx)
+                ar.msg(body, fmt, topic, mctx)
         

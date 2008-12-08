@@ -18,6 +18,7 @@ Packet Coding:
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 from .adverts import advertIdForNS
+from .adverts import AdvertResponder
 
 from .manager import MessageMgr
 from .msgObject import MsgObject

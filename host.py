@@ -17,7 +17,7 @@ from .base import BlatherObject
 from . import taskMgrs
 from . import routes 
 from . import messages
-from .messages import adverts
+from .messages import adverts, MsgObject
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 #~ Definitions 
@@ -75,6 +75,8 @@ class Blather(BlatherObject):
     def addTask(self, task):
         return self.tasks.addTask(task)
 
+    #~ Advert Responders ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
     def addResponder(self, advertId, responder):
         return self.advertDb.addResponder(advertId, responder)
     def addResponderFn(self, advertId, msgfn):
@@ -82,8 +84,10 @@ class Blather(BlatherObject):
     def removeResponder(self, advertId, responder):
         return self.advertDb.removeResponder(advertId, responder)
 
+    #~ Messages ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
     def newMsg(self, advertId=None):
-        return self.msgMgr.newMsg(advertId)
+        return MsgObject(advertId)
     def sendMsg(self, mobj):
         return self.msgMgr.queueMsg(advertId)
     def sendTo(self, advertId, body, fmt=0, topic=None):
