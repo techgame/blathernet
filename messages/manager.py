@@ -30,13 +30,12 @@ class MessageMgr(object):
 
     #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-    def addMsg(self, mobj):
+    def queueMsg(self, mobj):
         self.tasks.addTask(partial(self._dispatchMsgObj, mobj))
-    add = addMsg
 
     pktDecoders = {}
     pktDecoders.update(msgDecoderMap)
-    def addPacket(self, pkt):
+    def queuePacket(self, pkt):
         pktDecoder = self.pktDecoders.get(packet[:1])
         if pktDecoder is not None:
             # supported packet, add it

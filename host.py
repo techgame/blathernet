@@ -30,29 +30,31 @@ class Blather(BlatherObject):
             AdvertDB = adverts.AdvertDB,
             MessageMgr = messages.MessageMgr,
             )
-    tasks = None
-    routes = None
+    taskMgr = None
+    routeMgr = None
+    advertDb = None
+    messageMgr = None
 
-    name = None
+    _name = None
     def __init__(self, name=None):
         BlatherObject.__init__(self)
         if name is not None:
-            self.name = name
-        self.initMgrs()
+            self._name = name
+        self._initMgrs()
 
     def __repr__(self):
         if self.name is None:
             return '<%s %s>' % (self.__class__.__name__, id(self))
-        else: return '<%s "%s" %s>' % (self.__class__.__name__, self.name, id(self))
+        else: return '<%s "%s" %s>' % (self.__class__.__name__, self._name, id(self))
 
     #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-    def initMgrs(self):
-        self.tasks = self._fm_.TaskMgr(self.name)
+    def _initMgrs(self):
+        self.taskMgr = self._fm_.TaskMgr(self.name)
         self.advertDb = self._fm_.AdvertDB(),
-        self.messages = self._fm_.MessageMgr(self)
+        self.msgMgr = self._fm_.MessageMgr(self)
 
-        self.routes = self._fm_.RouteMgr(self, self.messages.addPacket)
+        self.routeMgr = self._fm_.RouteMgr(self, self.msgMgr.queuePacket)
 
     @property
     def routeFactory(self):
@@ -72,4 +74,21 @@ class Blather(BlatherObject):
         return self.tasks.addTimer(tsStart, task)
     def addTask(self, task):
         return self.tasks.addTask(task)
+
+    def addResponder(self, advertId, responder):
+        return self.advertDb.addResponder(advertId, responder)
+    def addResponderFn(self, advertId, msgfn):
+        return self.advertDb.addResponderFn(advertId, msgfn)
+    def removeResponder(self, advertId, responder):
+        return self.advertDb.removeResponder(advertId, responder)
+
+    def newMsg(self, advertId=None):
+        return self.msgMgr.newMsg(advertId)
+    def sendMsg(self, mobj):
+        return self.msgMgr.queueMsg(advertId)
+    def sendTo(self, advertId, body, fmt=0, topic=None):
+        mobj = self.newMsg(advertId)
+        mobj.msg(body, fmt, topic)
+        mobj.forward()
+        return self.sendMsg(mobj)
 
