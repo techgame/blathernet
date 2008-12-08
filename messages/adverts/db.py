@@ -10,6 +10,7 @@
 #~ Imports 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
+from .responder import FunctionAdvertResponder
 from .entry import AdvertEntry
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -85,12 +86,18 @@ class AdvertDB(object):
     #~ Responders
     #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-    def addResponder(self, adKey, advertResponder):
+    def addResponder(self, adKey, advertResponder=None):
+        if advertResponder is None:
+            if not isinstance(adKey, string):
+                advertResponder = adKey
+                adKey = advertResponder.advertId
+
         return self[adKey].addResponder(advertResponder)
 
     def removeResponder(self, adKey, advertResponder):
         return self[adKey].removeResponder(advertResponder)
 
-    def addResponderFn(self, adKey, msgfn):
-        return self[adKey].addResponderFn(msgfn)
+    def addResponderFn(self, advertId, msgfn):
+        fnResponder = FunctionAdvertResponder(msgfn, advertId=advertId)
+        return self.addResponder(advertId, fnResponder)
 

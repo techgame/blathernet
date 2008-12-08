@@ -30,10 +30,10 @@ class Blather(BlatherObject):
             AdvertDB = adverts.AdvertDB,
             MessageMgr = messages.MessageMgr,
             )
-    taskMgr = None
-    routeMgr = None
+    tasks = None
     advertDb = None
-    messageMgr = None
+    msgMgr = None
+    routeMgr = None
 
     _name = None
     def __init__(self, name=None):
@@ -43,17 +43,16 @@ class Blather(BlatherObject):
         self._initMgrs()
 
     def __repr__(self):
-        if self.name is None:
+        if self._name is None:
             return '<%s %s>' % (self.__class__.__name__, id(self))
         else: return '<%s "%s" %s>' % (self.__class__.__name__, self._name, id(self))
 
     #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
     def _initMgrs(self):
-        self.taskMgr = self._fm_.TaskMgr(self.name)
-        self.advertDb = self._fm_.AdvertDB(),
+        self.tasks = self._fm_.TaskMgr(self._name)
+        self.advertDb = self._fm_.AdvertDB()
         self.msgMgr = self._fm_.MessageMgr(self)
-
         self.routeMgr = self._fm_.RouteMgr(self, self.msgMgr.queuePacket)
 
     @property
@@ -77,7 +76,7 @@ class Blather(BlatherObject):
 
     #~ Advert Responders ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-    def addResponder(self, advertId, responder):
+    def addResponder(self, advertId, responder=None):
         return self.advertDb.addResponder(advertId, responder)
     def addResponderFn(self, advertId, msgfn):
         return self.advertDb.addResponderFn(advertId, msgfn)
@@ -89,7 +88,7 @@ class Blather(BlatherObject):
     def newMsg(self, advertId=None):
         return MsgObject(advertId)
     def sendMsg(self, mobj):
-        return self.msgMgr.queueMsg(advertId)
+        return self.msgMgr.queueMsg(mobj)
     def sendTo(self, advertId, body, fmt=0, topic=None):
         mobj = self.newMsg(advertId)
         mobj.msg(body, fmt, topic)

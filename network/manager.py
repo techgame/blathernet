@@ -25,10 +25,6 @@ class BlatherNetworkMgr(BlatherObject):
     _fm_ = BlatherObject._fm_.branch(
             NetworkSelector=NetworkSelector,)
 
-    def __init__(self, host):
-        BlatherObject.__init__(self)
-        self.host = host.asWeakRef()
-
     _networkSelector = None
     def getNetworkSelector(self):
         result = self._networkSelector

@@ -11,6 +11,7 @@
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 from __future__ import with_statement
+from ..base import PacketNS
 from ..base.tracebackBoundry import localtb
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -21,9 +22,7 @@ class MsgContext(object):
     advertId = None
     msgId = None
     adRefs = None
-
     src = None
-    fwd = None
 
     handled = False
     
@@ -36,9 +35,10 @@ class MsgContext(object):
 
     _fwdPacket = None
     def getFwdPacket(self):
-        pkt = self._fwdPacket
-        if pkt is None:
-            raise NotImplementedError("TODO")
+        def findPkt(src):
+            return src.packet or src.mobj.encode().packet
+
+        pkt = self._fwdPacket or findPkt(self.src)
         return pkt
     fwdPacket = property(getFwdPacket)
 
@@ -100,7 +100,7 @@ class MsgDispatch(object):
         adEntry = self.advertDb[advertId]
         self.adEntry = adEntry
 
-        mctx = self.MsgCtx(advertId, msgId, src)
+        mctx = self.MsgContext(advertId, msgId, src)
         mctx.adEntry = adEntry
         self.mctx = mctx
 
@@ -132,20 +132,20 @@ class MsgDispatch(object):
         if fwdAdEntry is None: 
             return
 
-        fwdPacket = mctx.fwdPacket
-        if fwdPacket is None:
-            return
-
-        r = fwdAdEntry.responder
         # notify fwdAdEntry reponders that we are sending through
-        for r in self.fwdAdEntry.allResponders:
+        for r in fwdAdEntry.allResponders():
             with localtb:
                 r.forwarding(fwdAdvertId, fwdAdEntry, mctx)
 
-        # actually accomplish the forward!
         fwdRoutes = fwdAdEntry.getRoutes(breadthLimit)
-        for route in fwdRoutes:
-            route.sendDispatch(fwdPacket)
+        if not fwdRoutes:
+            return
+
+        fwdPacket = mctx.fwdPacket
+        if fwdPacket is not None:
+            # actually accomplish the forward!
+            for route in fwdRoutes:
+                route.sendDispatch(fwdPacket)
 
     def replyRef(self, replyAdvertIds):
         if isinstance(replyAdvertIds, str):
@@ -158,7 +158,7 @@ class MsgDispatch(object):
         mctx = self.mctx
         mctx.adIds[key] = replyAdvertIds
 
-        self.advertDB.addRouteForAdverts(mctx.src.route, advertIds)
+        self.advertDb.addRouteForAdverts(mctx.src.route, advertIds)
         return advertIds
 
     def msg(self, body, fmt=0, topic=None):

@@ -12,13 +12,21 @@
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 from __future__ import with_statement
+from hashlib import md5
+
+from ...base import BlatherObject
 from ...base.tracebackBoundry import localtb
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 #~ Definitions 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-class AdvertResponder(object):
+def advertIdForNS(ns):
+    return md5(ns).digest()
+
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+class IAdvertResponder(object):
     def isAdvertResponder(self):
         return True
 
@@ -35,8 +43,28 @@ class AdvertResponder(object):
         
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-class FunctionAdvertResponder(AdvertResponder):
-    def __init__(self, msgfn, forwardfn=None):
+def buildAdvertId(self, pName, obInstance):
+    advertNS = obInstance.advertNS
+    if advertNS is not None:
+        advertId = advertIdForNS(advertNS)
+        obInstance.advertId = advertId
+
+buildAdvertId.onObservableInit = buildAdvertId
+
+
+class AdvertResponder(BlatherObject, IAdvertResponder):
+    advertNS = None
+    advertId = buildAdvertId
+
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+#~ Advert Responder for a function
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+class FunctionAdvertResponder(IAdvertResponder):
+    def __init__(self, msgfn, forwardfn=None, advertId=None):
+        if advertId is not None:
+            self.advertId = advertId
+
         if msgfn is not None:
             self.msg = msgfn
         if forwardfn is not None:
@@ -46,7 +74,7 @@ class FunctionAdvertResponder(AdvertResponder):
 #~ Advert Responder List
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-class AdvertResponderList(AdvertResponder):
+class AdvertResponderList(IAdvertResponder):
     def __init__(self, *reponders):
         self._responders = list(reponders)
 

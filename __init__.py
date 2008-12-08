@@ -12,5 +12,5 @@
 
 from .host import Blather
 from .messages import MsgObject
-from .messages.adverts import advertIdForNS, AdvertResponder
+from .messages.adverts import advertIdForNS, IAdvertResponder, AdvertResponder
 

@@ -55,6 +55,12 @@ class MsgCommandObject(object):
         self.msgId = msgId
         self.fwd.packet = pkt
 
+    def getFwdPacket(self):
+        fwd = self.fwd
+        if fwd.packet is None:
+            fwd = self.encode()
+        return fwd
+
     #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
     def advertNS(self, advertNS, msgId=None):
@@ -80,7 +86,7 @@ class MsgCommandObject(object):
     def advertMsgId(self, advertId, msgId=None, src=None):
         self.advertId = advertId
         self.msgId = msgId
-        self.src = PacketNS(src)
+        self.src = PacketNS(src, mobj=self)
         self.fwd = PacketNS(self.src.packet)
         return self
 

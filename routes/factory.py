@@ -17,14 +17,9 @@ import itertools
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 class BlatherRouteFactory(object):
-    def __init__(self, host, network=None, routes=None):
-        if network is None:
-            network = host.network
-        self.network = network.asWeakProxy()
-
-        if routes is None:
-            routes = host.routes
+    def __init__(self, routes, network):
         self.routes = routes.asWeakProxy()
+        self.network = network.asWeakProxy()
 
     #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 

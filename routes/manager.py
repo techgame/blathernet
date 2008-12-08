@@ -30,8 +30,8 @@ class BlatherRouteMgr(BlatherObject):
         self.routes = set()
 
         self.tasks = host.tasks
-        self.network = self._fm_.NetworkMgr(self)
-        self.factory = self._fm_.RouteFactory(self)
+        self.network = self._fm_.NetworkMgr()
+        self.factory = self._fm_.RouteFactory(self, self.network)
 
     def addRoute(self, route):
         route.assignRouteManager(self)

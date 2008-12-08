@@ -25,7 +25,7 @@ class MessageMgr(object):
     def __init__(self, host):
         self.tasks = host.tasks
         self.msgFilter = MsgAdvertIdBloomFilter()
-        self.advertDB = host.advertDB
+        self.advertDb = host.advertDb
         self._cfgMsgDispatch()
 
     #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -52,7 +52,7 @@ class MessageMgr(object):
     def _cfgMsgDispatch(self):
         ns = dict(mq=weakref.proxy(self),
                 msgFilter = self.msgFilter,
-                advertDB = self.advertDB)
+                advertDb = self.advertDb)
 
         self.MsgQDispatch = self.MsgQDispatch.newFlyweight(**ns)
 

@@ -30,7 +30,7 @@ class ObjectNS(object):
     def new(klass, *args, **kw):
         return klass(*args, **kw)
     def copy(self):
-        return self.new(self.iteritems())
+        return self.new(self)
     def update(self, *args, **kw): 
         self.__dict__.update(*args, **kw)
         return self

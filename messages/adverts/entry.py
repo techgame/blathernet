@@ -12,7 +12,7 @@
 
 from collections import defaultdict
 
-from .responder import AdvertResponder, FunctionAdvertResponder, AdvertResponderList
+from .responder import IAdvertResponder
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 #~ Definitions 
@@ -55,23 +55,19 @@ class AdvertEntry(object):
     #~ Responders
     #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-    def addResponderFn(self, msgfn):
-        fnResponder = FunctionAdvertResponder(msgfn)
-        return self.addResponder(fnResponder)
-
     def addResponder(self, aResponder):
         if not aResponder.isAdvertResponder():
-            raise ValueError("Can only add advert responders that comply with AdvertResponder")
+            raise ValueError("Can only add advert responders that comply with IAdvertResponder")
 
         responders = self._responders
         if responders is None:
-            self._responders = []
+            self._responders = responders = []
 
         responders.append(aResponder)
         return aResponder
 
     def removeResponder(self, aResponder):
-        responders = self._responder
+        responders = self._responders
         if responders is None: 
             return False
 
@@ -82,5 +78,5 @@ class AdvertEntry(object):
         return False
 
     def allResponders(self):
-        return list(self._responder or ())
+        return list(self._responders or ())
 
