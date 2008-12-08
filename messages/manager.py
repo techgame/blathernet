@@ -11,57 +11,45 @@
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 import weakref
+from functools import partial
 
-from . import msgDispatch, msgObject 
-from .msgFilter import MsgAdvertIdBloomFilter
+from .dispatch import MsgDispatch
+from .msgObject import msgDecoderMap
+from .filter import MsgAdvertIdBloomFilter
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 #~ Definitions 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-class MsgQueue(object):
+class MessageMgr(object):
     def __init__(self, host):
-        self._fifo = []
+        self.tasks = host.tasks
         self.msgFilter = MsgAdvertIdBloomFilter()
         self.advertDB = host.advertDB
         self._cfgMsgDispatch()
 
-        host.addTask(self.processQueue)
-
     #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
     def addMsg(self, mobj):
-        self._fifo.append(mobj)
+        self.tasks.addTask(partial(self._dispatchMsgObj, mobj))
     add = addMsg
 
     pktDecoders = {}
-    pktDecoders.update(msgObject.msgDecoderMap)
+    pktDecoders.update(msgDecoderMap)
     def addPacket(self, pkt):
         pktDecoder = self.pktDecoders.get(packet[:1])
-        if pktDecoder is None:
-            # unsupported packet, drop it
-            return
-
-        mobj = pktDecoder(pkt)
-        self.add(mobj)
+        if pktDecoder is not None:
+            # supported packet, add it
+            mobj = pktDecoder(pkt)
+            self.add(mobj)
 
     #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-    def processQueue(self):
-        queue = self._fifo
-        self._fifo = []
+    def _dispatchMsgObj(self, mobj):
+        mx = self.MsgQDispatch()
+        mobj.executeOn(mx)
 
-        ctx = self.msgCtx
-        while queue:
-            mobj = queue.pop()
-
-            mx = self.MsgQDispatch()
-            mobj.executeOn(mx)
-    process = processQueue
-
-    #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-    MsgQDispatch = msgDispatch.MsgDispatch
+    MsgQDispatch = MsgDispatch
     def _cfgMsgDispatch(self):
         ns = dict(mq=weakref.proxy(self),
                 msgFilter = self.msgFilter,

@@ -6,19 +6,25 @@
 ##~ found in the LICENSE file included with this distribution.    ##
 ##~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~##
 
-"""MsgCommand Packet Format
-
-Packet Coding:
-    [0:1]  ( 1 byte ) -> Packet Version 
-    [1:end] version dependent 
-"""
-    
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 #~ Imports 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-from .adverts import advertIdForNS
+from threading import Event, Lock, Thread
 
-from .manager import MessageMgr
-from .msgObject import MsgObject
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+#~ Definitions 
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+def threadcall(method):
+    def decorate(*args, **kw):
+        t = Thread(target=method, args=args, kwargs=kw)
+        t.setDaemon(True)
+        t.start()
+        return t
+    decorate.__name__ = method.__name__
+    decorate.__doc__ = method.__doc__
+    return decorate
+
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 

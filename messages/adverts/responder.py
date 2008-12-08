@@ -22,15 +22,15 @@ class IAdvertResponder(object):
     def isAdvertResponder(self):
         return True
 
-    def beginResponse(self, meta):
+    def beginResponse(self, mctx):
         pass
-    def finishResponse(self, meta):
+    def finishResponse(self, mctx):
         pass
 
-    def forwarding(self, fwdAdvertId, fwdAdEntry, meta):
+    def forwarding(self, fwdAdvertId, fwdAdEntry, mctx):
         return True
 
-    def msg(self, msg, fmt, topic, meta):
+    def msg(self, msg, fmt, topic, mctx):
         pass
         
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -66,26 +66,26 @@ class AdvertResponderList(IAdvertResponder):
 
     #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-    def beginResponse(self, meta):
+    def beginResponse(self, mctx):
         for ar in self._responders:
             with localtb:
-                ar.beginResponse(meta)
+                ar.beginResponse(mctx)
 
-    def finishResponse(self, meta):
+    def finishResponse(self, mctx):
         for ar in self._responders:
             with localtb:
-                ar.finishResponse(meta)
+                ar.finishResponse(mctx)
 
-    def forwarding(self, fwdAdvertId, , fwdAdEntrymeta):
+    def forwarding(self, fwdAdvertId, fwdAdEntry, mctx):
         r = True
         for ar in self._responders:
             with localtb:
-                if ar.forwarding(fwdAdvertId, fwdAdEntry, meta) is False:
+                if ar.forwarding(fwdAdvertId, fwdAdEntry, mctx) is False:
                     r = False
         return r
 
-    def msg(self, msg, fmt, topic, meta):
+    def msg(self, msg, fmt, topic, mctx):
         for ar in self._responders:
             with localtb:
-                ar.msg(msg, fmt, topic, meta)
+                ar.msg(msg, fmt, topic, mctx)
         

@@ -10,16 +10,28 @@
 #~ Imports 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
+from TG.kvObserving import kvobserve
 from ..base import BlatherObject
+from .. import network
+from .factory import BlatherRouteFactory
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 #~ Definitions 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 class BlatherRouteMgr(BlatherObject):
+    _fm_ = BlatherObject._fm_.branch(
+            RouteFactory = BlatherRouteFactory,
+            NetworkMgr = network.BlatherNetworkMgr,
+            )
+
     def __init__(self, host, dispatchPacket):
         self.dispatchPacket = dispatchPacket
         self.routes = set()
+
+        self.tasks = host.tasks
+        self.network = self._fm_.NetworkMgr(self)
+        self.factory = self._fm_.RouteFactory(self)
 
     def addRoute(self, route):
         route.assignRouteManager(self)
@@ -31,9 +43,21 @@ class BlatherRouteMgr(BlatherObject):
                 return route
         else: return None
 
+    #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
     def getDispatchForRoute(self, route):
         return self.dispatchEnvelope
 
     def dispatchPacket(self, pkt):
         raise NotImplementedError('Method override responsibility: %r' % (self,))
+
+    #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+    @kvobserve('network.selector.selectables.*')
+    def _onNetworkSelectorChange(self, selectables):
+        # if we have a network task, use the network's tasksleep mechanism.  Otherwise, use the tasks' default one
+        if len(selectables):
+            tasksleep = self.network.process
+        else: tasksleep = None
+        self.tasks.setTaskSleep(tasksleep)
 

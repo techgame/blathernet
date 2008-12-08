@@ -10,17 +10,28 @@
 #~ Imports 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
+import sys
+import time
 import weakref
 
-from TG.kvObserving import KVObject, KVProperty, OBFactoryMap, kvobserve
+from TG.kvObserving import KVObject, OBFactoryMap
 from .nsObjects import ObjectNS, PacketNS
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 #~ Definitions 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
+sleep = time.sleep
+
+if sys.platform.startswith("win"):
+    timestamp = time.clock
+else: timestamp = time.time
+
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
 class BlatherObject(KVObject):
     _fm_ = OBFactoryMap()
+    timestamp = staticmethod(timestamp)
 
     def asStrongProxy(self, cb=None): return self
     def asStrongRef(self, cb=None): return (lambda: self)

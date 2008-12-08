@@ -13,26 +13,24 @@
 import uuid
 import md5
 
-from .base import BlatherObject, kvobserve
+from .base import BlatherObject
 from . import taskMgrs
-from . import network
 from . import routes 
 from . import messages
+from .messages import adverts
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 #~ Definitions 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-class BlatherHost(BlatherObject):
+class Blather(BlatherObject):
     _fm_ = BlatherObject._fm_.branch(
             TaskMgr = taskMgrs.BlatherTaskMgr,
-            NetworkMgr = network.BlatherNetworkMgr,
             RouteMgr = routes.BlatherRouteMgr,
-            RouteFactory = routes.BlatherRouteFactory,
-            MsgQueue = messages.MsgQueue,
+            AdvertDB = adverts.AdvertDB,
+            MessageMgr = messages.MessageMgr,
             )
     tasks = None
-    network = None
     routes = None
 
     name = None
@@ -47,18 +45,14 @@ class BlatherHost(BlatherObject):
             return '<%s %s>' % (self.__class__.__name__, id(self))
         else: return '<%s "%s" %s>' % (self.__class__.__name__, self.name, id(self))
 
-    def isBlatherHost(self): return True
-
     #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
     def initMgrs(self):
         self.tasks = self._fm_.TaskMgr(self.name)
-        self.network = self._fm_.NetworkMgr(self)
+        self.advertDb = self._fm_.AdvertDB(),
+        self.messages = self._fm_.MessageMgr(self)
 
-        self.msgQueue = self._fm_.MsgQueue(self)
-
-        self.routes = self._fm_.RouteMgr(self, self.msgQueue.addPacket)
-        self.routes.factory = self._fm_.RouteFactory(self)
+        self.routes = self._fm_.RouteMgr(self, self.messages.addPacket)
 
     @property
     def routeFactory(self):
@@ -78,14 +72,4 @@ class BlatherHost(BlatherObject):
         return self.tasks.addTimer(tsStart, task)
     def addTask(self, task):
         return self.tasks.addTask(task)
-
-    #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-    @kvobserve('network.selector.selectables.*')
-    def _onNetworkSelectorChange(self, selectables):
-        # if we have a network task, use the network's tasksleep mechanism.  Otherwise, use the tasks' default one
-        if len(selectables):
-            tasksleep = self.network.process
-        else: tasksleep = None
-        self.tasks.setTaskSleep(tasksleep)
 

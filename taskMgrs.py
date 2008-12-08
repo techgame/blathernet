@@ -12,36 +12,20 @@
 
 from __future__ import with_statement
 
-import weakref
-import time
-import traceback
-import threading
 from functools import partial
 from heapq import heappop, heappush
 
-from TG.kvObserving import KVSet, KVList
-
-from .base import BlatherObject
+from .base import BlatherObject, timestamp, sleep
+from .base.tracebackBoundry import localtb
+from .base.threadutils import threadcall, Event, Lock
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 #~ Definitions 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-def threadcall(method):
-    def decorate(*args, **kw):
-        t = threading.Thread(target=method, args=args, kwargs=kw)
-        t.setDaemon(True)
-        t.start()
-        return t
-    decorate.__name__ = method.__name__
-    decorate.__doc__ = method.__doc__
-    return decorate
-
-#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
 class BasicBlatherTaskMgr(BlatherObject):
     timeout = 0.05
-    tasksleep = time.sleep
+    tasksleep = sleep
 
     def __init__(self, name):
         BlatherObject.__init__(self)
@@ -50,7 +34,7 @@ class BasicBlatherTaskMgr(BlatherObject):
 
     def initTasks(self):
         self.tasks = set()
-        self._e_tasks = threading.Event()
+        self._e_tasks = Event()
         self.setTaskSleep()
 
     def __repr__(self):
@@ -100,11 +84,9 @@ class BasicBlatherTaskMgr(BlatherObject):
             for task in list(activeTasks):
                 n += 1
                 activeTasks.discard(task)
-                try:
+                with localtb:
                     if task():
                         activeTasks.add(task)
-                except Exception:
-                    traceback.print_exc()
 
             if not allActive:
                 break
@@ -117,14 +99,14 @@ class BasicBlatherTaskMgr(BlatherObject):
 
 class BasicBlatherTimerMgr(BasicBlatherTaskMgr):
     done = False
-    timestamp = time.time
+    timestamp = timestamp
 
     def __init__(self, name):
         BasicBlatherTaskMgr.__init__(self, name)
         self.initTimer()
 
     def initTimer(self):
-        self.lockTimerHQ = threading.Lock()
+        self.lockTimerHQ = Lock()
         with self.lockTimerHQ:
             self.hqTimer = []
         self.threadTimers()
@@ -154,7 +136,7 @@ class BasicBlatherTimerMgr(BasicBlatherTaskMgr):
                 heappush(hqTimer, (tsStart, task))
 
     debug = False
-    timersleep = time.sleep
+    timersleep = sleep
     minTimerFrequency = 0.008
     @threadcall
     def threadTimers(self):
