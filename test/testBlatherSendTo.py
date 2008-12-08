@@ -19,38 +19,69 @@ from TG.blathernet import Blather, MsgObject, advertIdForNS
 
 class TestMsgObject(unittest.TestCase):
     advertId = advertIdForNS('testBlather/A')
-    msgId = '9876'
 
-    def testSimple(self):
-        recv = []
+    def newBlather(self):
+        rq = []
         def fnResponder(body, fmt=0, topic=None, mctx=None):
-            recv.append((body, fmt, topic))
+            rq.append((body, fmt, topic))
 
         blather = Blather()
 
-        self.assertEqual(len(recv), 0)
+        self.assertEqual(len(rq), 0)
         blather.addResponderFn(self.advertId, fnResponder)
+        return blather, rq
+
+    def testBodyOnly(self):
+        blather, rq = self.newBlather()
 
         blather.sendTo(self.advertId, "a test body, no fmt, no topic")
-        self.assertEqual(len(recv), 0)
-        self.assertTrue(blather.process() > 0)
-        self.assertEqual(len(recv), 1)
+        self.assertEqual(len(rq), 0)
 
-        self.assertEqual(recv[-1], ("a test body, no fmt, no topic", 0, None))
+        self.assertTrue(blather.process() > 0)
+        self.assertEqual(len(rq), 1)
+
+        self.assertEqual(rq, [("a test body, no fmt, no topic", 0, None)])
+
+    def testBodyFmtTopicVar(self):
+        blather, rq = self.newBlather()
 
         blather.sendTo(self.advertId, "a test body, 0x7 fmt, topic of neat", 7, 'neat')
-        self.assertEqual(len(recv), 1)
+        self.assertEqual(len(rq), 0)
         self.assertTrue(blather.process() > 0)
-        self.assertEqual(len(recv), 2)
+        self.assertEqual(len(rq), 1)
 
-        self.assertEqual(recv[-1], ("a test body, 0x7 fmt, topic of neat", 0x7, 'neat'))
+        self.assertEqual(rq, [("a test body, 0x7 fmt, topic of neat", 0x7, 'neat')])
+
+    def testBodyFmtTopic16(self):
+        blather, rq = self.newBlather()
 
         blather.sendTo(self.advertId, "a test body, 0xf fmt, topic of advertId", 0xf, self.advertId)
-        self.assertEqual(len(recv), 2)
+        self.assertEqual(len(rq), 0)
         self.assertTrue(blather.process() > 0)
-        self.assertEqual(len(recv), 3)
+        self.assertEqual(len(rq), 1)
 
-        self.assertEqual(recv[-1], ("a test body, 0xf fmt, topic of advertId", 0xf, self.advertId))
+        self.assertEqual(rq, [("a test body, 0xf fmt, topic of advertId", 0xf, self.advertId)])
+
+    def test3Msg(self):
+        blather, rq = self.newBlather()
+
+        blather.sendTo(self.advertId, "message A")
+        blather.sendTo(self.advertId, "message B")
+
+        self.assertEqual(len(rq), 0)
+        self.assertTrue(blather.process() > 0)
+        self.assertEqual(len(rq), 2)
+
+        blather.sendTo(self.advertId, "message C")
+
+        self.assertEqual(len(rq), 2)
+        self.assertTrue(blather.process() > 0)
+        self.assertEqual(len(rq), 3)
+
+        self.assertEqual(rq, [
+                ("message A", 0, None),
+                ("message B", 0, None),
+                ("message C", 0, None)])
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 #~ Unittest Main  
