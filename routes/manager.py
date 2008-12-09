@@ -45,8 +45,15 @@ class BlatherRouteMgr(BlatherObject):
 
     #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
+    def __len__(self):
+        return len(self.routes)
+    def __iter__(self):
+        return iter(self.routes)
+
+    #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
     def getDispatchForRoute(self, route):
-        return self.dispatchEnvelope
+        return self.dispatchPacket
 
     def dispatchPacket(self, pkt):
         raise NotImplementedError('Method override responsibility: %r' % (self,))

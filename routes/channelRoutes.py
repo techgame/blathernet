@@ -30,6 +30,8 @@ class BlatherChannelRoute(BasicBlatherRoute):
         return self.addrInbound is None
     def isSendRoute(self): 
         return self.addrOutbound is not None
+    def isBroadcastRoute(self):
+        return False
 
     #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -43,8 +45,6 @@ class BlatherChannelRoute(BasicBlatherRoute):
 
     def findReturnRouteFor(self, addr):
         if addr != self.addrOutbound:
-            return None
-        if self.addrInbound is None:
             return None
         return self.wrRoute
 
