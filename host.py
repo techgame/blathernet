@@ -32,8 +32,8 @@ class Blather(BlatherObject):
             )
     tasks = None
     advertDb = None
-    msgMgr = None
-    routeMgr = None
+    msgs = None
+    routes = None
 
     _name = None
     def __init__(self, name=None):
@@ -52,8 +52,8 @@ class Blather(BlatherObject):
     def _initMgrs(self):
         self.tasks = self._fm_.TaskMgr(self._name)
         self.advertDb = self._fm_.AdvertDB()
-        self.msgMgr = self._fm_.MessageMgr(self)
-        self.routeMgr = self._fm_.RouteMgr(self, self.msgMgr.queuePacket)
+        self.msgs = self._fm_.MessageMgr(self)
+        self.routes = self._fm_.RouteMgr(self, self.msgs.queuePacket)
 
     @property
     def routeFactory(self):
@@ -78,8 +78,10 @@ class Blather(BlatherObject):
 
     def addResponder(self, advertId, responder=None):
         return self.advertDb.addResponder(advertId, responder)
-    def addResponderFn(self, advertId, msgfn):
+    def addResponderFn(self, advertId, msgfn=None):
         return self.advertDb.addResponderFn(advertId, msgfn)
+    def respondTo(self, advertId, msgfn=None):
+        return self.advertDb.respondTo(advertId, msgfn)
     def removeResponder(self, advertId, responder):
         return self.advertDb.removeResponder(advertId, responder)
 
@@ -88,7 +90,7 @@ class Blather(BlatherObject):
     def newMsg(self, advertId=None):
         return MsgObject(advertId)
     def sendMsg(self, mobj):
-        return self.msgMgr.queueMsg(mobj)
+        return self.msgs.queueMsg(mobj)
     def sendTo(self, advertId, body, fmt=0, topic=None):
         mobj = self.newMsg(advertId)
         mobj.msg(body, fmt, topic)

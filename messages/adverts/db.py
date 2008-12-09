@@ -97,7 +97,14 @@ class AdvertDB(object):
     def removeResponder(self, adKey, advertResponder):
         return self[adKey].removeResponder(advertResponder)
 
-    def addResponderFn(self, advertId, msgfn):
-        fnResponder = FunctionAdvertResponder(msgfn, advertId=advertId)
-        return self.addResponder(advertId, fnResponder)
+    def addResponderFn(self, advertId, msgfn=None):
+        if msgFn is None:
+            def bindFnAsResponder(msgfn):
+                self.addResponderFn(advertId, msgfn)
+                return msgfn
+            return bindFnAsResponder
+        else:
+            fnResponder = FunctionAdvertResponder(msgfn, advertId=advertId)
+            return self.addResponder(advertId, fnResponder)
+    respondTo = addResponderFn
 
