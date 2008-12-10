@@ -11,9 +11,9 @@
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 from ..base import PacketNS
-from ..base.commandDispatch import CommamdDispatch
 
 from .adverts import advertIdForNS
+from .msgPPrint import MsgPPrint
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 #~ Definitions 
@@ -87,6 +87,13 @@ class MsgCommandObject(object):
     def newMsgId(self):
         raise NotImplementedError('Subclass Responsibility: %r' % (self,))
 
+    def ensureMsgId(self):
+        msgId = self.msgId
+        if msgId is None:
+            msgId = self.newMsgId()
+            self.msgId = msgId
+        return msgId
+
     #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     #~ Msg Builder Interface
     #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -158,42 +165,7 @@ class MsgCommandObject(object):
     #~ Debug Printing
     #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-    _debugFormat = CommamdDispatch()
     def pprint(self, out=None):
-        print >> out, '%r:' % (self, )
-        fmtMap = self._debugFormat
-        for cmd, arg in self.cmdList:
-            fmt = fmtMap[cmd]
-            fmt = fmt(self, cmd, arg)
-            print >> out, '    ' + fmt
-        print
-
-    @_debugFormat.add('end')
-    def _debugFmt_end(self, cmd, args):
-        return '%s%r' % (cmd, args)
-
-    @_debugFormat.add('forward')
-    def _debugFmt_forward(self, cmd, args):
-        n, when, adid = args
-        if adid:
-            adid = adid.encode('hex')
-        return '%s(%s, %s, %s)' % (cmd, n, when, adid)
-
-    @_debugFormat.add('replyRef')
-    def _debugFmt_replyRef(self, cmd, args):
-        adIds, = args
-        if isinstance(adIds, str):
-            adIds = [adIds]
-        adIds = [e.encode('hex') for e in adIds]
-        return '%s([%s])' % (cmd, ', '.join(adIds))
-
-    @_debugFormat.add('adRefs')
-    def _debugFmt_adRefs(self, cmd, args):
-        adIds, key = args
-        adIds = [e.encode('hex') for e in adIds]
-        return '%s([%s], %r)' % (cmd, ', '.join(adIds), key)
-
-    @_debugFormat.add('msg')
-    def _debugFmt_msg(self, cmd, args):
-        return '%s%r' % (cmd, args)
+        mx = MsgPPrint(out)
+        self.executeOn(mx)
 

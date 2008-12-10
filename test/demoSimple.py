@@ -11,17 +11,18 @@
 #~ Imports 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
+import time
 from TG.blathernet import Blather, advertIdForNS
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 #~ Definitions 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-adAnnounce = advertIdForNS('TG.blathernet.test.demo::demoChat,announce')
-ad0 = advertIdForNS('TG.blathernet.test.demo::demoChat,0')
+adAnnounce = '-!Blather Ann !-'
+ad0 = '-!DEMO Ad Zero!-'
+ad1 = '-!DEMO Ad One !-'
+
 bla0 = Blather('Left')
-ad1 = advertIdForNS('TG.blathernet.test.demo::demoChat,r')
-##bla1 = bla0
 bla1 = Blather('Right')
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -35,7 +36,7 @@ def setup():
     r0 = bla0.routes.factory
     r1 = bla1.routes.factory
 
-    if 0:
+    if 1:
         r0.connectDirectUDP(ch1.address)
         r1.connectDirectUDP(ch0.address)
 
@@ -47,10 +48,11 @@ def setup():
         r0.connectInproc('r1')
         r1.connectInproc('r0')
 
-def main():
-    setup()
     bla0.run(True)
     bla1.run(True)
+
+def main():
+    setup()
 
     @bla0.respondTo(ad0)
     def bla0_chatMsg(body, fmt, topic, mctx):
@@ -60,20 +62,24 @@ def main():
     def bla1_chatMsg(body, fmt, topic, mctx):
         print 'bla1 chat> ', (body, fmt, topic)
 
-    # TODO: 'introduce' routes to advert ids
+    if 0:
+        bla0.addAdvertRoutes(adAnnounce)
+        bla1.addAdvertRoutes(adAnnounce)
 
-    bla0.addAdvertRoutes(adAnnounce)
-    bla1.addAdvertRoutes(adAnnounce)
+        annMsg = bla0.newMsg(adAnnounce, ad0)
+        bla0.fwdMsg(annMsg, 0, False)
 
-    bla0.sendMsg(bla0.newMsg(adAnnounce, [ad0, ad1]))
-    bla1.sendMsg(bla1.newMsg(adAnnounce, [ad0, ad1]))
+        annMsg = bla1.newMsg(adAnnounce, ad1)
+        bla1.fwdMsg(annMsg, 0, False)
 
-    ##for x in xrange(5):
-    ##    while sum([bla0.process(), bla1.process()]):
-    ##        print '.'
-    ##    print '?'
+        time.sleep(0.1)
+    elif 1:
+        bla0.addAdvertRoutes(ad1)
+        bla1.addAdvertRoutes(ad0)
 
-    raw_input("RDY?")
+
+    ##print; raw_input("RDY?\n\n"); print
+
     #k = raw_input('BLA0 What? ')
     k = 'msg from left to right'
     bla0.sendTo(ad1, k)
@@ -82,12 +88,9 @@ def main():
     k = 'msg from right to left'
     bla1.sendTo(ad0, k)
 
-    ##for x in xrange(5):
-    ##    while sum([bla0.process(), bla1.process()]):
-    ##        print '.'
-    ##    print '?'
-
-    raw_input("DONE>")
+    try: 
+        while 1: time.sleep(.1)
+    except KeyboardInterrupt: pass
 
 if __name__=='__main__':
     main()

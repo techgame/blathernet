@@ -95,18 +95,19 @@ class MsgDispatch(object):
     #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
     def advertMsgId(self, advertId, msgId, src=None):
-        if self.msgFilter(advertId, msgId):
-            return False
-
-        adEntry = self.advertDb[advertId]
+        adEntry = self.advertDb.get(advertId)
         self.adEntry = adEntry
 
         mctx = self.MsgContext(advertId, msgId, src)
         mctx.adEntry = adEntry
         self.mctx = mctx
 
-        self.adResponders = self.adEntry.allResponders()
-        for r in self.adResponders:
+        if adEntry is not None:
+            adResponders = adEntry.allResponders()
+        else: adResponders = []
+
+        self.adResponders = adResponders
+        for r in adResponders:
             with localtb:
                 r.beginResponse(mctx)
 
@@ -143,11 +144,16 @@ class MsgDispatch(object):
         if not fwdRoutes:
             return
 
+        srcRoutes = [mctx.src.recvRoute, mctx.src.route]
         fwdPacket = mctx.fwdPacket
         if fwdPacket is not None:
             # actually accomplish the forward!
             for route in fwdRoutes:
-                route.sendDispatch(fwdPacket)
+                if route in srcRoutes:
+                    # Skip source routes, cause they already know
+                    continue
+
+                route().sendDispatch(fwdPacket)
 
     def replyRef(self, replyAdvertIds):
         if isinstance(replyAdvertIds, str):
@@ -161,7 +167,8 @@ class MsgDispatch(object):
         mctx = self.mctx
         mctx.adRefs[key] = advertIds
 
-        self.advertDb.addRouteForAdverts(mctx.src.route, advertIds)
+        if self.adEntry is not None:
+            self.advertDb.addRouteForAdverts(mctx.src.route, advertIds)
         return advertIds
 
     def msg(self, body, fmt=0, topic=None):

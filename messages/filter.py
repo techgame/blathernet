@@ -25,7 +25,7 @@ class MsgAdvertIdBloomFilter(object):
     def __call__(self, advertId, msgId):
         return self.test(advertId, msgId, True)
 
-    def test(self, advertId, msgId, bUpdate=True):
+    def test(self, advertId, msgId, bUpdate=False):
         if msgId is None:
             # msgId of None indicates a new instance
             return False

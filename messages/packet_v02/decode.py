@@ -50,6 +50,9 @@ class MsgDecoder_v02(object):
     msgId = property(getMsgId)
     hexMsgId = property(lambda self:self.getMsgId().encode('hex'))
 
+    def ensureMsgId(self):
+        return self.msgId
+
     #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     #~ Routing and Delivery Commands
     #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

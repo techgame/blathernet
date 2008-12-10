@@ -68,10 +68,16 @@ class AdvertEntry(object):
     def getRoutes(self, limit=None):
         routes = self._routes or []
         if routes:
-            routes = routes.items()
+            for r in routes.keys():
+                if r() is None: 
+                    routes.pop(r(), None)
+
             if limit:
+                routes = routes.items()
                 routes.sort(key=lambda (r,i): i)
-                routes = [r() for r,i in routes[:limit] if r() is not None]
+                routes = [r for r,i in routes[:limit]]
+            else: routes = routes.keys()
+
         return routes
 
     #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

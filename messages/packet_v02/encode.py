@@ -22,6 +22,9 @@ from ..packet_base import MsgEncoderBase, iterMsgId
 
 class MsgEncoder_v02(MsgEncoderBase):
     msgVersion = '\x02'
+
+    advertId = None
+    msgId = None
     msgIdLen = 4
     newMsgId = iterMsgId(msgIdLen).next
 
@@ -33,6 +36,19 @@ class MsgEncoder_v02(MsgEncoderBase):
         return self.newPacketNS(self.packet)
     pkt = property(getPacketNS)
 
+    def ensureMsgId(self):
+        msgId = self.msgId
+        if msgId is None:
+            msgId = self.newMsgId()
+        else:
+            msgIdLen = self.msgIdLen
+            if len(msgId) != msgIdLen:
+                msgId = msgId[:msgIdLen]
+            if len(msgId) != msgIdLen:
+                raise ValueError("MsgId must have a least %s bytes" % (msgIdLen,))
+        self.msgId = msgId
+        return msgId
+
     #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     #~ Msg Builder Interface
     #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -41,18 +57,13 @@ class MsgEncoder_v02(MsgEncoderBase):
         tip = StringIO()
         tip.write(self.msgVersion)
 
-        msgIdLen = self.msgIdLen
-        if msgId is None:
-            msgId = self.newMsgId()
-        elif len(msgId) < msgIdLen:
-            raise ValueError("MsgId must have a least %s bytes" % (msgIdLen,))
-
-        msgId = msgId[:msgIdLen]
-        self.msgId = msgId
+        if msgId: self.msgId = msgId
+        msgId = self.ensureMsgId()
         tip.write(msgId)
 
         if len(advertId) != 16:
             raise ValueError("AdvertId must be 16 bytes long")
+        self.advertId = advertId
         tip.write(advertId)
 
         self.tip = tip

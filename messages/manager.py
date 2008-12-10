@@ -15,6 +15,7 @@ from functools import partial
 
 from .dispatch import MsgDispatch
 from .msgObject import msgDecoderMap, MsgObject
+from .msgPPrint import MsgPPrint
 from .filter import MsgAdvertIdBloomFilter
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -25,6 +26,7 @@ class MessageMgr(object):
     MsgObject = MsgObject
 
     def __init__(self, host):
+        self._name = host._name
         self.tasks = host.tasks
         self.msgFilter = MsgAdvertIdBloomFilter()
         self.advertDb = host.advertDb
@@ -37,37 +39,45 @@ class MessageMgr(object):
         if replyId is not None:
             mobj.replyRef(replyId)
         return mobj
-    def sendMsg(self, mobj, forward=True):
-        if forward:
-            if isinstance(forward, str):
-                mobj.forward(fwdAdvertId=forward)
-            else: mobj.forward()
+    def fwdMsg(self, mobj, breadth=1, whenUnhandled=True, fwdAdvertId=None):
+        mobj.forward(breadth, whenUnhandled, fwdAdvertId)
         return self.queueMsg(mobj)
     def sendTo(self, advertId, body, fmt=0, topic=None, replyId=None):
         mobj = self.newMsg(advertId, replyId)
         mobj.msg(body, fmt, topic)
-        return self.sendMsg(mobj, True)
-
-    #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+        return self.fwdMsg(mobj)
 
     def queueMsg(self, mobj):
+        if self.msgFilter(mobj.advertId, mobj.ensureMsgId()):
+            return False
+
+        if 0: # XXX Debugging
+            print 'QUEUE on %-20s msgId:%s advertId:%s' % (self._name, mobj.hexMsgId, self._anAdId_(mobj.advertId))
         self.tasks.addTask(partial(self._dispatchMsgObj, mobj))
+    sendMsg = queueMsg
 
     pktDecoders = {}
     pktDecoders.update(msgDecoderMap)
     def queuePacket(self, pkt):
+        if 0: # XXX Debugging
+            print 'PKT QUEUE on %-20s' % (self._name, )
         pktDecoder = self.pktDecoders.get(pkt.packet[:1])
         if pktDecoder is not None:
             # supported packet, add it
             mobj = pktDecoder(pkt)
             self.queueMsg(mobj)
 
+    def _anAdId_(self, anId, enc='ascii'):
+        return anId.encode(enc) if anId else None
+
     #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
     def _dispatchMsgObj(self, mobj):
-        mc = MsgObject()
-        mobj.executeOn(mc)
-        mc.pprint()
+        if 0: # XXX Debugging
+            print 'DISPATCH on %-17s msgId:%s advertId:%s' % (self._name, mobj.hexMsgId, self._anAdId_(mobj.advertId))
+            mp = MsgPPrint()
+            mobj.executeOn(mp)
+            print
 
         mx = self.MsgQDispatch()
         mobj.executeOn(mx)
