@@ -20,13 +20,11 @@ class MsgPPrint(object):
 
     def _print_(self, fmt, *args):
         print >> self.out, fmt%args
-
     def _print_cmd_(self, cmdfmt, *args):
         return self._print_('    '+cmdfmt, *args)
-
     def _aMsgId_(self, anId, enc='hex'):
         return anId.encode(enc) if anId else None
-    def _anAdId_(self, anId, enc='ascii'):
+    def _anAdId_(self, anId, enc='hex'):
         return anId.encode(enc) if anId else None
 
     def advertMsgId(self, advertId, msgId=None, src=None):

@@ -67,7 +67,7 @@ class MessageMgr(object):
             mobj = pktDecoder(pkt)
             self.queueMsg(mobj)
 
-    def _anAdId_(self, anId, enc='ascii'):
+    def _anAdId_(self, anId, enc='hex'):
         return anId.encode(enc) if anId else None
 
     #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
