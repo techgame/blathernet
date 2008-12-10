@@ -14,7 +14,7 @@ import weakref
 from functools import partial
 
 from .dispatch import MsgDispatch
-from .msgObject import msgDecoderMap
+from .msgObject import msgDecoderMap, MsgObject
 from .filter import MsgAdvertIdBloomFilter
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -22,11 +22,31 @@ from .filter import MsgAdvertIdBloomFilter
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 class MessageMgr(object):
+    MsgObject = MsgObject
+
     def __init__(self, host):
         self.tasks = host.tasks
         self.msgFilter = MsgAdvertIdBloomFilter()
         self.advertDb = host.advertDb
         self._cfgMsgDispatch()
+
+    #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+    def newMsg(self, advertId=None, replyId=None):
+        mobj = self.MsgObject(advertId)
+        if replyId is not None:
+            mobj.replyRef(replyId)
+        return mobj
+    def sendMsg(self, mobj, forward=True):
+        if forward:
+            if isinstance(forward, str):
+                mobj.forward(fwdAdvertId=forward)
+            else: mobj.forward()
+        return self.queueMsg(mobj)
+    def sendTo(self, advertId, body, fmt=0, topic=None, replyId=None):
+        mobj = self.newMsg(advertId, replyId)
+        mobj.msg(body, fmt, topic)
+        return self.sendMsg(mobj, True)
 
     #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -36,15 +56,18 @@ class MessageMgr(object):
     pktDecoders = {}
     pktDecoders.update(msgDecoderMap)
     def queuePacket(self, pkt):
-        pktDecoder = self.pktDecoders.get(packet[:1])
+        pktDecoder = self.pktDecoders.get(pkt.packet[:1])
         if pktDecoder is not None:
             # supported packet, add it
             mobj = pktDecoder(pkt)
-            self.add(mobj)
+            self.queueMsg(mobj)
 
     #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
     def _dispatchMsgObj(self, mobj):
+        mc = MsgObject()
+        mobj.executeOn(mc)
+        print id(self), 'D:', mc.cmdList
         mx = self.MsgQDispatch()
         mobj.executeOn(mx)
 

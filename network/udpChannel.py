@@ -91,6 +91,7 @@ class UDPBaseChannel(SocketChannel):
         self.setMulticastInterface(interface, True)
 
         self.needsRead = True
+    address = property(getSocketAddress, setSocketAddress)
 
     _allowBroadcast = True
     _allowMulicastHops = 5
@@ -167,7 +168,7 @@ class UDPBaseChannel(SocketChannel):
                 traceback.print_exc()
 
         if dataPackets:
-            tasks.append((self._dispatchDataItems, dataPackets))
+            tasks.append((self._dispatchDataPackets, dataPackets))
         return n
 
     def performWrite(self, tasks):

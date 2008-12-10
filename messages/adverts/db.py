@@ -68,14 +68,16 @@ class AdvertDB(object):
     #~ Routes
     #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-    def addRoute(self, adKey, route):
+    def addRoutes(self, adKey, route):
         e = self[adKey]
         e.addRoute(route)
         return e
-    def removeRoute(self, adKey, route):
+    addRoute = addRoutes
+    def removeRoutes(self, adKey, route):
         e = self[adKey]
         e.removeRoute(route)
         return e
+    removeRoute = removeRoutes
 
     def addRouteForAdverts(self, route, advertIds):
         if route is not None:
@@ -98,7 +100,7 @@ class AdvertDB(object):
         return self[adKey].removeResponder(advertResponder)
 
     def addResponderFn(self, advertId, msgfn=None):
-        if msgFn is None:
+        if msgfn is None:
             def bindFnAsResponder(msgfn):
                 self.addResponderFn(advertId, msgfn)
                 return msgfn

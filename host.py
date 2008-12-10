@@ -17,7 +17,6 @@ from .base import BlatherObject
 from . import taskMgrs
 from . import routes 
 from . import messages
-from .messages import adverts, MsgObject
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 #~ Definitions 
@@ -27,7 +26,7 @@ class Blather(BlatherObject):
     _fm_ = BlatherObject._fm_.branch(
             TaskMgr = taskMgrs.BlatherTaskMgr,
             RouteMgr = routes.BlatherRouteMgr,
-            AdvertDB = adverts.AdvertDB,
+            AdvertDB = messages.adverts.AdvertDB,
             MessageMgr = messages.MessageMgr,
             )
     tasks = None
@@ -85,15 +84,22 @@ class Blather(BlatherObject):
     def removeResponder(self, advertId, responder):
         return self.advertDb.removeResponder(advertId, responder)
 
+    def addAdvertRoutes(self, advertId, route=None):
+        if route is None: route = list(self.routes)
+        return self.advertDb.addRoutes(advertId, route)
+    addAdvertRoute = addAdvertRoutes
+
+    def removeAdvertRoutes(self, advertId, route=None):
+        if route is None: route = list(self.routes)
+        return self.advertDb.removeRoutes(advertId)
+    removeAdvertRoute = removeAdvertRoutes
+
     #~ Messages ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-    def newMsg(self, advertId=None):
-        return MsgObject(advertId)
-    def sendMsg(self, mobj):
-        return self.msgs.queueMsg(mobj)
-    def sendTo(self, advertId, body, fmt=0, topic=None):
-        mobj = self.newMsg(advertId)
-        mobj.msg(body, fmt, topic)
-        mobj.forward()
-        return self.sendMsg(mobj)
+    def newMsg(self, advertId=None, replyId=None):
+        return self.msgs.newMsg(advertId, replyId)
+    def sendMsg(self, mobj, forward=True):
+        return self.msgs.sendMsg(mobj, forward)
+    def sendTo(self, advertId, body, fmt=0, topic=None, replyId=None):
+        return self.msgs.sendTo(advertId, body, fmt, topic, replyId)
 

@@ -31,7 +31,6 @@ class MsgAdvertIdBloomFilter(object):
             return False
 
         msgIdSets = self.msgIdSets
-
         for msgSet in msgIdSets:
             entry = msgSet.pop(msgId, None)
             if entry is not None: 
@@ -49,6 +48,7 @@ class MsgAdvertIdBloomFilter(object):
     def update(self, advertId, msgId, entry):
         entry.add(advertId[:self.nAdvertId])
 
+        msgIdSets = self.msgIdSets
         tip = msgIdSets[0]
         tip[msgId] = entry
 

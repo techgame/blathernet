@@ -10,6 +10,7 @@
 #~ Imports 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
+from weakref import ref
 from collections import defaultdict
 
 from .responder import IAdvertResponder
@@ -17,6 +18,13 @@ from .responder import IAdvertResponder
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 #~ Definitions 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+def isBlatherRoute(wrRoute):
+    if isinstance(wrRoute, ref):
+        wrRoute = wrRoute()
+    isBR = getattr(wrRoute, 'isBlatherRoute', None)
+    if isBR is not None:
+        return isBR()
 
 class AdvertEntry(object):
     __slots__ = ('_routes', '_responders')
@@ -32,15 +40,30 @@ class AdvertEntry(object):
     #~ Routes
     #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-    def addRoute(self, wrRoute):
-        routes = self._routes 
-        if routes is None:
-            routes = defaultdict(int)
-            self._routes = routes
-        routes[wrRoute] += 1
+    def addRoutes(self, routes):
+        if isBlatherRoute(routes):
+            routes = [routes]
 
-    def removeRoute(self, wrRoute):
-        return routes.pop(wrRoute, False)
+        routeMap = self._routes
+        if routeMap is None:
+            routeMap = defaultdict(int)
+            self._routes = routeMap
+
+        for r in routes:
+            if not isinstance(r, ref):
+                r = ref(r)
+            routeMap[r] += 1
+    addRoute = addRoutes
+
+    def removeRoutes(self, routes):
+        if isBlatherRoute(routes):
+            routes = [routes]
+
+        for r in routes:
+            if not isinstance(r, ref):
+                r = ref(r)
+            routes.pop(r, False)
+    removeRoute = removeRoutes
 
     def getRoutes(self, limit=None):
         routes = self._routes or []
@@ -48,7 +71,7 @@ class AdvertEntry(object):
             routes = routes.items()
             if limit:
                 routes.sort(key=lambda (r,i): i)
-                routes = [r for r,i in routes[:limit]]
+                routes = [r() for r,i in routes[:limit] if r() is not None]
         return routes
 
     #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

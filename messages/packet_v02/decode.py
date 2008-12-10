@@ -37,6 +37,19 @@ class MsgDecoder_v02(object):
             raise ValueError("Parameter src.packet is not a str: %s" % kname)
         self.src = src
 
+    def __repr__(self):
+        return '<%s msgId: %s advertId: %s>' % (self.__class__.__name__, self.hexMsgId, self.hexAdvertId)
+
+    def getAdvertId(self):
+        return self.src.packet[5:21]
+    advertId = property(getAdvertId)
+    hexAdvertId = property(lambda self:self.getAdvertId().encode('hex'))
+
+    def getMsgId(self, encoding=None):
+        return self.src.packet[1:5]
+    msgId = property(getMsgId)
+    hexMsgId = property(lambda self:self.getMsgId().encode('hex'))
+
     #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     #~ Routing and Delivery Commands
     #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

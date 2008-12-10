@@ -32,6 +32,7 @@ class MsgContext(object):
         self.advertId = advertId
         self.msgId = msgId
         self.src = src
+        self.adRefs = {}
 
     _fwdPacket = None
     def getFwdPacket(self):
@@ -48,7 +49,7 @@ class MsgContext(object):
 
         raise NotImplementedError("TODO")
 
-    def forwarded(self, fwdAdvertId):
+    def forwarding(self, breadthLimit=1, whenUnhandled=True, fwdAdvertId=None):
         pass
 
     #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -117,7 +118,7 @@ class MsgDispatch(object):
     def forward(self, breadthLimit=1, whenUnhandled=True, fwdAdvertId=None):
         # let mctx know that it was intended to be forwarded...
         mctx = self.mctx
-        mctx.forwarded(fwdAdvertId)
+        mctx.forwarding(breadthLimit, whenUnhandled, fwdAdvertId)
         if whenUnhandled and mctx.handled:
             # we were handled, so don't forward
             return
@@ -135,7 +136,8 @@ class MsgDispatch(object):
         # notify fwdAdEntry reponders that we are sending through
         for r in fwdAdEntry.allResponders():
             with localtb:
-                r.forwarding(fwdAdvertId, fwdAdEntry, mctx)
+                if r.forwarding(fwdAdvertId, fwdAdEntry, mctx) is False:
+                    return
 
         fwdRoutes = fwdAdEntry.getRoutes(breadthLimit)
         if not fwdRoutes:
@@ -151,12 +153,13 @@ class MsgDispatch(object):
         if isinstance(replyAdvertIds, str):
             replyAdvertIds = [replyAdvertIds]
 
+        mctx = self.mctx
         mctx.replyId = replyAdvertIds[0] if replyAdvertIds else None
         self.adRefs(replyAdvertIds, True)
 
     def adRefs(self, advertIds, key=None):
         mctx = self.mctx
-        mctx.adIds[key] = replyAdvertIds
+        mctx.adRefs[key] = advertIds
 
         self.advertDb.addRouteForAdverts(mctx.src.route, advertIds)
         return advertIds

@@ -95,6 +95,8 @@ class MsgCommandObject(object):
         return False
 
     def forward(self, breadthLimit=1, whenUnhandled=True, fwdAdvertId=None):
+        if fwdAdvertId in (True, False):
+            fwdAdvertId = None
         self._cmd_('forward', breadthLimit, whenUnhandled, fwdAdvertId)
 
     def replyRef(self, replyAdvertIds):

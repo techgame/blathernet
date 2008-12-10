@@ -29,9 +29,11 @@ class BlatherRouteMgr(BlatherObject):
         self.dispatchPacket = dispatchPacket
         self.routes = set()
 
-        self.tasks = host.tasks
+        #self.tasks = host.tasks
         self.network = self._fm_.NetworkMgr()
         self.factory = self._fm_.RouteFactory(self, self.network)
+
+        host.tasks.setTaskSleep(self.network.process)
 
     def addRoute(self, route):
         route.assignRouteManager(self)
@@ -60,11 +62,11 @@ class BlatherRouteMgr(BlatherObject):
 
     #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-    @kvobserve('network.selector.selectables.*')
-    def _onNetworkSelectorChange(self, selectables):
-        # if we have a network task, use the network's tasksleep mechanism.  Otherwise, use the tasks' default one
-        if len(selectables):
-            tasksleep = self.network.process
-        else: tasksleep = None
-        self.tasks.setTaskSleep(tasksleep)
+    #@kvobserve('network.selector.selectables.*')
+    #def _onNetworkSelectorChange(self, selectables):
+    #    # if we have a network task, use the network's tasksleep mechanism.  Otherwise, use the tasks' default one
+    #    if len(selectables):
+    #        tasksleep = self.network.process
+    #    else: tasksleep = None
+    #    self.tasks.setTaskSleep(tasksleep)
 
