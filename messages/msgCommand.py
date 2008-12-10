@@ -10,8 +10,10 @@
 #~ Imports 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-from .adverts import advertIdForNS
 from ..base import PacketNS
+from ..base.commandDispatch import CommamdDispatch
+
+from .adverts import advertIdForNS
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 #~ Definitions 
@@ -27,6 +29,9 @@ class MsgCommandObject(object):
     def __init__(self, advertId=None, msgId=None, src=None):
         if advertId is not None:
             self.advertMsgId(advertId, msgId, src)
+
+    def __repr__(self):
+        return '<%s msgId: %s advertId: %s>' % (self.__class__.__name__, self.hexMsgId, self.hexAdvertId)
 
     #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -76,6 +81,9 @@ class MsgCommandObject(object):
         self._cmd_clear_()
     advertId = property(getAdvertId, setAdvertId)
 
+    hexAdvertId = property(lambda self:self.advertId.encode('hex'))
+    hexMsgId = property(lambda self:(self.msgId or '').encode('hex'))
+
     def newMsgId(self):
         raise NotImplementedError('Subclass Responsibility: %r' % (self,))
 
@@ -103,6 +111,7 @@ class MsgCommandObject(object):
         if isinstance(replyAdvertIds, str):
             replyAdvertIds = [replyAdvertIds]
         self._cmd_('replyRef', replyAdvertIds)
+
     def adRefs(self, advertIds, key=None):
         self._cmd_('adRefs', advertIds, key)
 
@@ -144,4 +153,47 @@ class MsgCommandObject(object):
             self.cmdList = []
         else:
             self.cmdList[:] = [(n,a) for n,a in self.cmdList if n != name]
+
+    #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    #~ Debug Printing
+    #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+    _debugFormat = CommamdDispatch()
+    def pprint(self, out=None):
+        print >> out, '%r:' % (self, )
+        fmtMap = self._debugFormat
+        for cmd, arg in self.cmdList:
+            fmt = fmtMap[cmd]
+            fmt = fmt(self, cmd, arg)
+            print >> out, '    ' + fmt
+        print
+
+    @_debugFormat.add('end')
+    def _debugFmt_end(self, cmd, args):
+        return '%s%r' % (cmd, args)
+
+    @_debugFormat.add('forward')
+    def _debugFmt_forward(self, cmd, args):
+        n, when, adid = args
+        if adid:
+            adid = adid.encode('hex')
+        return '%s(%s, %s, %s)' % (cmd, n, when, adid)
+
+    @_debugFormat.add('replyRef')
+    def _debugFmt_replyRef(self, cmd, args):
+        adIds, = args
+        if isinstance(adIds, str):
+            adIds = [adIds]
+        adIds = [e.encode('hex') for e in adIds]
+        return '%s([%s])' % (cmd, ', '.join(adIds))
+
+    @_debugFormat.add('adRefs')
+    def _debugFmt_adRefs(self, cmd, args):
+        adIds, key = args
+        adIds = [e.encode('hex') for e in adIds]
+        return '%s([%s], %r)' % (cmd, ', '.join(adIds), key)
+
+    @_debugFormat.add('msg')
+    def _debugFmt_msg(self, cmd, args):
+        return '%s%r' % (cmd, args)
 

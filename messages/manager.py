@@ -67,7 +67,8 @@ class MessageMgr(object):
     def _dispatchMsgObj(self, mobj):
         mc = MsgObject()
         mobj.executeOn(mc)
-        print id(self), 'D:', mc.cmdList
+        mc.pprint()
+
         mx = self.MsgQDispatch()
         mobj.executeOn(mx)
 
