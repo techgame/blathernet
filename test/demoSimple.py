@@ -30,13 +30,13 @@ bla1 = Blather('Right')
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 def setup():
-    ch0 = bla0.routes.network.addUdpChannel(('127.0.0.1', 8470), assign=True)
-    ch1 = bla1.routes.network.addUdpChannel(('127.0.0.1', 8470), assign=True)
-
     r0 = bla0.routes.factory
     r1 = bla1.routes.factory
 
-    if 1:
+    if 0:
+        ch0 = bla0.routes.network.addUdpChannel(('127.0.0.1', 8470), assign=True)
+        ch1 = bla1.routes.network.addUdpChannel(('127.0.0.1', 8470), assign=True)
+
         r0.connectDirectUDP(ch1.address)
         r1.connectDirectUDP(ch0.address)
 
@@ -44,9 +44,12 @@ def setup():
         r0.connectMUDP()
         r1.connectMUDP()
 
-    elif 1:
-        r0.connectInproc('r1')
-        r1.connectInproc('r0')
+    elif 0:
+        ch0 = bla0.routes.network.inprocChannel
+        ch1 = bla1.routes.network.inprocChannel
+
+        r0.connectInproc(ch1.address)
+        r1.connectInproc(ch0.address)
 
     bla0.run(True)
     bla1.run(True)
