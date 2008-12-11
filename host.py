@@ -26,8 +26,8 @@ class Blather(BlatherObject):
     _fm_ = BlatherObject._fm_.branch(
             TaskMgr = taskMgrs.BlatherTaskMgr,
             RouteMgr = routes.BlatherRouteMgr,
-            AdvertDB = messages.adverts.AdvertDB,
-            MessageMgr = messages.MessageMgr,
+            AdvertDB = messages.adverts.BlatherAdvertDB,
+            MessageMgr = messages.BlatherMessageMgr,
             )
     tasks = None
     advertDb = None

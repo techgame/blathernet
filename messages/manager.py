@@ -51,34 +51,21 @@ class MessageMgr(object):
         if self.msgFilter(mobj.advertId, mobj.ensureMsgId()):
             return False
 
-        if 0: # XXX Debugging
-            print 'QUEUE on %-20s msgId:%s advertId:%s' % (self._name, mobj.hexMsgId, self._anAdId_(mobj.advertId))
         self.tasks.addTask(partial(self._dispatchMsgObj, mobj))
     sendMsg = queueMsg
 
     pktDecoders = {}
     pktDecoders.update(msgDecoderMap)
     def queuePacket(self, pkt):
-        if 0: # XXX Debugging
-            print 'PKT QUEUE on %-20s' % (self._name, )
         pktDecoder = self.pktDecoders.get(pkt.packet[:1])
         if pktDecoder is not None:
             # supported packet, add it
             mobj = pktDecoder(pkt)
             self.queueMsg(mobj)
 
-    def _anAdId_(self, anId, enc='hex'):
-        return anId.encode(enc) if anId else None
-
     #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
     def _dispatchMsgObj(self, mobj):
-        if 0: # XXX Debugging
-            print 'DISPATCH on %-17s msgId:%s advertId:%s' % (self._name, mobj.hexMsgId, self._anAdId_(mobj.advertId))
-            mp = MsgPPrint()
-            mobj.executeOn(mp)
-            print
-
         mx = self.MsgQDispatch()
         mobj.executeOn(mx)
 
@@ -89,4 +76,35 @@ class MessageMgr(object):
                 advertDb = self.advertDb)
 
         self.MsgQDispatch = self.MsgQDispatch.newFlyweight(**ns)
+
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+class DebugMessageMgr(MessageMgr):
+    def __init__(self, host):
+        self._name = host._name
+        MessageMgr.__init__(self, host)
+
+    def _anAdId_(self, anId, enc='hex'):
+        return anId.encode(enc) if anId else None
+
+    def queueMsg(self, mobj):
+        print 'QUEUE on %-20s msgId:%s advertId:%s' % (self._name, mobj.hexMsgId, self._anAdId_(mobj.advertId))
+        return MessageMgr.queueMsg(self, mobj)
+
+    def queuePacket(self, pkt):
+        print 'PKT QUEUE on %-20s' % (self._name, )
+        return MessageMgr.queuePacket(self, pkt)
+
+    def _dispatchMsgObj(self, mobj):
+        print 'DISPATCH on %-17s msgId:%s advertId:%s' % (self._name, mobj.hexMsgId, self._anAdId_(mobj.advertId))
+        mp = MsgPPrint()
+        mobj.executeOn(mp)
+        print
+
+        return MessageMgr._dispatchMsgObj(self, mobj)
+
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+BlatherMessageMgr = MessageMgr
+#BlatherMessageMgr = DebugMessageMgr
 

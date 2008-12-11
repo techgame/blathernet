@@ -110,3 +110,7 @@ class AdvertDB(object):
             return self.addResponder(advertId, fnResponder)
     respondTo = addResponderFn
 
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+BlatherAdvertDB = AdvertDB
+

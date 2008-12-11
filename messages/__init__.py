@@ -20,6 +20,6 @@ Packet Coding:
 from .adverts import advertIdForNS
 from .adverts import AdvertResponder
 
-from .manager import MessageMgr
+from .manager import BlatherMessageMgr
 from .msgObject import MsgObject
 

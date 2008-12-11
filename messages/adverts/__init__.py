@@ -12,7 +12,7 @@
 
 from .responder import IAdvertResponder, AdvertResponder, advertIdForNS
 from .entry import AdvertEntry
-from .db import AdvertDB
+from .db import BlatherAdvertDB
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 #~ Definitions 
