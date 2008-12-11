@@ -48,12 +48,12 @@ def chatMsg(body, fmt, topic, mctx):
     print prompt,
     sys.stdout.flush()
 
+prompt = '>>'
 def main():
     setup()
 
     blather.addAdvertRoutes(adChat)
 
-    prompt = '>>'
     me = getuser()
     try:
         me = raw_input("Name? (%s)>" %(me,)) or me
