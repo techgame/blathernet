@@ -40,9 +40,7 @@ def main():
 
     @blather.respondTo(adChat)
     def chatMsg(body, fmt, topic, mctx):
-        print
-        print '%s> %s' % (topic, body)
-        print
+        print '\r%s> %s' % (topic, body)
         print prompt,
         sys.stdout.flush()
 
@@ -57,7 +55,6 @@ def main():
             body = raw_input(prompt)
             if not body: break
             blather.sendTo(adChat, body, 0, me)
-            print
     except (KeyboardInterrupt, EOFError), e: 
         pass
 
