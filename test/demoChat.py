@@ -29,24 +29,32 @@ blather = Blather()
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 def setup():
+    rn = blather.routes.network
+    print 
+    for e, lst in rn.getIFIndexes():
+        print 'I:', e, lst
+    print 
+    for e, lst in rn.getIFAddrs():
+        print 'A:', e, lst
+    print 
     rf = blather.routes.factory
     rf.connectMUDP()
 
     blather.run(True)
 
+@blather.respondTo(adChat)
+def chatMsg(body, fmt, topic, mctx):
+    print '\r%s> %s' % (topic, body)
+    print prompt,
+    sys.stdout.flush()
+
 def main():
     setup()
-    prompt = '>>'
-
-    @blather.respondTo(adChat)
-    def chatMsg(body, fmt, topic, mctx):
-        print '\r%s> %s' % (topic, body)
-        print prompt,
-        sys.stdout.flush()
 
     blather.addAdvertRoutes(adChat)
-    me = getuser()
 
+    prompt = '>>'
+    me = getuser()
     try:
         me = raw_input("Name? (%s)>" %(me,)) or me
         print "Welcome, %s!"%(me,)
