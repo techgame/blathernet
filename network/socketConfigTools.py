@@ -184,6 +184,7 @@ class SocketConfigUtils(object):
 
     def joinGroup(self, group, if_address=None):
         groupAndIF = self._packedGroup(group, if_address)
+        print 'joinGroup:',(group, if_address, groupAndIF.encode('hex'))
         if self.afamily == AF_INET:
             self.sock.setsockopt(socket.IPPROTO_IP, socket.IP_ADD_MEMBERSHIP, groupAndIF)
         elif self.afamily == AF_INET6:
