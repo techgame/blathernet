@@ -58,7 +58,7 @@ class AdvertResponder(BlatherObject, IAdvertResponder):
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 class FunctionAdvertResponder(IAdvertResponder):
-    def __init__(self, msgfn, forwardfn=None, advertId=None):
+    def __init__(self, msgfn, advertId=None):
         if advertId is not None:
             self.advertId = advertId
 
