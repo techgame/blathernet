@@ -62,7 +62,11 @@ def main():
         while 1:
             body = raw_input(prompt)
             if not body: break
-            blather.sendTo(adChat, body, 0, me)
+
+            cm = blather.newMsg(adChat)
+            cm.msg(body, 0, me)
+            cm.forward(0, False)
+            blather.sendMsg(cm)
     except (KeyboardInterrupt, EOFError), e: 
         pass
 
