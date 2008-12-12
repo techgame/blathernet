@@ -41,7 +41,7 @@ class MsgCommandObject(object):
 
     def copy(self):
         r = self.new(self.advertId, self.msgId, self.src)
-        r.cmdList = self.cmdList[:]
+        r._cmdList = self._cmdList[:]
         return r
 
     @classmethod
