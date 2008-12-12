@@ -22,6 +22,7 @@ class MsgPPrint(object):
         print >> self.out, fmt%args
     def _print_cmd_(self, cmdfmt, *args):
         return self._print_('    '+cmdfmt, *args)
+
     def _aMsgId_(self, anId, enc='hex'):
         return anId.encode(enc) if anId else None
     def _anAdId_(self, anId, enc='hex'):
@@ -32,7 +33,7 @@ class MsgPPrint(object):
         return self
 
     def end(self):
-        self._cmd_('end')
+        self._print_cmd_('end')
         return False
 
     def forward(self, breadthLimit=1, whenUnhandled=True, fwdAdvertId=None):
