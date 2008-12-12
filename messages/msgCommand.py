@@ -40,7 +40,9 @@ class MsgCommandObject(object):
         return klass(advertId, msgId, src)
 
     def copy(self):
-        return self.fromMsgObject(self)
+        r = self.new(self.advertId, self.msgId, self.src)
+        r.cmdList = self.cmdList[:]
+        return r
 
     @classmethod
     def fromMsgObject(klass, mobj):
@@ -135,7 +137,7 @@ class MsgCommandObject(object):
     def executeOn(self, mxRoot):
         mx = mxRoot.advertMsgId(self.advertId, self.msgId, self.src)
         if mx:
-            for fn, args in self.cmdList:
+            for fn, args in self._iterCmds_():
                 fn = getattr(mx, fn)
                 r = fn(*args)
                 if r is False:
@@ -144,6 +146,16 @@ class MsgCommandObject(object):
             return mx.complete()
 
     #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+    _cmd_order = {'end':100, 'forward':90, 'msg': 50, 'adRefs': 30, 'replyRef': 30}
+    def _iterCmds_(self, bSorted=True):
+        cmdOrderMap = self._cmd_order
+
+        cmdList = self.cmdList
+        if bSorted and cmdOrderMap:
+            cmdList = sorted(cmdList, key=lambda (cmd, args):cmdOrderMap[cmd])
+
+        return iter(cmdList)
 
     def _cmd_(self, name, *args):
         if self.fwd is not None:
