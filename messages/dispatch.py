@@ -175,7 +175,9 @@ class MsgDispatch(object):
         mctx = self.mctx
         for r in self.adResponders:
             with localtb:
-                r.msg(body, fmt, topic, mctx)
+                v = r.msg(body, fmt, topic, mctx)
+                if v is not False:
+                    mctx.handled += 1
 
     def complete(self):
         mctx = self.mctx
