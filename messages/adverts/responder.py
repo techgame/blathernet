@@ -40,7 +40,7 @@ class IAdvertResponder(object):
         
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-def buildAdvertId(self, pName, obInstance):
+def buildAdvertId(pName, obInstance):
     advertNS = obInstance.advertNS
     if advertNS is not None:
         advertId = advertIdForNS(advertNS)
