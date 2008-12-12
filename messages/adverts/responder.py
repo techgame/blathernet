@@ -30,13 +30,10 @@ class IAdvertResponder(object):
     def isAdvertResponder(self):
         return True
 
-    def beginResponse(self, mctx):
+    def beginResponse(self, mctx, mrules):
         pass
     def finishResponse(self, mctx):
         pass
-
-    def forwarding(self, fwdAdvertId, fwdAdEntry, mctx):
-        return True
 
     def msg(self, body, fmt, topic, mctx):
         pass
@@ -67,8 +64,6 @@ class FunctionAdvertResponder(IAdvertResponder):
 
         if msgfn is not None:
             self.msg = msgfn
-        if forwardfn is not None:
-            self.forwarding = forwardfn
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 #~ Advert Responder List
@@ -94,23 +89,15 @@ class AdvertResponderList(IAdvertResponder):
 
     #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-    def beginResponse(self, mctx):
+    def beginResponse(self, mctx, mrules):
         for ar in self._responders:
             with localtb:
-                ar.beginResponse(mctx)
+                ar.beginResponse(mctx, mrules)
 
     def finishResponse(self, mctx):
         for ar in self._responders:
             with localtb:
                 ar.finishResponse(mctx)
-
-    def forwarding(self, fwdAdvertId, fwdAdEntry, mctx):
-        r = True
-        for ar in self._responders:
-            with localtb:
-                if ar.forwarding(fwdAdvertId, fwdAdEntry, mctx) is False:
-                    r = False
-        return r
 
     def msg(self, body, fmt, topic, mctx):
         for ar in self._responders:

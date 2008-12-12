@@ -69,11 +69,33 @@ class MsgContext(object):
 #~ Message Dispatching
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
+class MsgDispatchRules(object):
+    def __init__(self, adEntry):
+        if adEntry is None:
+            self.setAllowRef(False)
+
+    _allowForward = True
+    def getAllowForward(self):
+        return self._allowForward > False
+    def setAllowForward(self, bAllow):
+        self._allowForward += bAllow
+    allowForward = property(getAllowForward, setAllowForward)
+
+    _allowRef = True
+    def getAllowRef(self):
+        return self._allowRef > False
+    def setAllowRef(self, bAllow):
+        self._allowRef += bAllow
+    allowRef = property(getAllowRef, setAllowRef)
+
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
 class MsgDispatch(object):
     mq = None
     msgFilter = None # flyweighted
     advertDb = None # flyweighted
 
+    MsgDispatchRules = MsgDispatchRules
     MsgContext = MsgContext 
     mctx = None
 
@@ -106,10 +128,11 @@ class MsgDispatch(object):
             adResponders = adEntry.allResponders()
         else: adResponders = []
 
+        self.mrules = mrules = self.MsgDispatchRules(adEntry)
         self.adResponders = adResponders
         for r in adResponders:
             with localtb:
-                r.beginResponse(mctx)
+                r.beginResponse(mctx, mrules)
 
         return self
 
@@ -118,6 +141,9 @@ class MsgDispatch(object):
 
     def forward(self, breadthLimit=1, whenUnhandled=True, fwdAdvertId=None):
         # let mctx know that it was intended to be forwarded...
+        if not self.mrules.allowForward:
+            return
+
         mctx = self.mctx
         mctx.forwarding(breadthLimit, whenUnhandled, fwdAdvertId)
         if whenUnhandled and mctx.handled:
@@ -133,12 +159,6 @@ class MsgDispatch(object):
 
         if fwdAdEntry is None: 
             return
-
-        # notify fwdAdEntry reponders that we are sending through
-        for r in fwdAdEntry.allResponders():
-            with localtb:
-                if r.forwarding(fwdAdvertId, fwdAdEntry, mctx) is False:
-                    return
 
         fwdRoutes = fwdAdEntry.getRoutes(breadthLimit)
         if not fwdRoutes:
@@ -167,7 +187,7 @@ class MsgDispatch(object):
         mctx = self.mctx
         mctx.adRefs[key] = advertIds
 
-        if self.adEntry is not None:
+        if self.mrules.allowRef:
             self.advertDb.addRouteForAdverts(mctx.src.route, advertIds)
         return advertIds
 
