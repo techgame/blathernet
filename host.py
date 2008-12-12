@@ -54,11 +54,6 @@ class Blather(BlatherObject):
         self.msgs = self._fm_.MessageMgr(self)
         self.routes = self._fm_.RouteMgr(self, self.msgs.queuePacket)
 
-    @property
-    def routeFactory(self):
-        warnings.warn('routeFactory is deprecated.  Use route.factory instead')
-        return self.routes.factory
-
     #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     #~ Task and timer processing
     #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
