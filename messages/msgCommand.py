@@ -86,13 +86,10 @@ class MsgCommandObject(object):
     hexAdvertId = property(lambda self:self.advertId.encode('hex'))
     hexMsgId = property(lambda self:(self.msgId or '').encode('hex'))
 
-    def newMsgId(self):
-        raise NotImplementedError('Subclass Responsibility: %r' % (self,))
-
     def ensureMsgId(self):
         msgId = self.msgId
         if msgId is None:
-            msgId = self.newMsgId()
+            msgId = self.codec.newMsgId()
             self.msgId = msgId
         return msgId
 
@@ -137,7 +134,7 @@ class MsgCommandObject(object):
     def executeOn(self, mxRoot):
         mx = mxRoot.advertMsgId(self.advertId, self.msgId, self.src)
         if mx:
-            for fn, args in self._iterCmds_():
+            for fn, args in self.iterCmds():
                 fn = getattr(mx, fn)
                 r = fn(*args)
                 if r is False:
@@ -148,30 +145,32 @@ class MsgCommandObject(object):
     #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
     _cmd_order = {'end':100, 'forward':90, 'msg': 50, 'adRefs': 30, 'replyRef': 30}
-    def _iterCmds_(self, bSorted=True):
+    def listCmds(self, bSorted=True):
         cmdOrderMap = self._cmd_order
 
-        cmdList = self.cmdList
+        cmdList = self._cmdList
         if bSorted and cmdOrderMap:
             cmdList = sorted(cmdList, key=lambda (cmd, args):cmdOrderMap[cmd])
 
-        return iter(cmdList)
+        return cmdList
+    def iterCmds(self, bSorted=True):
+        return iter(self.listCmds(bSorted))
 
     def _cmd_(self, name, *args):
         if self.fwd is not None:
             self.fwd.packet = None
 
         ce = (name, args)
-        self.cmdList.append(ce)
+        self._cmdList.append(ce)
         return ce
     
     def _cmd_clear_(self, name=None):
         if self.fwd is not None:
             self.fwd.packet = None
         if name is None:
-            self.cmdList = []
+            self._cmdList = []
         else:
-            self.cmdList[:] = [(n,a) for n,a in self.cmdList if n != name]
+            self._cmdList[:] = [(n,a) for n,a in self._cmdList if n != name]
 
     #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     #~ Debug Printing

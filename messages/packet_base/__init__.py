@@ -30,6 +30,13 @@ def iterMsgId(count, seed=None):
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 class MsgCodecBase(object):
+    @classmethod
+    def new(klass, MsgCommandKlass=None):
+        self = klass()
+        if MsgCommandKlass is not None:
+            self.assignTo(MsgCommandKlass)
+        return self
+
     def assignTo(self, MsgCommandKlass):
         self.newMsgCommandObject = MsgCommandKlass
         MsgCommandKlass.codec = self

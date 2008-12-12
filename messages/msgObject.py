@@ -10,6 +10,7 @@
 #~ Imports 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
+from .msgCommand import MsgCommandObject
 from .adverts import advertIdForNS
 from . import packet_v02
 
@@ -17,11 +18,17 @@ from . import packet_v02
 #~ Mapping Values
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-msgDecoderList = [
+msgCodecList = [
     packet_v02.MsgObject,
     ]
 
-msgDecoderMap = dict((e.msgVersion, e.codec.newDecoder) for e in msgDecoderList)
+msgDecoderMap = dict((e.codec.msgVersion, e.codec.newDecoder) for e in msgCodecList)
 
-MsgObject = msgDecoderList[-1]
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+class MsgObject(MsgCommandObject):
+    pass
+
+defaultCodec = msgCodecList[-1].codec
+defaultCodec = defaultCodec.new(MsgObject)
 

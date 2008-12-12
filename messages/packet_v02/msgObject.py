@@ -21,15 +21,15 @@ from .decode import MsgDecoder_v02
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 class MsgCodec_v02(MsgCodecBase):
+    msgVersion = '\x02'
     newEncoder = MsgEncoder_v02
     newDecoder = MsgDecoder_v02
+    newMsgId = MsgEncoder_v02.newMsgId
 
 class MsgObject_v02(MsgCommandObject):
-    msgVersion = '\x02'
-    msgIdLen = 4
-    newMsgId = iterMsgId(msgIdLen).next
+    pass
 
-MsgCodec_v02().assignTo(MsgObject_v02)
+MsgCodec_v02.new(MsgObject_v02)
 
 MsgCodec = MsgCodec_v02
 MsgObject = MsgObject_v02

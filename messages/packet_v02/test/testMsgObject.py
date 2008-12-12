@@ -31,8 +31,8 @@ class TestMsgObject(unittest.TestCase):
         newMobj = packet.MsgObject.fromData(mpkt)
         newMpkt = newMobj.encode()
 
-        self.assertEqual(len(mobj.cmdList), len(newMobj.cmdList))
-        for idx, (sc, nc) in enumerate(zip(mobj.cmdList, newMobj.cmdList)):
+        self.assertEqual(len(mobj.listCmds()), len(newMobj.listCmds()))
+        for idx, (sc, nc) in enumerate(zip(mobj.listCmds(), newMobj.listCmds())):
             self.assertEqual(sc, nc)
 
         self.assertEqual(mpkt.packet, newMpkt.packet)
@@ -71,12 +71,5 @@ class TestMsgObject(unittest.TestCase):
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 if __name__=='__main__':
-    tl = unittest.defaultTestLoader
-    ts = unittest.TestSuite()
-    ts.addTest(tl.loadTestsFromTestCase(TestMsgObject))
-
-    tr = ts.run(unittest.TestResult())
-    if not tr.wasSuccessful():
-        ts.debug()
-    print tr
+    unittest.main()
 
