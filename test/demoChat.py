@@ -54,6 +54,10 @@ def main():
 
     blather.addAdvertRoutes(adChat)
 
+    chatMsg = blather.newMsg(adChat)
+    # forward out all interfaces, even after being handled
+    chatMsg.forward(None, False)
+
     me = getuser()
     try:
         me = raw_input("Name? (%s)>" %(me,)) or me
@@ -63,9 +67,8 @@ def main():
             body = raw_input(prompt)
             if not body: break
 
-            cm = blather.newMsg(adChat)
+            cm = chatMsg.copy()
             cm.msg(body, 0, me)
-            cm.forward(0, False)
             blather.sendMsg(cm)
     except (KeyboardInterrupt, EOFError), e: 
         pass
