@@ -1,0 +1,60 @@
+##~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~##
+##~ Copyright (C) 2002-2009  TechGame Networks, LLC.              ##
+##~                                                               ##
+##~ This library is free software; you can redistribute it        ##
+##~ and/or modify it under the terms of the BSD style License as  ##
+##~ found in the LICENSE file included with this distribution.    ##
+##~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~##
+
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+#~ Imports 
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+#~ Definitions 
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+class IAdvertAPI(object):
+    def addResponder(self, advertId, responder=None):
+        raise NotImplementedError('Interface method: %r' % (self,))
+    def addResponderFn(self, advertId, msgfn=None):
+        raise NotImplementedError('Interface method: %r' % (self,))
+    def respondTo(self, advertId, msgfn=None):
+        raise NotImplementedError('Interface method: %r' % (self,))
+    def removeResponder(self, advertId, responder):
+        raise NotImplementedError('Interface method: %r' % (self,))
+
+    def addAdvertRoutes(self, advertId, route=None):
+        raise NotImplementedError('Interface method: %r' % (self,))
+    addAdvertRoute = addAdvertRoutes
+
+    def removeAdvertRoutes(self, advertId, route=None):
+        raise NotImplementedError('Interface method: %r' % (self,))
+    removeAdvertRoute = removeAdvertRoutes
+
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+class AdvertDelegateAPI(IAdvertAPI):
+    #~ Advert Responders ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    advertDb = None
+
+    def addResponder(self, advertId, responder=None):
+        return self.advertDb.addResponder(advertId, responder)
+    def addResponderFn(self, advertId, msgfn=None):
+        return self.advertDb.addResponderFn(advertId, msgfn)
+    def respondTo(self, advertId, msgfn=None):
+        return self.advertDb.respondTo(advertId, msgfn)
+    def removeResponder(self, advertId, responder):
+        return self.advertDb.removeResponder(advertId, responder)
+
+    def addAdvertRoutes(self, advertId, route=None):
+        if route is None: route = list(self.routes)
+        return self.advertDb.addRoutes(advertId, route)
+    addAdvertRoute = addAdvertRoutes
+
+    def removeAdvertRoutes(self, advertId, route=None):
+        if route is None: route = list(self.routes)
+        return self.advertDb.removeRoutes(advertId)
+    removeAdvertRoute = removeAdvertRoutes
+
+

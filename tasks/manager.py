@@ -15,9 +15,9 @@ from __future__ import with_statement
 from functools import partial
 from heapq import heappop, heappush
 
-from .base import BlatherObject, timestamp, sleep
-from .base.tracebackBoundry import localtb
-from .base.threadutils import threadcall, Event, Lock
+from ..base import BlatherObject, timestamp, sleep
+from ..base.tracebackBoundry import localtb
+from ..base.threadutils import threadcall, Event, Lock
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 #~ Definitions 

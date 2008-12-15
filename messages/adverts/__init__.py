@@ -10,6 +10,7 @@
 #~ Imports 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
+from . import api
 from .responder import IAdvertResponder, AdvertResponder, advertIdForNS
 from .entry import AdvertEntry
 from .db import BlatherAdvertDB

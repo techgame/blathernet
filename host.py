@@ -14,24 +14,24 @@ import uuid
 import md5
 
 from .base import BlatherObject
-from . import taskMgrs
+from . import tasks
 from . import routes 
 from . import messages
+from .messages import adverts
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 #~ Definitions 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-class Blather(BlatherObject):
+class BlatherHost(BlatherObject):
+    """BlatherHost for components of the blather system"""
+
     _fm_ = BlatherObject._fm_.branch(
-            TaskMgr = taskMgrs.BlatherTaskMgr,
+            TaskMgr = tasks.BlatherTaskMgr,
             RouteMgr = routes.BlatherRouteMgr,
             AdvertDB = messages.adverts.BlatherAdvertDB,
             MessageMgr = messages.BlatherMessageMgr,
             )
-    tasks = None
-    advertDb = None
-    msgs = None
     routes = None
 
     _name = None
@@ -54,51 +54,13 @@ class Blather(BlatherObject):
         self.msgs = self._fm_.MessageMgr(self)
         self.routes = self._fm_.RouteMgr(self, self.msgs.queuePacket)
 
-    #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-    #~ Task and timer processing
-    #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-    def process(self, allActive=True):
-        return self.tasks.process(allActive)
-    def run(self, threaded=False):
-        return self.tasks.run(threaded)
-
-    def addTimer(self, tsStart, task):
-        return self.tasks.addTimer(tsStart, task)
-    def addTask(self, task):
-        return self.tasks.addTask(task)
-
-    #~ Advert Responders ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-    def addResponder(self, advertId, responder=None):
-        return self.advertDb.addResponder(advertId, responder)
-    def addResponderFn(self, advertId, msgfn=None):
-        return self.advertDb.addResponderFn(advertId, msgfn)
-    def respondTo(self, advertId, msgfn=None):
-        return self.advertDb.respondTo(advertId, msgfn)
-    def removeResponder(self, advertId, responder):
-        return self.advertDb.removeResponder(advertId, responder)
-
-    def addAdvertRoutes(self, advertId, route=None):
-        if route is None: route = list(self.routes)
-        return self.advertDb.addRoutes(advertId, route)
-    addAdvertRoute = addAdvertRoutes
-
-    def removeAdvertRoutes(self, advertId, route=None):
-        if route is None: route = list(self.routes)
-        return self.advertDb.removeRoutes(advertId)
-    removeAdvertRoute = removeAdvertRoutes
-
-    #~ Messages ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-    def newMsg(self, advertId=None, replyId=None):
-        return self.msgs.newMsg(advertId, replyId)
-    def fwdMsg(self, mobj, breadth=1, whenUnhandled=True, fwdAdvertId=None):
-        return self.msgs.fwdMsg(mobj, breadth, whenUnhandled, fwdAdvertId)
-    def sendMsg(self, mobj):
-        return self.msgs.sendMsg(mobj)
-    def queueMsg(self, mobj):
-        return self.msgs.queueMsg(mobj)
-    def sendTo(self, advertId, body, fmt=0, topic=None, replyId=None):
-        return self.msgs.sendTo(advertId, body, fmt, topic, replyId)
+class Blather(BlatherHost, 
+        tasks.api.TaskDelegateAPI,
+        ##routes.api.RouteDelegateAPI,
+        adverts.api.AdvertDelegateAPI,
+        messages.api.MessageDelegateAPI,
+        ):
+    """Entrypoint into the blather system"""
 

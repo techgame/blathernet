@@ -128,7 +128,10 @@ class MsgDispatch(object):
             adResponders = adEntry.allResponders()
         else: adResponders = []
 
-        self.mrules = mrules = self.MsgDispatchRules(adEntry)
+        mrules = self.MsgDispatchRules(adEntry)
+        self.mrules = mrules
+        mctx.mrules = mrules
+
         self.adResponders = adResponders
         for r in adResponders:
             with localtb:

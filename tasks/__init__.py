@@ -6,21 +6,10 @@
 ##~ found in the LICENSE file included with this distribution.    ##
 ##~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~##
 
-"""MsgCommand Packet Format
-
-Packet Coding:
-    [0:1]  ( 1 byte ) -> Packet Version 
-    [1:end] version dependent 
-"""
-    
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 #~ Imports 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 from . import api
-from .adverts import advertIdForNS
-from .adverts import AdvertResponder
-
-from .manager import BlatherMessageMgr
-from .msgObject import MsgObject
+from .manager import BlatherTaskMgr
 
