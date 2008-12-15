@@ -30,16 +30,16 @@ class IMessageAPI(object):
 
 class MessageDelegateAPI(IMessageAPI):
     #~ Messages ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-    msgs = None
+    _msgs = None
 
     def newMsg(self, advertId=None, replyId=None):
-        return self.msgs.newMsg(advertId, replyId)
+        return self._msgs.newMsg(advertId, replyId)
     def fwdMsg(self, mobj, breadth=1, whenUnhandled=True, fwdAdvertId=None):
-        return self.msgs.fwdMsg(mobj, breadth, whenUnhandled, fwdAdvertId)
+        return self._msgs.fwdMsg(mobj, breadth, whenUnhandled, fwdAdvertId)
     def sendMsg(self, mobj):
-        return self.msgs.sendMsg(mobj)
+        return self._msgs.sendMsg(mobj)
     def queueMsg(self, mobj):
-        return self.msgs.queueMsg(mobj)
+        return self._msgs.queueMsg(mobj)
     def sendTo(self, advertId, body, fmt=0, topic=None, replyId=None):
-        return self.msgs.sendTo(advertId, body, fmt, topic, replyId)
+        return self._msgs.sendTo(advertId, body, fmt, topic, replyId)
 

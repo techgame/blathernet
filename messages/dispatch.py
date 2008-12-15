@@ -24,6 +24,7 @@ class MsgContext(object):
     adRefs = None
     src = None
 
+    mrules = None
     handled = False
     
     def __init__(self, advertId, msgId, src):
@@ -45,7 +46,7 @@ class MsgContext(object):
 
     def replyObj(self, replyId=None):
         if replyId is None:
-            replyId = self.advertId
+            replyId = self.replyId
 
         raise NotImplementedError("TODO")
 

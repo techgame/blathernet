@@ -29,15 +29,15 @@ class ITaskAPI(object):
 
 class TaskDelegateAPI(ITaskAPI):
     #~ Task and Timer Processing
-    tasks = None
+    _tasks = None
 
     def process(self, allActive=True):
-        return self.tasks.process(allActive)
+        return self._tasks.process(allActive)
     def run(self, threaded=False):
-        return self.tasks.run(threaded)
+        return self._tasks.run(threaded)
 
     def addTimer(self, tsStart, task):
-        return self.tasks.addTimer(tsStart, task)
+        return self._tasks.addTimer(tsStart, task)
     def addTask(self, task):
-        return self.tasks.addTask(task)
+        return self._tasks.addTask(task)
 
