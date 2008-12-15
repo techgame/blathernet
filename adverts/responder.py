@@ -22,7 +22,9 @@ from ..base.tracebackBoundry import localtb
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 def advertIdForNS(ns):
-    return md5(ns).digest()
+    if ns is not None:
+        return md5(ns).digest()
+    else: return ns
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -37,21 +39,27 @@ class IAdvertResponder(object):
 
     def msg(self, body, fmt, topic, mctx):
         pass
+
+    def addAsResponderOnAdvertDb(self, advertDb):
+        return advertDb.addResponder(self.advertId, self)
         
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-def buildAdvertId(pName, obInstance):
-    advertNS = obInstance.advertNS
-    if advertNS is not None:
+def buildAdvertIdFrom(advertNS):
+    def buildAdvertId(pName, obInstance):
+        advertNS = getattr(obInstance, advertNS)
         advertId = advertIdForNS(advertNS)
-        obInstance.advertId = advertId
+        setattr(obInstance, pName, advertId)
+        return advertId
 
-buildAdvertId.onObservableInit = buildAdvertId
+    buildAdvertId.onObservableInit = buildAdvertId
+    buildAdvertId.__name__ = 'buildAdvertIdFrom#'+advertNS
+    return buildAdvertId
 
 
 class AdvertResponder(BlatherObject, IAdvertResponder):
     advertNS = None
-    advertId = buildAdvertId
+    advertId = buildAdvertIdFrom('advertNS')
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 #~ Advert Responder for a function
