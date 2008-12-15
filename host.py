@@ -17,7 +17,7 @@ from .base import BlatherObject
 from . import tasks
 from . import routes 
 from . import messages
-from .messages import adverts
+from . import adverts
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 #~ Definitions 
@@ -29,7 +29,7 @@ class BlatherHost(BlatherObject):
     _fm_ = BlatherObject._fm_.branch(
             TaskMgr = tasks.BlatherTaskMgr,
             RouteMgr = routes.BlatherRouteMgr,
-            AdvertDB = messages.adverts.BlatherAdvertDB,
+            AdvertDB = adverts.BlatherAdvertDB,
             MessageMgr = messages.BlatherMessageMgr,
             )
     routes = None

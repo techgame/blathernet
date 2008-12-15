@@ -12,7 +12,7 @@
 
 from ..base import PacketNS
 
-from .adverts import advertIdForNS
+from ..adverts import advertIdForNS
 from .msgPPrint import MsgPPrint
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

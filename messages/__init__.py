@@ -17,9 +17,9 @@ Packet Coding:
 #~ Imports 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
+from ..adverts import advertIdForNS
+
 from . import api
-from .adverts import advertIdForNS
-from .adverts import AdvertResponder
 
 from .manager import BlatherMessageMgr
 from .msgObject import MsgObject

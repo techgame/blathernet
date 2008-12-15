@@ -14,8 +14,8 @@
 from __future__ import with_statement
 from hashlib import md5
 
-from ...base import BlatherObject
-from ...base.tracebackBoundry import localtb
+from ..base import BlatherObject
+from ..base.tracebackBoundry import localtb
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 #~ Definitions 
