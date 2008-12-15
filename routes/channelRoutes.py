@@ -1,5 +1,5 @@
 ##~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~##
-##~ Copyright (C) 2002-2007  TechGame Networks, LLC.              ##
+##~ Copyright (C) 2002-2009  TechGame Networks, LLC.              ##
 ##~                                                               ##
 ##~ This library is free software; you can redistribute it        ##
 ##~ and/or modify it under the terms of the BSD style License as  ##
@@ -30,8 +30,23 @@ class BlatherChannelRoute(BasicBlatherRoute):
         return self.addrInbound is None
     def isSendRoute(self): 
         return self.addrOutbound is not None
+    def isBroadcastRoute(self):
+        return False
 
     #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+    def sendDispatch(self, data):
+        self.channel().send(data, self.addrOutbound)
+
+    def _sendDispatchNoop(self, data):
+        return False
+
+    #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+    def findReturnRouteFor(self, addr):
+        if addr != self.addrOutbound:
+            return None
+        return self.wrRoute
 
     def matchPeerAddr(self, addr): 
         return (addr == self.addrInbound and addr == self.addrOutbound)
@@ -41,10 +56,11 @@ class BlatherChannelRoute(BasicBlatherRoute):
         return klass
     def newPeerRoute(self, addr):
         RouteFactory = self.peerFactory()
+
         route = RouteFactory()
         route.channel = self.channel
         route.setAddrs(addr, addr)
-        route.registerForInbound(self.msgRouter)
+        route.registerForInbound(self.routeMgr)
         return route
 
     #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -59,32 +75,12 @@ class BlatherChannelRoute(BasicBlatherRoute):
         elif routeKinds:
             self.routeKinds = list(routeKinds)
 
-    def registerForInbound(self, msgRouter, channels=None):
+    def registerForInbound(self, routeMgr, channels=None):
         if channels is None:
             channels = [self.channel()]
 
         for ch in channels:
-            ch.register(self.addrInbound, self.recvDispatch)
+            ch.register(self.addrInbound, self.onRecvDispatch)
 
-        self.registerOn(msgRouter)
-
-    #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-    def sendDispatch(self, packet):
-        raise NotImplementedError('Should be replaced by mode function')
-    def _sendDispatch(self, packet):
-        self.channel().send(packet, self.addrOutbound, self._onSendNotify)
-    def _onSendNotify(self, kind, packet, address, err):
-        print (kind, address, err)
-    def _sendDispatchNoop(self, packet):
-        return False
-    def _sendDispatchDebug(self, packet):
-        if self.addrOutbound:
-            print 'send:', self.addrOutbound, repr(packet)
-            return self._sendDispatch(packet)
-        else:
-            print 'send to nowhere:', repr(packet)
-            return False
-
-    sendDispatch = _sendDispatch
+        routeMgr.addRoute(self)
 

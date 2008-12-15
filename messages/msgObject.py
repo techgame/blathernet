@@ -10,14 +10,25 @@
 #~ Imports 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-from .channelRoutes import BlatherChannelRoute
-from ..network.socketConfigTools import asSockAddr
+from .msgCommand import MsgCommandObject
+from ..adverts import advertIdForNS
+from . import packet_v02
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-#~ Definitions 
+#~ Mapping Values
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-class BlatherNetworkRoute(BlatherChannelRoute):
-    def normalizeAddr(self, addr):
-        return asSockAddr(addr)
+msgCodecList = [
+    packet_v02.MsgObject,
+    ]
+
+msgDecoderMap = dict((e.codec.msgVersion, e.codec.newDecoder) for e in msgCodecList)
+
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+class MsgObject(MsgCommandObject):
+    pass
+
+defaultCodec = msgCodecList[-1].codec
+defaultCodec = defaultCodec.new(MsgObject)
 

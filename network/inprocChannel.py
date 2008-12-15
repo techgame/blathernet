@@ -73,47 +73,47 @@ class InprocChannel(NetworkChannel):
 
         self.registry[address] = entry
 
-    def recvDefault(self, packet, address):
+    def recvDefault(self, data, address):
         pass
 
     #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-    def send(self, packet, address, onNotify=None):
+    def send(self, data, address, onNotify=None):
         fromAddress = self.address
         for dest in self.inprocRegistry.get(address) or ():
             dest = dest()
             if dest is not None:
-                dest.transferPacket(packet, fromAddress)
+                dest.transferDataPacket(data, fromAddress)
 
-    def transferPacket(self, packet, fromAddress):
+    def transferDataPacket(self, data, fromAddress):
         with self.recvQueueLock:
-            self.recvQueue.append((packet, fromAddress))
+            self.recvQueue.append((data, fromAddress))
         self.needsVisit = True
 
     def performVisit(self, tasks):
-        packets = self.recvQueue
+        data = self.recvQueue
 
-        if not packets: 
+        if not data: 
             self.needsVisit = False
             return 0
 
         with self.recvQueueLock:
             self.recvQueue = []
 
-        if packets:
-            tasks.append((self._dispatchPackets, packets))
+        if data:
+            tasks.append((self._dispatchDataPackets, data))
         self.needsVisit = False
-        return len(packets)
+        return len(data)
 
-    def _dispatchPackets(self, packets):
+    def _dispatchDataPackets(self, data):
         registry = self.registry
         default = registry.get(None) or self.recvDefault
 
-        for packet, address in packets:
+        for data, address in data:
             recvFns = registry.get(address, default)
             if isinstance(recvFns, set):
                 for recv in recvFns:
-                    recv(packet, address)
+                    recv(data, address)
             else: 
-                recvFns(packet, address)
+                recvFns(data, address)
 

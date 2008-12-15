@@ -57,22 +57,22 @@ class UDPBaseChannel(SocketChannel):
 
         self.registry[address] = entry
 
-    def send(self, packet, address, onNotify=None):
+    def send(self, data, address, onNotify=None):
         try:
             # send it directly, if we can
-            self.sock.sendto(packet, address)
+            self.sock.sendto(data, address)
             return 
         except SocketError, err:
             if onNotify is None:
                 reraise = self.reraiseSocketError(err, err.args[0])
-            else: reraise = onNotify('error', packet, address, err)
+            else: reraise = onNotify('error', data, address, err)
             if reraise: 
                 traceback.print_exc()
 
-        self.sendQueue.put((packet, address, onNotify))
+        self.sendQueue.put((data, address, onNotify))
         self.needsWrite = True
 
-    def recvDefault(self, packet, address):
+    def recvDefault(self, data, address):
         print
         print self.sock.getsockname(), 'recvDefault:'
         print '   ', address, 'not in:', self.registry.keys()
@@ -91,6 +91,7 @@ class UDPBaseChannel(SocketChannel):
         self.setMulticastInterface(interface, True)
 
         self.needsRead = True
+    address = property(getSocketAddress, setSocketAddress)
 
     _allowBroadcast = True
     _allowMulicastHops = 5
@@ -142,32 +143,32 @@ class UDPBaseChannel(SocketChannel):
     #~ Socket processing
     #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-    def _dispatchPackets(self, packets):
+    def _dispatchDataPackets(self, dataPackets):
         registry = self.registry
         default = registry.get(None) or self.recvDefault
 
-        for packet, address in packets:
+        for data, address in dataPackets:
             recvFns = registry.get(address, default)
             if isinstance(recvFns, set):
                 for recv in recvFns:
-                    recv(packet, address)
+                    recv(data, address)
             else: 
-                recvFns(packet, address)
+                recvFns(data, address)
 
     def performRead(self, tasks):
         sock = self.sock
         iterThrottle = xrange(self.recvThrottle)
 
-        packets = []
+        dataPackets = []
         try:
             for n in iterThrottle:
-                packets.append(sock.recvfrom(65536))
+                dataPackets.append(sock.recvfrom(65536))
         except SocketError, err:
             if self.reraiseSocketError(err, err.args[0]):
                 traceback.print_exc()
 
-        if packets:
-            tasks.append((self._dispatchPackets, packets))
+        if dataPackets:
+            tasks.append((self._dispatchDataPackets, dataPackets))
         return n
 
     def performWrite(self, tasks):
@@ -180,19 +181,19 @@ class UDPBaseChannel(SocketChannel):
         iterThrottle = xrange(self.sendThrottle)
         try:
             for n in iterThrottle:
-                packet, address, onNotify = sendQueue.get(False, 0.1)
-                sock.sendto(packet, address)
+                data, address, onNotify = sendQueue.get(False, 0.1)
+                sock.sendto(data, address)
         except Queue.Empty:
             self.needsWrite = False
         except SocketError, err:
             if onNotify is None:
                 reraise = self.reraiseSocketError(err, err.args[0])
             else: 
-                reraise = onNotify('error', packet, address, err)
+                reraise = onNotify('error', data, address, err)
             if reraise:
                 traceback.print_exc()
             else:
-                sendQueue.put((packet, address, onNotify))
+                sendQueue.put((data, address, onNotify))
 
         return n
 

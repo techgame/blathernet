@@ -1,5 +1,5 @@
 ##~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~##
-##~ Copyright (C) 2002-2007  TechGame Networks, LLC.              ##
+##~ Copyright (C) 2002-2009  TechGame Networks, LLC.              ##
 ##~                                                               ##
 ##~ This library is free software; you can redistribute it        ##
 ##~ and/or modify it under the terms of the BSD style License as  ##
@@ -10,5 +10,14 @@
 #~ Imports 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-from .manager import BlatherRouteMgr
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+#~ Definitions 
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+class CommamdDispatch(dict):
+    def add(self, *keys):
+        def register(fn):
+            self.update((k, fn) for k in keys)
+            return fn
+        return register
 

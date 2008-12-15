@@ -10,14 +10,25 @@
 #~ Imports 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-from .channelRoutes import BlatherChannelRoute
-from ..network.socketConfigTools import asSockAddr
+from __future__ import with_statement
+import sys
+import traceback
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 #~ Definitions 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-class BlatherNetworkRoute(BlatherChannelRoute):
-    def normalizeAddr(self, addr):
-        return asSockAddr(addr)
+class TracebackBoundry(object):
+    printException = staticmethod(traceback.print_exception)
+
+    def __enter__(self):
+        pass
+
+    def __exit__(self, exc_type, exc_value, exc_traceback):
+        if exc_type is not None:
+            self.printException(exc_type, exc_value, exc_traceback)
+            return True
+
+localtb = TracebackBoundry()
+
 

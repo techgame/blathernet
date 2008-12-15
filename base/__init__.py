@@ -10,14 +10,31 @@
 #~ Imports 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-from .channelRoutes import BlatherChannelRoute
-from ..network.socketConfigTools import asSockAddr
+import sys
+import time
+import weakref
+
+from TG.kvObserving import KVObject, OBFactoryMap
+from .nsObjects import ObjectNS, PacketNS
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 #~ Definitions 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-class BlatherNetworkRoute(BlatherChannelRoute):
-    def normalizeAddr(self, addr):
-        return asSockAddr(addr)
+sleep = time.sleep
+
+if sys.platform.startswith("win"):
+    timestamp = time.clock
+else: timestamp = time.time
+
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+class BlatherObject(KVObject):
+    _fm_ = OBFactoryMap()
+    timestamp = staticmethod(timestamp)
+
+    def asStrongProxy(self, cb=None): return self
+    def asStrongRef(self, cb=None): return (lambda: self)
+    def asWeakProxy(self, cb=None): return weakref.proxy(self, cb)
+    def asWeakRef(self, cb=None): return weakref.ref(self, cb)
 

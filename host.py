@@ -13,74 +13,54 @@
 import uuid
 import md5
 
-from .base import BlatherObject, kvobserve
-from . import msgRouter
+from .base import BlatherObject
+from . import tasks
 from . import routes 
-from . import network
-from . import taskMgrs
+from . import messages
+from . import adverts
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 #~ Definitions 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 class BlatherHost(BlatherObject):
+    """BlatherHost for components of the blather system"""
+
     _fm_ = BlatherObject._fm_.branch(
-            TaskMgr = taskMgrs.BlatherTaskMgr,
-            NetworkMgr = network.BlatherNetworkMgr,
-            MessageRouter = msgRouter.MessageRouter,
-            RouteFactory = routes.BlatherRouteFactory,
+            TaskMgr = tasks.BlatherTaskMgr,
+            RouteMgr = routes.BlatherRouteMgr,
+            AdvertDB = adverts.BlatherAdvertDB,
+            MessageMgr = messages.BlatherMessageMgr,
             )
-    taskMgr = None
-    msgRouter = None
-    networkMgr = None
-    routeFactory = None
+    routes = None
 
-    def isBlatherHost(self): return True
-
-    name = None
+    _name = None
     def __init__(self, name=None):
         BlatherObject.__init__(self)
         if name is not None:
-            self.name = name
-        self.initMgrs()
-
-    def initMgrs(self):
-        self.taskMgr = self._fm_.TaskMgr(self.name)
-        self.msgRouter = self._fm_.MessageRouter(self)
-        self.networkMgr = self._fm_.NetworkMgr(self)
-        self.routeFactory = self._fm_.RouteFactory(self)
+            self._name = name
+        self._initMgrs()
 
     def __repr__(self):
-        if self.name is None:
+        if self._name is None:
             return '<%s %s>' % (self.__class__.__name__, id(self))
-        else: return '<%s "%s" %s>' % (self.__class__.__name__, self.name, id(self))
+        else: return '<%s "%s" %s>' % (self.__class__.__name__, self._name, id(self))
 
-    @kvobserve('networkMgr.selector.selectables.*')
-    def _onNetworkSelectorChange(self, selectables):
-        # if we have a network task, use the network's tasksleep mechanism.  Otherwise, use the taskMgr's default one
-        if len(selectables):
-            tasksleep = self.networkMgr.process
-        else: tasksleep = None
-        self.taskMgr.setTaskSleep(tasksleep)
+    #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-    def registerRoute(self, route):
-        self.msgRouter.registerOn(route)
-    def registerAdvert(self, advert):
-        self.msgRouter.registerOn(advert)
-    def registerClient(self, client):
-        self.msgRouter.registerOn(client)
-    def registerService(self, service):
-        self.msgRouter.registerOn(service)
+    def _initMgrs(self):
+        self.tasks = self._fm_.TaskMgr(self._name)
+        self.advertDb = self._fm_.AdvertDB()
+        self.msgs = self._fm_.MessageMgr(self)
+        self.routes = self._fm_.RouteMgr(self, self.msgs.queuePacket)
 
-    def process(self, allActive=True):
-        return self.taskMgr.process(allActive)
-    def run(self, threaded=False):
-        return self.taskMgr.run(threaded)
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-    def addTimer(self, tsStart, task):
-        return self.taskMgr.addTimer(tsStart, task)
-    def addTask(self, task):
-        return self.taskMgr.addTask(task)
-
-Host = BlatherHost
+class Blather(BlatherHost, 
+        tasks.api.TaskDelegateAPI,
+        ##routes.api.RouteDelegateAPI,
+        adverts.api.AdvertDelegateAPI,
+        messages.api.MessageDelegateAPI,
+        ):
+    """Entrypoint into the blather system"""
 

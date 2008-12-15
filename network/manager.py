@@ -12,7 +12,7 @@
 
 from ..base import BlatherObject
 
-from .socketConfigTools import netif
+from .socketConfigTools import netif, AF_INET, AF_INET6
 from .selectTask import NetworkSelector
 from . import udpChannel
 from . import inprocChannel
@@ -25,10 +25,6 @@ class BlatherNetworkMgr(BlatherObject):
     _fm_ = BlatherObject._fm_.branch(
             NetworkSelector=NetworkSelector,)
 
-    def __init__(self, host):
-        BlatherObject.__init__(self)
-        self.host = host.asWeakRef()
-
     _networkSelector = None
     def getNetworkSelector(self):
         result = self._networkSelector
@@ -40,6 +36,26 @@ class BlatherNetworkMgr(BlatherObject):
 
     def process(self, timeout):
         return self.selector.processSelectable(timeout)
+
+    #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+    @staticmethod
+    def getIFAddrs_v4(): return netif.getifaddrs(AF_INET)
+    @staticmethod
+    def getIFIndexes_v4(): return netif.getifindexes(AF_INET)
+    @staticmethod
+    def getIFInfo_v4(): return netif.getifinfo(AF_INET)
+
+    @staticmethod
+    def getIFAddrs_v6(): return netif.getifaddrs(AF_INET6)
+    @staticmethod
+    def getIFIndexes_v6(): return netif.getifindexes(AF_INET6)
+    @staticmethod
+    def getIFInfo_v6(): return netif.getifinfo(AF_INET6)
+
+    getIFAddrs = getIFAddrs_v4
+    getIFIndexes = getIFIndexes_v4
+    getIFInfo = getIFInfo_v4
 
     #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     #~ Factory methods
@@ -84,7 +100,9 @@ class BlatherNetworkMgr(BlatherObject):
         ch = udpChannel.UDPMulticastChannel(address, interface)
 
         ch.grpAddr = ch.normSockAddr(address)[1][:2]
-        ch.joinGroupAll(ch.grpAddr)
+        if interface is not None:
+            ch.joinGroup(ch.grpAddr, interface)
+        else: ch.joinGroupAll(ch.grpAddr)
 
         self.selector.add(ch)
         self.checkMudpChannel(ch, assign)

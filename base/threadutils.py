@@ -10,14 +10,21 @@
 #~ Imports 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-from .channelRoutes import BlatherChannelRoute
-from ..network.socketConfigTools import asSockAddr
+from threading import Event, Lock, Thread
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 #~ Definitions 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-class BlatherNetworkRoute(BlatherChannelRoute):
-    def normalizeAddr(self, addr):
-        return asSockAddr(addr)
+def threadcall(method):
+    def decorate(*args, **kw):
+        t = Thread(target=method, args=args, kwargs=kw)
+        t.setDaemon(True)
+        t.start()
+        return t
+    decorate.__name__ = method.__name__
+    decorate.__doc__ = method.__doc__
+    return decorate
+
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
