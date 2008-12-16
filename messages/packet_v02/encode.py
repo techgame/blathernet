@@ -208,7 +208,7 @@ class MsgEncoder_v02(MsgEncoderBase):
         tip.write(chr(cmd))
         for a in args:
             if a: 
-                tip.write(a)
+                tip.write(str(a))
         return tip
     
     def _verifyAdvertIds(self, advertIds):
