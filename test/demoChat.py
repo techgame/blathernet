@@ -44,6 +44,7 @@ def setup():
 
 @blather.respondTo(adChat)
 def chatResponder(body, fmt, topic, mctx):
+    body = body.decode('utf-8')
     print '\r%s> %s' % (topic, body)
     print prompt,
     sys.stdout.flush()
@@ -67,6 +68,7 @@ def main():
             body = raw_input(prompt)
             if not body: break
 
+            body = body.encode("utf-8")
             cm = chatMsg.copy()
             cm.msg(body, 0, me)
             cm.send()

@@ -40,10 +40,14 @@ def chatResponder(body, fmt, topic, mctx):
     if topic.startswith(me):
         return
 
+    body = body.decode('utf-8')
     print '\r%s> %s' % (topic, body)
+
+    response = 'mirror:'+body[::-1]
+    response = response.encode('utf-8')
     robj = mctx.replyMsg(mctx.advertId)
     robj.forward(None, False)
-    robj.msg('mirror:'+body[::-1], fmt, me+'-'+topic)
+    robj.msg(response, fmt, me+'-'+topic)
     robj.send()
 
 me = 'replybot'
