@@ -11,71 +11,12 @@
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 from __future__ import with_statement
-from ..base import PacketNS
 from ..base.tracebackBoundry import localtb
 
-#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-#~ Msg Context
-#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-class MsgContext(object):
-    advertId = None
-    msgId = None
-    adRefs = None
-    src = None
-
-    mrules = None
-    handled = False
-    
-    def __init__(self, advertId, msgId, src):
-        src = PacketNS(src)
-
-        self.advertId = advertId
-        self.msgId = msgId
-        self.src = src
-        self.adRefs = {}
-
-    _fwdPacket = None
-    def getFwdPacket(self):
-        def findPkt(src):
-            return src.packet or src.mobj.encode().packet
-
-        pkt = self._fwdPacket or findPkt(self.src)
-        return pkt
-    fwdPacket = property(getFwdPacket)
-
-    def forwarding(self, breadthLimit=1, whenUnhandled=True, fwdAdvertId=None):
-        pass
-
-    #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-    #~ Small IMessageAPI
-    #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-    def newMsg(self, advertId=None, replyId=None, forward=True):
-        mobj = self.host.newMsg(advertId, replyId)
-        if forward is not False:
-            mobj.forward(forward)
-        return mobj
-
-    def replyMsg(self, replyId=None, respondId=None, forward=True):
-        if replyId is None:
-            replyId = self.replyId
-        return self.newMsg(replyId, respondId, forward)
-
-    def sendMsg(self, mobj):
-        return self.host.sendMsg(mobj)
-
-    #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-    @classmethod
-    def newFlyweight(klass, host, **ns):
-        ns.update(host=host)
-        bklass = getattr(klass, '__flyweight__', klass)
-        ns['__flyweight__'] = bklass
-        return type(bklass)("%s_%s"%(bklass.__name__, id(ns)), (bklass,), ns)
+from .context import MsgContext
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-#~ Message Dispatching
+#~ Message Dispatch Rules
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 class MsgDispatchRules(object):
@@ -86,17 +27,29 @@ class MsgDispatchRules(object):
     _allowForward = True
     def getAllowForward(self):
         return self._allowForward > False
-    def setAllowForward(self, bAllow):
+    def setAllowForward(self, bAllow=True):
         self._allowForward += bAllow
     allowForward = property(getAllowForward, setAllowForward)
 
     _allowRef = True
     def getAllowRef(self):
         return self._allowRef > False
-    def setAllowRef(self, bAllow):
+    def setAllowRef(self, bAllow=True):
         self._allowRef += bAllow
     allowRef = property(getAllowRef, setAllowRef)
 
+    #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    #~ Flyweight support
+    #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+    @classmethod
+    def newFlyweight(klass, **ns):
+        bklass = getattr(klass, '__flyweight__', klass)
+        ns['__flyweight__'] = bklass
+        return type(bklass)("%s_%s"%(bklass.__name__, id(ns)), (bklass,), ns)
+
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+#~ Message Dispatching
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 class MsgDispatch(object):
