@@ -14,11 +14,14 @@ from __future__ import with_statement
 from ..base import PacketNS
 from ..base.tracebackBoundry import localtb
 
+from ..adverts.api import AdvertDelegateAPI
+from .api import MessageDelegateAPI
+
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 #~ Msg Context
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-class MsgContext(object):
+class MsgContext(AdvertDelegateAPI, MessageDelegateAPI):
     advertId = None
     msgId = None
     adRefs = None
@@ -44,27 +47,25 @@ class MsgContext(object):
         return pkt
     fwdPacket = property(getFwdPacket)
 
-    def replyObj(self, replyId=None):
-        if replyId is None:
-            replyId = self.replyId
-
-        raise NotImplementedError("TODO")
-
     def forwarding(self, breadthLimit=1, whenUnhandled=True, fwdAdvertId=None):
         pass
+
+    def replyMsg(self, replyId=None, respondId=None, forward=True):
+        if replyId is None:
+            replyId = self.replyId
+        mobj = self.newMsg(replyId, respondId)
+        if forward is not False:
+            mobj.forward(forward)
+        return mobj
 
     #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
     @classmethod
-    def newFlyweight(klass, mq, advertDb, **ns):
-        ns.update(mq=mq, advertDb=advertDb)
+    def newFlyweight(klass, msgs, advertDb, **ns):
+        ns.update(_msgs=msgs, _advertDb=advertDb)
         bklass = getattr(klass, '__flyweight__', klass)
         ns['__flyweight__'] = bklass
         return type(bklass)("%s_%s"%(bklass.__name__, id(ns)), (bklass,), ns)
-
-    @classmethod
-    def sendMsg(klass, mobj):
-        return klass.mq.addMsg(mobj)
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 #~ Message Dispatching
@@ -92,10 +93,6 @@ class MsgDispatchRules(object):
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 class MsgDispatch(object):
-    mq = None
-    msgFilter = None # flyweighted
-    advertDb = None # flyweighted
-
     MsgDispatchRules = MsgDispatchRules
     MsgContext = MsgContext 
     mctx = None
@@ -105,9 +102,9 @@ class MsgDispatch(object):
     #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
     @classmethod
-    def newFlyweight(klass, mq, msgFilter, advertDb, **ns):
-        MsgContext = klass.MsgContext.newFlyweight(mq, advertDb)
-        ns.update(mq=mq, msgFilter=msgFilter, advertDb=advertDb, MsgContext=MsgContext)
+    def newFlyweight(klass, msgs, advertDb, **ns):
+        MsgContext = klass.MsgContext.newFlyweight(msgs, advertDb)
+        ns.update(advertDb=advertDb, MsgContext=MsgContext)
 
         bklass = getattr(klass, '__flyweight__', klass)
         ns['__flyweight__'] = bklass

@@ -30,13 +30,6 @@ blather = Blather('Chat')
 
 def setup():
     rn = blather.routes.network
-    print 
-    for e, lst in rn.getIFIndexes():
-        print 'I:', e, lst
-    print 
-    for e, lst in rn.getIFAddrs():
-        print 'A:', e, lst
-    print 
     rf = blather.routes.factory
     rf.connectMUDP()
 
@@ -44,10 +37,16 @@ def setup():
 
 @blather.respondTo(adChat)
 def chatMsg(body, fmt, topic, mctx):
-    print '\r%s> %s' % (topic, body)
-    print prompt,
-    sys.stdout.flush()
+    if topic.startswith(me):
+        return
 
+    print '\r%s> %s' % (topic, body)
+    robj = mctx.replyMsg(mctx.advertId)
+    robj.forward(None, False)
+    robj.msg('mirror:'+body[::-1], fmt, me+'-'+topic)
+    mctx.sendMsg(robj)
+
+me = 'replybot'
 prompt = '>>'
 def main():
     setup()
@@ -58,19 +57,13 @@ def main():
     # forward out all interfaces, even after being handled
     chatMsg.forward(None, False)
 
-    me = getuser()
     try:
-        me = raw_input("Name? (%s)>" %(me,)) or me
-        print "Welcome, %s!"%(me,)
+        print "I am %s!"%(me,)
 
         while 1:
             body = raw_input(prompt)
             if not body: break
 
-            cm = chatMsg.copy()
-            cm.msg(body, 0, me)
-            ##cm.pprint()
-            blather.sendMsg(cm)
     except (KeyboardInterrupt, EOFError), e: 
         pass
 

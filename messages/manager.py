@@ -52,6 +52,7 @@ class MessageMgr(object):
             return False
 
         self.tasks.addTask(partial(self._dispatchMsgObj, mobj))
+        return True
     sendMsg = queueMsg
 
     pktDecoders = {}
@@ -71,10 +72,7 @@ class MessageMgr(object):
 
     MsgQDispatch = MsgDispatch
     def _cfgMsgDispatch(self):
-        ns = dict(mq=weakref.proxy(self),
-                msgFilter = self.msgFilter,
-                advertDb = self.advertDb)
-
+        ns = dict(msgs=weakref.proxy(self), advertDb = self.advertDb)
         self.MsgQDispatch = self.MsgQDispatch.newFlyweight(**ns)
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -89,7 +87,13 @@ class DebugMessageMgr(MessageMgr):
 
     def queueMsg(self, mobj):
         print 'QUEUE on %-20s msgId:%s advertId:%s' % (self._name, mobj.hexMsgId, self._anAdId_(mobj.advertId))
-        return MessageMgr.queueMsg(self, mobj)
+        if MessageMgr.queueMsg(self, mobj):
+            return True
+        #print ' ***'
+        #mobj.pprint()
+        print ' --> rejected in msgFilter'
+        print
+        return False
 
     def queuePacket(self, pkt):
         print 'PKT QUEUE on %-20s' % (self._name, )
