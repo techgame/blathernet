@@ -108,17 +108,24 @@ class MsgCommandObject(object):
         self._cmd_('end')
         return False
 
+    def isForwarded(self):
+        for fn, args in self.iterCmds(False):
+            if fn == 'forward':
+                return True
+        else: return False
     def forward(self, breadthLimit=1, whenUnhandled=True, fwdAdvertId=None):
         if fwdAdvertId in (True, False):
             fwdAdvertId = None
         self._cmd_('forward', breadthLimit, whenUnhandled, fwdAdvertId)
 
     def replyRef(self, replyAdvertIds):
+        if not replyAdvertIds: return
         if isinstance(replyAdvertIds, str):
             replyAdvertIds = [replyAdvertIds]
         self._cmd_('replyRef', replyAdvertIds)
 
     def adRefs(self, advertIds, key=None):
+        if not advertIds: return
         self._cmd_('adRefs', advertIds, key)
 
     def msg(self, body, fmt=0, topic=None):

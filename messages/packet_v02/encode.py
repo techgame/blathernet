@@ -104,11 +104,13 @@ class MsgEncoder_v02(MsgEncoderBase):
         self._writeCmd(cmd, flags, fwdBreadth, fwdAdvertId)
 
     def replyRef(self, replyAdvertIds):
+        if not replyAdvertIds: return
         if isinstance(replyAdvertIds, str):
             replyAdvertIds = [replyAdvertIds]
         return self.adRefs(replyAdvertIds, True)
 
     def adRefs(self, advertIds, key=None):
+        if not advertIds: return
         cmd = 0x4; flags = 0
         if key is not None:
             if key == True:

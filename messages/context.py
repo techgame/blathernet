@@ -62,13 +62,15 @@ class MsgContext(IReplyMessageAPI):
     #~ IReplyMessageAPI
     #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-    def newMsg(self, advertId=None, replyId=True, forward=True):
+    def newMsg(self, advertId=None, replyId=True):
         if replyId is True:
             replyId = self.advertId
         return self.host.newMsg(advertId, replyId)
     def replyMsg(self, replyId=True, respondId=True):
         if replyId is True:
             replyId = self.replyId
+        if respondId is True:
+            respondId = self.advertId
         return self.newMsg(replyId, respondId)
     def sendMsg(self, mobj):
         return self.host.sendMsg(mobj)

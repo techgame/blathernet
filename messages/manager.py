@@ -37,7 +37,7 @@ class MessageMgr(IMessageAPI):
 
     def newMsg(self, advertId=None, replyId=None):
         mobj = self.MsgObject(advertId)
-        if replyId is not None:
+        if replyId:
             mobj.replyRef(replyId)
         return mobj
 
