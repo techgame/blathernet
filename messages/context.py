@@ -10,13 +10,15 @@
 #~ Imports 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
+from contextlib import contextmanager
 from ..base import timestamp, PacketNS
+from .api import IReplyMessageAPI
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 #~ Msg Context
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-class MsgContext(object):
+class MsgContext(IReplyMessageAPI):
     ts = None
     advertId = None
     msgId = None
@@ -57,20 +59,17 @@ class MsgContext(object):
         pass
 
     #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-    #~ Small IMessageAPI
+    #~ IReplyMessageAPI
     #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-    def newMsg(self, advertId=None, replyId=None, forward=True):
-        mobj = self.host.newMsg(advertId, replyId)
-        if forward is not False:
-            mobj.forward(forward)
-        return mobj
-
-    def replyMsg(self, replyId=None, respondId=None, forward=True):
-        if replyId is None:
+    def newMsg(self, advertId=None, replyId=True, forward=True):
+        if replyId is True:
+            replyId = self.advertId
+        return self.host.newMsg(advertId, replyId)
+    def replyMsg(self, replyId=True, respondId=True):
+        if replyId is True:
             replyId = self.replyId
-        return self.newMsg(replyId, respondId, forward)
-
+        return self.newMsg(replyId, respondId)
     def sendMsg(self, mobj):
         return self.host.sendMsg(mobj)
 

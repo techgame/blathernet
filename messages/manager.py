@@ -40,21 +40,14 @@ class MessageMgr(IMessageAPI):
         if replyId is not None:
             mobj.replyRef(replyId)
         return mobj
-    def fwdMsg(self, mobj, breadth=1, whenUnhandled=True, fwdAdvertId=None):
-        mobj.forward(breadth, whenUnhandled, fwdAdvertId)
-        return self.queueMsg(mobj)
-    def sendTo(self, advertId, body, fmt=0, topic=None, replyId=None):
-        mobj = self.newMsg(advertId, replyId)
-        mobj.msg(body, fmt, topic)
-        return self.fwdMsg(mobj)
-    def sendMsg(self, mobj):
-        return self.queueMsg(mobj)
+
     def queueMsg(self, mobj):
         if self.msgFilter(mobj.advertId, mobj.ensureMsgId()):
             return False
 
         self.tasks.addTask(partial(self._dispatchMsgObj, mobj))
         return True
+    sendMsg = queueMsg
 
     pktDecoders = {}
     pktDecoders.update(msgDecoderMap)

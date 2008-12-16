@@ -10,6 +10,8 @@
 #~ Imports 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
+from contextlib import contextmanager
+
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 #~ Definitions 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -17,14 +19,16 @@
 class IMessageAPI(object):
     def newMsg(self, advertId=None, replyId=None):
         raise NotImplementedError('Interface method: %r' % (self,))
-    def fwdMsg(self, mobj, breadth=1, whenUnhandled=True, fwdAdvertId=None):
-        raise NotImplementedError('Interface method: %r' % (self,))
     def sendMsg(self, mobj):
-        raise NotImplementedError('Interface method: %r' % (self,))
+        return self.queueMsg(mobj)
     def queueMsg(self, mobj):
         raise NotImplementedError('Interface method: %r' % (self,))
-    def sendTo(self, advertId, body, fmt=0, topic=None, replyId=None):
-        raise NotImplementedError('Interface method: %r' % (self,))
+
+    @contextmanager
+    def sendTo(self, advertId, replyId=None):
+        mobj = self.newMsg(advertId, replyId)
+        yield mobj
+        self.sendMsg(mobj)
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -34,12 +38,24 @@ class MessageDelegateAPI(IMessageAPI):
 
     def newMsg(self, advertId=None, replyId=None):
         return self._msgs_.newMsg(advertId, replyId)
-    def fwdMsg(self, mobj, breadth=1, whenUnhandled=True, fwdAdvertId=None):
-        return self._msgs_.fwdMsg(mobj, breadth, whenUnhandled, fwdAdvertId)
     def sendMsg(self, mobj):
         return self._msgs_.sendMsg(mobj)
     def queueMsg(self, mobj):
         return self._msgs_.queueMsg(mobj)
-    def sendTo(self, advertId, body, fmt=0, topic=None, replyId=None):
-        return self._msgs_.sendTo(advertId, body, fmt, topic, replyId)
+
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+class IReplyMessageAPI(object):
+    def newMsg(self, advertId=None, replyId=None):
+        raise NotImplementedError('Interface method: %r' % (self,))
+    def replyMsg(self, replyId=True, respondId=True):
+        raise NotImplementedError('Interface method: %r' % (self,))
+    def sendMsg(self, mobj):
+        raise NotImplementedError('Interface method: %r' % (self,))
+
+    @contextmanager
+    def reply(self, replyId=True, respondId=True):
+        robj = self.replyMsg(replyId, respondId)
+        yield robj
+        self.sendMsg(robj)
 
