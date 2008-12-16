@@ -13,6 +13,7 @@
 import weakref
 from functools import partial
 
+from .api import IMessageAPI
 from .dispatch import MsgDispatch
 from .msgObject import msgDecoderMap, MsgObject
 from .msgPPrint import MsgPPrint
@@ -22,15 +23,15 @@ from .filter import MsgAdvertIdBloomFilter
 #~ Definitions 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-class MessageMgr(object):
+class MessageMgr(IMessageAPI):
     MsgObject = MsgObject
 
     def __init__(self, host):
-        self._name = host._name
+        self.host = host.asWeakProxy()
         self.tasks = host.tasks
-        self.msgFilter = MsgAdvertIdBloomFilter()
         self.advertDb = host.advertDb
-        self._cfgMsgDispatch()
+        self.msgFilter = MsgAdvertIdBloomFilter()
+        self._cfgFlyweights()
 
     #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -46,14 +47,14 @@ class MessageMgr(object):
         mobj = self.newMsg(advertId, replyId)
         mobj.msg(body, fmt, topic)
         return self.fwdMsg(mobj)
-
+    def sendMsg(self, mobj):
+        return self.queueMsg(mobj)
     def queueMsg(self, mobj):
         if self.msgFilter(mobj.advertId, mobj.ensureMsgId()):
             return False
 
         self.tasks.addTask(partial(self._dispatchMsgObj, mobj))
         return True
-    sendMsg = queueMsg
 
     pktDecoders = {}
     pktDecoders.update(msgDecoderMap)
@@ -71,9 +72,12 @@ class MessageMgr(object):
         mobj.executeOn(mx)
 
     MsgQDispatch = MsgDispatch
-    def _cfgMsgDispatch(self):
-        ns = dict(msgs=weakref.proxy(self), advertDb = self.advertDb)
+    def _cfgFlyweights(self):
+        ns = dict(host=self.host, advertDb = self.advertDb)
         self.MsgQDispatch = self.MsgQDispatch.newFlyweight(**ns)
+
+        ns = dict(_msgs_=weakref.proxy(self))
+        self.MsgObject = self.MsgObject.newFlyweight(**ns)
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 

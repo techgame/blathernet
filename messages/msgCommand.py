@@ -173,6 +173,20 @@ class MsgCommandObject(object):
             self._cmdList[:] = [(n,a) for n,a in self._cmdList if n != name]
 
     #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    #~ Utility Flyweight integration
+    #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+    _msgs_ = None
+    def send(self):
+        return self._msgs_.sendMsg(self)
+
+    @classmethod
+    def newFlyweight(klass, **ns):
+        bklass = getattr(klass, '__flyweight__', klass)
+        ns['__flyweight__'] = bklass
+        return type(bklass)("%s_%s"%(bklass.__name__, id(ns)), (bklass,), ns)
+
+    #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     #~ Debug Printing
     #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 

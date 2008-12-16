@@ -14,14 +14,11 @@ from __future__ import with_statement
 from ..base import PacketNS
 from ..base.tracebackBoundry import localtb
 
-from ..adverts.api import AdvertDelegateAPI
-from .api import MessageDelegateAPI
-
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 #~ Msg Context
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-class MsgContext(AdvertDelegateAPI, MessageDelegateAPI):
+class MsgContext(object):
     advertId = None
     msgId = None
     adRefs = None
@@ -53,16 +50,19 @@ class MsgContext(AdvertDelegateAPI, MessageDelegateAPI):
     def replyMsg(self, replyId=None, respondId=None, forward=True):
         if replyId is None:
             replyId = self.replyId
-        mobj = self.newMsg(replyId, respondId)
+        mobj = self.host.newMsg(replyId, respondId)
         if forward is not False:
             mobj.forward(forward)
         return mobj
 
+    def sendMsg(self, mobj):
+        return self.host.sendMsg(mobj)
+
     #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
     @classmethod
-    def newFlyweight(klass, msgs, advertDb, **ns):
-        ns.update(_msgs=msgs, _advertDb=advertDb)
+    def newFlyweight(klass, host, **ns):
+        ns.update(host=host)
         bklass = getattr(klass, '__flyweight__', klass)
         ns['__flyweight__'] = bklass
         return type(bklass)("%s_%s"%(bklass.__name__, id(ns)), (bklass,), ns)
@@ -102,8 +102,8 @@ class MsgDispatch(object):
     #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
     @classmethod
-    def newFlyweight(klass, msgs, advertDb, **ns):
-        MsgContext = klass.MsgContext.newFlyweight(msgs, advertDb)
+    def newFlyweight(klass, host, advertDb, **ns):
+        MsgContext = klass.MsgContext.newFlyweight(host)
         ns.update(advertDb=advertDb, MsgContext=MsgContext)
 
         bklass = getattr(klass, '__flyweight__', klass)
