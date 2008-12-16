@@ -12,6 +12,7 @@
 
 from struct import pack, unpack, calcsize
 from StringIO import StringIO
+from ..msgPPrint import MsgPPrint
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 #~ Definitions 
@@ -52,6 +53,10 @@ class MsgDecoder_v02(object):
 
     def ensureMsgId(self):
         return self.msgId
+
+    def pprint(self, out=None):
+        mx = MsgPPrint(out)
+        self.executeOn(mx)
 
     #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     #~ Routing and Delivery Commands
