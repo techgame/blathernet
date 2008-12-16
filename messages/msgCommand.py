@@ -26,9 +26,11 @@ class MsgCommandObject(object):
     fwd = None
     src = None
 
-    def __init__(self, advertId=None, msgId=None, src=None):
-        if advertId is not None:
-            self.advertMsgId(advertId, msgId, src)
+    def __init__(self, advertId=None, replyId=None, src=None):
+        if advertId is not False:
+            self.advertMsgId(advertId, None, src)
+        if replyId:
+            self.replyRef(replyId)
 
     def __repr__(self):
         return '<%s msgId: %s advertId: %s>' % (self.__class__.__name__, self.hexMsgId, self.hexAdvertId)
@@ -36,18 +38,20 @@ class MsgCommandObject(object):
     #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
     @classmethod
-    def new(klass, advertId=None, msgId=None, src=None):
-        return klass(advertId, msgId, src)
+    def new(klass):
+        return klass(False)
 
     def copy(self):
-        r = self.new(self.advertId, self.msgId, self.src)
+        r = self.new()
+        r.advertMsgId(self.advertId, self.msgId, self.src)
         r._cmdList = self._cmdList[:]
         return r
 
     @classmethod
     def fromMsgObject(klass, mobj):
         self = klass.new()
-        return mobj.executeOn(self)
+        mobj.executeOn(self)
+        return self
 
     @classmethod
     def fromData(klass, data, **kw):

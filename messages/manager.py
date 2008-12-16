@@ -36,10 +36,7 @@ class MessageMgr(IMessageAPI):
     #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
     def newMsg(self, advertId=None, replyId=None):
-        mobj = self.MsgObject(advertId)
-        if replyId:
-            mobj.replyRef(replyId)
-        return mobj
+        return self.MsgObject(advertId, replyId)
 
     def queueMsg(self, mobj):
         if self.msgFilter(mobj.advertId, mobj.ensureMsgId()):
