@@ -48,15 +48,15 @@ class BlatherHost(BlatherObject):
     #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
     def _initMgrs(self):
-        self._tasks = self._fm_.TaskMgr(self._name)
-        self._advertDb = self._fm_.AdvertDB()
-        self._msgs = self._fm_.MessageMgr(self)
-        self._routes = self._fm_.RouteMgr(self, self.msgs.queuePacket)
+        self._tasks_ = self._fm_.TaskMgr(self._name)
+        self._advertDb_ = self._fm_.AdvertDB()
+        self._msgs_ = self._fm_.MessageMgr(self)
+        self._routes_ = self._fm_.RouteMgr(self, self.msgs.queuePacket)
 
-    tasks = property(lambda self: self._tasks)
-    advertDb = property(lambda self: self._advertDb)
-    msgs = property(lambda self: self._msgs)
-    routes = property(lambda self: self._routes)
+    tasks = property(lambda self: self._tasks_)
+    advertDb = property(lambda self: self._advertDb_)
+    msgs = property(lambda self: self._msgs_)
+    routes = property(lambda self: self._routes_)
 
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

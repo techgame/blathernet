@@ -33,23 +33,23 @@ class IAdvertAPI(object):
 
 class AdvertDelegateAPI(IAdvertAPI):
     #~ Advert Responders ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-    _advertDb = None
+    _advertDb_ = None
 
     def addResponder(self, advertId, responder=None):
-        return self._advertDb.addResponder(advertId, responder)
+        return self._advertDb_.addResponder(advertId, responder)
     def addResponderFn(self, advertId, msgfn=None):
-        return self._advertDb.addResponderFn(advertId, msgfn)
+        return self._advertDb_.addResponderFn(advertId, msgfn)
     def respondTo(self, advertId, msgfn=None):
-        return self._advertDb.respondTo(advertId, msgfn)
+        return self._advertDb_.respondTo(advertId, msgfn)
     def removeResponder(self, advertId, responder):
-        return self._advertDb.removeResponder(advertId, responder)
+        return self._advertDb_.removeResponder(advertId, responder)
 
     def addAdvertRoutes(self, advertId, route=None):
         if route is None: route = list(self.routes)
-        return self._advertDb.addAdvertRoutes(advertId, route)
+        return self._advertDb_.addAdvertRoutes(advertId, route)
 
     def removeAdvertRoutes(self, advertId, route=None):
         if route is None: route = list(self.routes)
-        return self._advertDb.removeAdvertRoutes(advertId)
+        return self._advertDb_.removeAdvertRoutes(advertId)
 
 
