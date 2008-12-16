@@ -47,13 +47,20 @@ class MsgContext(object):
     def forwarding(self, breadthLimit=1, whenUnhandled=True, fwdAdvertId=None):
         pass
 
-    def replyMsg(self, replyId=None, respondId=None, forward=True):
-        if replyId is None:
-            replyId = self.replyId
-        mobj = self.host.newMsg(replyId, respondId)
+    #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    #~ Small IMessageAPI
+    #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+    def newMsg(self, advertId=None, replyId=None, forward=True):
+        mobj = self.host.newMsg(advertId, replyId)
         if forward is not False:
             mobj.forward(forward)
         return mobj
+
+    def replyMsg(self, replyId=None, respondId=None, forward=True):
+        if replyId is None:
+            replyId = self.replyId
+        return self.newMsg(replyId, respondId, forward)
 
     def sendMsg(self, mobj):
         return self.host.sendMsg(mobj)
