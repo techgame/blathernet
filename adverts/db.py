@@ -10,6 +10,8 @@
 #~ Imports 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
+from .api import IAdvertAPI
+
 from .responder import FunctionAdvertResponder
 from .entry import AdvertEntry
 
@@ -30,7 +32,7 @@ class AdvertLookup(dict):
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-class AdvertDB(object):
+class AdvertDB(IAdvertAPI):
     AdvertEntry = AdvertEntry
     AdvertLookup = AdvertLookup
 
@@ -72,12 +74,13 @@ class AdvertDB(object):
         e = self[adKey]
         e.addRoute(route)
         return e
-    addRoute = addRoutes
+    addAdvertRoutes = addRoutes
+
     def removeRoutes(self, adKey, route):
         e = self[adKey]
         e.removeRoute(route)
         return e
-    removeRoute = removeRoutes
+    removeAdvertRoutes = removeRoutes
 
     def addRouteForAdverts(self, route, advertIds):
         if route is not None:

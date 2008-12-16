@@ -19,11 +19,13 @@ from ..base import BlatherObject, timestamp, sleep
 from ..base.tracebackBoundry import localtb
 from ..base.threadutils import threadcall, Event, Lock
 
+from .api import ITaskAPI
+
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 #~ Definitions 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-class BasicBlatherTaskMgr(BlatherObject):
+class BasicBlatherTaskMgr(BlatherObject, ITaskAPI):
     timeout = 0.05
     tasksleep = sleep
 

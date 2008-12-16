@@ -26,11 +26,8 @@ class IAdvertAPI(object):
 
     def addAdvertRoutes(self, advertId, route=None):
         raise NotImplementedError('Interface method: %r' % (self,))
-    addAdvertRoute = addAdvertRoutes
-
     def removeAdvertRoutes(self, advertId, route=None):
         raise NotImplementedError('Interface method: %r' % (self,))
-    removeAdvertRoute = removeAdvertRoutes
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -49,12 +46,10 @@ class AdvertDelegateAPI(IAdvertAPI):
 
     def addAdvertRoutes(self, advertId, route=None):
         if route is None: route = list(self.routes)
-        return self._advertDb.addRoutes(advertId, route)
-    addAdvertRoute = addAdvertRoutes
+        return self._advertDb.addAdvertRoutes(advertId, route)
 
     def removeAdvertRoutes(self, advertId, route=None):
         if route is None: route = list(self.routes)
-        return self._advertDb.removeRoutes(advertId)
-    removeAdvertRoute = removeAdvertRoutes
+        return self._advertDb.removeAdvertRoutes(advertId)
 
 
