@@ -72,10 +72,12 @@ def main():
         bla1.addAdvertRoutes(adAnnounce)
 
         annMsg = bla0.newMsg(adAnnounce, ad0)
-        bla0.fwdMsg(annMsg, 0, False)
+        annMsg.forward(0, False)
+        bla0.sendMsg(annMsg)
 
         annMsg = bla1.newMsg(adAnnounce, ad1)
-        bla1.fwdMsg(annMsg, 0, False)
+        annMsg.forward(0, False)
+        bla1.sendMsg(annMsg)
 
         time.sleep(0.1)
     elif 1:

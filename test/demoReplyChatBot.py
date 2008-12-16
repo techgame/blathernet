@@ -11,6 +11,8 @@
 #~ Imports 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
+from __future__ import with_statement
+
 import sys
 import time
 from getpass import getuser
@@ -45,10 +47,9 @@ def chatResponder(body, fmt, topic, mctx):
 
     response = 'mirror:'+body[::-1]
     response = response.encode('utf-8')
-    robj = mctx.replyMsg(mctx.advertId)
-    robj.forward(None, False)
-    robj.msg(response, fmt, me+'-'+topic)
-    robj.send()
+    with mctx.reply(mctx.advertId, False) as robj:
+        robj.forward(None, False)
+        robj.msg(response, fmt, me+'-'+topic)
 
 me = 'replybot'
 prompt = '>>'
