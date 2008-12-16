@@ -40,8 +40,9 @@ class IAdvertResponder(object):
     def msg(self, body, fmt, topic, mctx):
         pass
 
-    def addAsResponderOnAdvertDb(self, advertDb):
-        return advertDb.addResponder(self.advertId, self)
+    def addAsResponderTo(self, host):
+        return host.addResponder(self.advertId, self)
+    addTo = property(lambda self: self.addAsResponderTo)
         
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -60,6 +61,8 @@ def buildAdvertIdFrom(advertNS):
 class AdvertResponder(BlatherObject, IAdvertResponder):
     advertNS = None
     advertId = buildAdvertIdFrom('advertNS')
+
+    buildAdvertIdFrom = staticmethod(buildAdvertIdFrom)
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 #~ Advert Responder for a function

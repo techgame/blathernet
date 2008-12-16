@@ -15,7 +15,7 @@
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 class IAdvertAPI(object):
-    def addResponder(self, advertId, responder=None):
+    def addResponder(self, advertId, responder):
         raise NotImplementedError('Interface method: %r' % (self,))
     def addResponderFn(self, advertId, msgfn=None):
         raise NotImplementedError('Interface method: %r' % (self,))
@@ -35,7 +35,7 @@ class AdvertDelegateAPI(IAdvertAPI):
     #~ Advert Responders ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     _advertDb_ = None
 
-    def addResponder(self, advertId, responder=None):
+    def addResponder(self, advertId, responder):
         return self._advertDb_.addResponder(advertId, responder)
     def addResponderFn(self, advertId, msgfn=None):
         return self._advertDb_.addResponderFn(advertId, msgfn)

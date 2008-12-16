@@ -91,11 +91,9 @@ class AdvertDB(IAdvertAPI):
     #~ Responders
     #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-    def addResponder(self, adKey, advertResponder=None):
+    def addResponder(self, adKey, advertResponder):
         if advertResponder is None:
-            if isinstance(adKey, string):
-                raise ValueError("Cannot add a None advertResponder")
-            return adKey.addAsResponderOnAdvertDb(self)
+            raise ValueError("Cannot add a None advertResponder")
 
         return self[adKey].addResponder(advertResponder)
 
