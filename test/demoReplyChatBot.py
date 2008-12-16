@@ -36,7 +36,7 @@ def setup():
     blather.run(True)
 
 @blather.respondTo(adChat)
-def chatMsg(body, fmt, topic, mctx):
+def chatResponder(body, fmt, topic, mctx):
     if topic.startswith(me):
         return
 
@@ -44,7 +44,7 @@ def chatMsg(body, fmt, topic, mctx):
     robj = mctx.replyMsg(mctx.advertId)
     robj.forward(None, False)
     robj.msg('mirror:'+body[::-1], fmt, me+'-'+topic)
-    mctx.sendMsg(robj)
+    robj.send()
 
 me = 'replybot'
 prompt = '>>'
@@ -53,9 +53,9 @@ def main():
 
     blather.addAdvertRoutes(adChat)
 
-    chatMsg = blather.newMsg(adChat)
+    chatMobj = blather.newMsg(adChat)
     # forward out all interfaces, even after being handled
-    chatMsg.forward(None, False)
+    chatMobj.forward(None, False)
 
     try:
         print "I am %s!"%(me,)
