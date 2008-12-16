@@ -46,10 +46,11 @@ class BasicBlatherRoute(BlatherObject):
         raise NotImplementedError('Subclass Responsibility: %r' % (self,))
 
     newPacketNS = PacketNS.new
-    def onRecvDispatch(self, data, addr):
-        pkt = self.newPacketNS(data, addr=addr)
+    def onRecvDispatch(self, data, addr, ts):
+        pkt = self.newPacketNS(data, addr=addr, ts=ts)
         pkt.route = self.findReturnRouteFor(addr)
         pkt.recvRoute = self.wrRoute
+        assert pkt.ts is not None
 
         self.dispatchPacket(pkt)
 

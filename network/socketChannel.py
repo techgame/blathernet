@@ -18,6 +18,8 @@ from TG.kvObserving import KVProperty
 from .selectTask import NetworkCommon
 from .socketConfigTools import SocketConfigUtils
 
+from ..base import timestamp
+
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 #~ Socket and select.select machenery
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -50,6 +52,8 @@ class NetworkChannel(NetworkCommon):
         is True.  Note that this is called during NetworkSelectTask's timeslice,
         and should not be used for intensive processing."""
         pass
+
+    timestamp = staticmethod(timestamp)
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 

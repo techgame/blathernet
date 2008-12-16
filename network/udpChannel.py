@@ -147,13 +147,14 @@ class UDPBaseChannel(SocketChannel):
         registry = self.registry
         default = registry.get(None) or self.recvDefault
 
+        ts = self.timestamp()
         for data, address in dataPackets:
             recvFns = registry.get(address, default)
             if isinstance(recvFns, set):
                 for recv in recvFns:
-                    recv(data, address)
+                    recv(data, address, ts)
             else: 
-                recvFns(data, address)
+                recvFns(data, address, ts)
 
     def performRead(self, tasks):
         sock = self.sock
