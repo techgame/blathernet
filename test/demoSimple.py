@@ -11,6 +11,8 @@
 #~ Imports 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
+from __future__ import with_statement
+
 import time
 from TG.blathernet import Blather, advertIdForNS
 
@@ -85,11 +87,13 @@ def main():
 
     #k = raw_input('BLA0 What? ')
     k = 'msg from left to right'
-    bla0.sendTo(ad1, k)
+    with bla0.sendTo(ad1) as mobj:
+        mobj.msg(k)
 
     #k = raw_input('BLA1 What? ')
     k = 'msg from right to left'
-    bla1.sendTo(ad0, k)
+    with bla1.sendTo(ad0) as mobj:
+        mobj.msg(k)
 
     try: 
         while 1: time.sleep(.1)

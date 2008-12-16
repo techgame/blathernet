@@ -10,6 +10,7 @@
 #~ Imports 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
+from __future__ import with_statement
 import unittest
 from TG.blathernet import Blather, MsgObject, advertIdForNS
 
@@ -34,7 +35,9 @@ class TestMsgObject(unittest.TestCase):
     def testBodyOnly(self):
         blather, rq = self.newBlather()
 
-        blather.sendTo(self.advertId, "a test body, no fmt, no topic")
+        with blather.sendTo(self.advertId) as mobj:
+            mobj.msg("a test body, no fmt, no topic")
+
         self.assertEqual(len(rq), 0)
 
         self.assertTrue(blather.process() > 0)
@@ -45,7 +48,9 @@ class TestMsgObject(unittest.TestCase):
     def testBodyFmtTopicVar(self):
         blather, rq = self.newBlather()
 
-        blather.sendTo(self.advertId, "a test body, 0x7 fmt, topic of neat", 7, 'neat')
+        with blather.sendTo(self.advertId) as mobj:
+            mobj.msg("a test body, 0x7 fmt, topic of neat", 7, 'neat')
+
         self.assertEqual(len(rq), 0)
         self.assertTrue(blather.process() > 0)
         self.assertEqual(len(rq), 1)
@@ -55,7 +60,9 @@ class TestMsgObject(unittest.TestCase):
     def testBodyFmtTopic16(self):
         blather, rq = self.newBlather()
 
-        blather.sendTo(self.advertId, "a test body, 0xf fmt, topic of advertId", 0xf, self.advertId)
+        with blather.sendTo(self.advertId) as mobj:
+            mobj.msg("a test body, 0xf fmt, topic of advertId", 0xf, self.advertId)
+
         self.assertEqual(len(rq), 0)
         self.assertTrue(blather.process() > 0)
         self.assertEqual(len(rq), 1)
@@ -65,14 +72,17 @@ class TestMsgObject(unittest.TestCase):
     def test3Msg(self):
         blather, rq = self.newBlather()
 
-        blather.sendTo(self.advertId, "message A")
-        blather.sendTo(self.advertId, "message B")
+        with blather.sendTo(self.advertId) as mobj:
+            mobj.msg("message A")
+        with blather.sendTo(self.advertId) as mobj:
+            mobj.msg("message B")
 
         self.assertEqual(len(rq), 0)
         self.assertTrue(blather.process() > 0)
         self.assertEqual(len(rq), 2)
 
-        blather.sendTo(self.advertId, "message C")
+        with blather.sendTo(self.advertId) as mobj:
+            mobj.msg("message C")
 
         self.assertEqual(len(rq), 2)
         self.assertTrue(blather.process() > 0)
