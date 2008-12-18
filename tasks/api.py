@@ -10,6 +10,8 @@
 #~ Imports 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
+from functools import partial
+
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 #~ Definitions 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -24,6 +26,13 @@ class ITaskAPI(object):
         raise NotImplementedError('Interface method: %r' % (self,))
     def addTask(self, task):
         raise NotImplementedError('Interface method: %r' % (self,))
+
+    def addTaskFn(self, fn, *args, **kw):
+        task = partial(fn, *args, **kw)
+        return self.addTask(task)
+    def addTimerFn(self, tsStart, fn, *args, **kw):
+        task = partial(fn, *args, **kw)
+        return self.addTimer(tsStart, task)
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
