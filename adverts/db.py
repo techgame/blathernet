@@ -72,20 +72,20 @@ class AdvertDB(IAdvertAPI):
 
     def addRoutes(self, adKey, route):
         e = self[adKey]
-        e.addRoute(route)
+        e.addRoutes(route)
         return e
     addAdvertRoutes = addRoutes
 
     def removeRoutes(self, adKey, route):
         e = self[adKey]
-        e.removeRoute(route)
+        e.removeRoutes(route)
         return e
     removeAdvertRoutes = removeRoutes
 
     def addRouteForAdverts(self, route, advertIds):
         if route is not None:
             for adId in advertIds:
-                self.addRoute(adId, route)
+                self.addRoutes(adId, route)
 
     #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     #~ Responders

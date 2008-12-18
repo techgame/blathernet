@@ -46,15 +46,15 @@ class IAdvertResponder(object):
         
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-def buildAdvertIdFrom(advertNS):
+def buildAdvertIdFrom(pAdvertNS):
     def buildAdvertId(pName, obInstance):
-        advertNS = getattr(obInstance, advertNS)
+        advertNS = getattr(obInstance, pAdvertNS)
         advertId = advertIdForNS(advertNS)
         setattr(obInstance, pName, advertId)
         return advertId
 
     buildAdvertId.onObservableInit = buildAdvertId
-    buildAdvertId.__name__ = 'buildAdvertIdFrom#'+advertNS
+    buildAdvertId.__name__ = 'buildAdvertIdFrom#'+pAdvertNS
     return buildAdvertId
 
 
