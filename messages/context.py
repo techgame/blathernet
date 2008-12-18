@@ -10,15 +10,16 @@
 #~ Imports 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
+from __future__ import with_statement
 from contextlib import contextmanager
 from ..base import timestamp, PacketNS
-from .api import IReplyMessageAPI
+from .api import IMessageAPI
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 #~ Msg Context
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-class MsgContext(IReplyMessageAPI):
+class MsgContext(IMessageAPI):
     ts = None
     advertId = None
     msgId = None
@@ -63,17 +64,23 @@ class MsgContext(IReplyMessageAPI):
     #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
     def newMsg(self, advertId=None, replyId=True):
-        if replyId is True:
-            replyId = self.advertId
+        if replyId is True: replyId = self.advertId
         return self.host.newMsg(advertId, replyId)
-    def replyMsg(self, replyId=True, respondId=True):
-        if replyId is True:
-            replyId = self.replyId
-        if respondId is True:
-            respondId = self.advertId
-        return self.newMsg(replyId, respondId)
     def sendMsg(self, mobj):
         return self.host.sendMsg(mobj)
+
+    def replyMsg(self, replyId=True, respondId=True):
+        if replyId is True: replyId = self.replyId
+        if respondId is True: respondId = self.advertId
+        return self.newMsg(replyId, respondId)
+
+    # returns a contextmanager
+    def reply(self, replyId=True, respondId=True, forward=True):
+        if replyId is True: replyId = self.replyId
+        if respondId is True: respondId = self.advertId
+
+        # sendTo returns a contextmanager
+        return self.sendTo(replyId, respondId, forward)
 
     #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     #~ Flyweight support

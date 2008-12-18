@@ -76,7 +76,6 @@ class MsgDispatch(object):
 
     def advertMsgId(self, advertId, msgId, src=None):
         adEntry = self.advertDb.get(advertId)
-        self.adEntry = adEntry
 
         mctx = self.MsgContext(advertId, msgId, src)
         mctx.adEntry = adEntry
@@ -116,7 +115,7 @@ class MsgDispatch(object):
             fwdAdEntry = self.advertDb.get(fwdAdvertId)
         else: 
             # not specified, so forward toward our implied adEntry
-            fwdAdEntry = self.adEntry
+            fwdAdEntry = self.mctx.adEntry
 
         if fwdAdEntry is None: 
             return
@@ -127,14 +126,16 @@ class MsgDispatch(object):
 
         srcRoutes = [mctx.src.recvRoute, mctx.src.route]
         fwdPacket = mctx.fwdPacket
-        if fwdPacket is not None:
-            # actually accomplish the forward!
-            for route in fwdRoutes:
-                if route in srcRoutes:
-                    # Skip source routes, cause they already know
-                    continue
+        if fwdPacket is None:
+            return
 
-                route().sendDispatch(fwdPacket)
+        # actually accomplish the forward!
+        for route in fwdRoutes:
+            if route in srcRoutes:
+                # Skip source routes, cause they already know
+                continue
+
+            route().sendDispatch(fwdPacket)
 
     def replyRef(self, replyAdvertIds):
         if isinstance(replyAdvertIds, str):
@@ -149,8 +150,11 @@ class MsgDispatch(object):
         mctx.adRefs[key] = advertIds
 
         if self.mrules.allowRef:
-            self.advertDb.addRouteForAdverts(mctx.src.route, advertIds)
-        return advertIds
+            route = mctx.src.route or mctx.src.recvRoute
+            if route is not None:
+                self.advertDb.addRouteForAdverts(route, advertIds)
+        else:
+            route = mctx.src.route or mctx.src.recvRoute
 
     def msg(self, body, fmt=0, topic=None):
         mctx = self.mctx

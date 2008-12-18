@@ -20,8 +20,6 @@ class IMessageAPI(object):
     def newMsg(self, advertId=None, replyId=None):
         raise NotImplementedError('Interface method: %r' % (self,))
     def sendMsg(self, mobj):
-        return self.queueMsg(mobj)
-    def queueMsg(self, mobj):
         raise NotImplementedError('Interface method: %r' % (self,))
 
     @contextmanager
@@ -46,27 +44,4 @@ class MessageDelegateAPI(IMessageAPI):
         return self._msgs_.newMsg(advertId, replyId)
     def sendMsg(self, mobj):
         return self._msgs_.sendMsg(mobj)
-    def queueMsg(self, mobj):
-        return self._msgs_.queueMsg(mobj)
-
-#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-class IReplyMessageAPI(object):
-    def newMsg(self, advertId=None, replyId=None):
-        raise NotImplementedError('Interface method: %r' % (self,))
-    def replyMsg(self, replyId=None, respondId=None):
-        raise NotImplementedError('Interface method: %r' % (self,))
-    def sendMsg(self, mobj):
-        raise NotImplementedError('Interface method: %r' % (self,))
-
-    @contextmanager
-    def reply(self, replyId=None, respondId=None, forward=True):
-        robj = self.replyMsg(replyId, respondId)
-        yield robj
-
-        if forward is not False:
-            if not robj.isForwarded():
-                robj.forward(forward, replyId != respondId)
-
-        self.sendMsg(robj)
 

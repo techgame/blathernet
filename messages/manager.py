@@ -37,6 +37,8 @@ class MessageMgr(IMessageAPI):
 
     def newMsg(self, advertId=None, replyId=None):
         return self.MsgObject(advertId, replyId)
+    def sendMsg(self, mobj):
+        return self.queueMsg(mobj)
 
     def queueMsg(self, mobj):
         if self.msgFilter(mobj.advertId, mobj.ensureMsgId()):
@@ -44,7 +46,6 @@ class MessageMgr(IMessageAPI):
 
         self.tasks.addTask(partial(self._dispatchMsgObj, mobj))
         return True
-    sendMsg = queueMsg
 
     pktDecoders = {}
     pktDecoders.update(msgDecoderMap)
