@@ -72,7 +72,7 @@ class UDPBaseChannel(SocketChannel):
         self.sendQueue.put((data, address, onNotify))
         self.needsWrite = True
 
-    def recvDefault(self, data, address):
+    def recvDefault(self, data, address, ts):
         print
         print self.sock.getsockname(), 'recvDefault:'
         print '   ', address, 'not in:', self.registry.keys()

@@ -73,7 +73,7 @@ class InprocChannel(NetworkChannel):
 
         self.registry[address] = entry
 
-    def recvDefault(self, data, address):
+    def recvDefault(self, data, address, ts):
         pass
 
     #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
