@@ -47,6 +47,13 @@ class MsgCommandObject(object):
         r._cmdList = self._cmdList[:]
         return r
 
+    def __enter__(self):
+        """Enables use of a MsgCommandObject as a template"""
+        return self.copy()
+
+    def __exit__(self, etype, exc, tb):
+        pass
+
     @classmethod
     def fromMsgObject(klass, mobj):
         self = klass.new()

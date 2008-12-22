@@ -11,6 +11,7 @@
 #~ Imports 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
+from __future__ import with_statement
 import sys
 import time
 from getpass import getuser
@@ -69,9 +70,10 @@ def main():
             if not body: break
 
             body = body.encode("utf-8")
-            cm = chatMsg.copy()
-            cm.msg(body, 0, me)
-            cm.send()
+            with chatMsg as cm:
+                cm.msg(body, 0, me)
+                cm.send()
+
     except (KeyboardInterrupt, EOFError), e: 
         pass
 
