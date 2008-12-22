@@ -110,25 +110,21 @@ class MsgDispatch(object):
             # we were handled, so don't forward
             return
 
+        fwdAdEntries = [self.mctx.adEntry]
         if fwdAdvertId is not None:
             # lookup entry for specified adEntry
-            fwdAdEntry = self.advertDb.get(fwdAdvertId)
-        else: 
-            # not specified, so forward toward our implied adEntry
-            fwdAdEntry = self.mctx.adEntry
+            fwdAdEntries.append(self.advertDb.get(fwdAdvertId))
 
-        if fwdAdEntry is None: 
+        fwdRoutes = [r for ae in fwdAdEntries if ae is not None
+                        for r in ae.getRoutes(breadthLimit)]
+        if not fwdRoutes: 
             return
 
-        fwdRoutes = fwdAdEntry.getRoutes(breadthLimit)
-        if not fwdRoutes:
+        fwdPacket = mctx.fwdPacket
+        if fwdPacket is None: 
             return
 
         srcRoutes = [mctx.src.recvRoute, mctx.src.route]
-        fwdPacket = mctx.fwdPacket
-        if fwdPacket is None:
-            return
-
         # actually accomplish the forward!
         for route in fwdRoutes:
             if route in srcRoutes:
