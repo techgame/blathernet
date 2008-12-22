@@ -139,9 +139,9 @@ class MsgEncoder_v02(MsgEncoderBase):
 
         # msgs with variable length str topic
         '1001': '!HB',
+        '1010': '!HH',
 
         # XXX: UNUSED
-        '1010': '!H9q',
         '1011': '!H9q',
 
         # msgs with integer as topicId
@@ -160,7 +160,7 @@ class MsgEncoder_v02(MsgEncoderBase):
         (int(k, 2), (fmt, partial(pack, fmt)))
             for k,fmt in _msgPackFmt.items())
 
-    _cmdByTopicLen = {4: 0xd, 8: 0xe, 16: 0xf}
+    _cmdByTopicLen = {0:0x8, 4: 0xd, 8: 0xe, 16: 0xf}
 
     def _msgCmdPrefix(self, lenBody, topic=''):
         topicEx = ''
@@ -177,8 +177,8 @@ class MsgEncoder_v02(MsgEncoderBase):
 
         if cmd is None:
             topicEx = topic
-            topic = len(topic)
-            cmd = 0x9
+            topic = len(topicEx)
+            cmd = 0x9 if topic < 256 else 0xa
 
         fmt, fmtPack = self._msgPackFmt[cmd]
         prefix = fmtPack(lenBody, topic)

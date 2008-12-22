@@ -126,9 +126,9 @@ class MsgDecoder_v02(object):
 
         # msgs with variable length str topic
         '1001': '!HB',
+        '1010': '!HH',
 
         # XXX: UNUSED
-        '1010': '!H9q',
         '1011': '!H9q',
 
         # msgs with integer as topicId

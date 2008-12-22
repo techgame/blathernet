@@ -197,6 +197,23 @@ class TestMsgEncode(unittest.TestCase):
 
         self._printTest('testTwoMsg', r, 2)
 
+    def testLongTopic(self):
+        body = 'a short message'
+        topic = 'a long long topic;'*16
+        r = self.buildMsg(body, 0, topic)
+        d0 = 21
+        self.assertEqual(r[d0+0], '\xa0')
+        self.assertEqual(r[d0+1], chr(len(body) >> 8))
+        self.assertEqual(r[d0+2], chr(len(body)&0xff))
+        self.assertEqual(r[d0+3], chr(len(topic) >> 8))
+        self.assertEqual(r[d0+4], chr(len(topic)&0xff))
+
+        d1 = d0+5+len(topic)
+        self.assertEqual(r[d0+5:d1], topic)
+        self.assertEqual(r[d1:], body)
+
+        self._printTest('testLongTopic', r, 1)
+
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 #~ Unittest Main  
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
