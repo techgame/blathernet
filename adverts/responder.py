@@ -12,20 +12,12 @@
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 from __future__ import with_statement
-from hashlib import md5
 
 from ..base import BlatherObject
 from ..base.tracebackBoundry import localtb
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 #~ Definitions 
-#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-def advertIdForNS(ns):
-    if ns is not None:
-        return md5(ns).digest()
-    else: return ns
-
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 class IAdvertResponder(object):

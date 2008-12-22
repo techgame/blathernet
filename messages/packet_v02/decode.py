@@ -12,6 +12,8 @@
 
 from struct import pack, unpack, calcsize
 from StringIO import StringIO
+
+from ..packet_base import AdvertIdStr, MsgIdStr
 from ..msgPPrint import MsgPPrint
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -42,12 +44,12 @@ class MsgDecoder_v02(object):
         return '<%s msgId: %s advertId: %s>' % (self.__class__.__name__, self.hexMsgId, self.hexAdvertId)
 
     def getAdvertId(self):
-        return self.src.packet[5:21]
+        return AdvertIdStr(self.src.packet[5:21])
     advertId = property(getAdvertId)
     hexAdvertId = property(lambda self:self.getAdvertId().encode('hex'))
 
     def getMsgId(self, encoding=None):
-        return self.src.packet[1:5]
+        return MsgIdStr(self.src.packet[1:1+self.msgIdLen])
     msgId = property(getMsgId)
     hexMsgId = property(lambda self:self.getMsgId().encode('hex'))
 
@@ -86,7 +88,7 @@ class MsgDecoder_v02(object):
 
         if flags & 0x8:
             # includes advertId to forward toward
-            fwdAdvertId = tip.read(16)
+            fwdAdvertId = AdvertIdStr(tip.read(16))
         else: fwdAdvertId = None
 
         mx.forward(breadthLimit, whenUnhandled, fwdAdvertId)
@@ -103,13 +105,13 @@ class MsgDecoder_v02(object):
         else: key = None
 
         count = flags + 1 # [0..15] => [1..16]
-        advertIds = [tip.read(16) for e in xrange(count)]
+        advertIds = [AdvertIdStr(tip.read(16)) for e in xrange(count)]
         mx.adRefs(advertIds, key)
 
     @cmds.add('0110')
     def cmd_replyRef(self, cmd, flags, tip, mx):
         count = flags + 1 # [0..15] => [1..16]
-        advertIds = [tip.read(16) for e in xrange(count)]
+        advertIds = [AdvertIdStr(tip.read(16)) for e in xrange(count)]
         mx.replyRef(advertIds)
 
     @cmds.add('0111')
@@ -186,8 +188,8 @@ class MsgDecoder_v02(object):
         if pktVersion != self.msgVersion:
             raise ValueError("Version mismatch! packet: %x class: %x" % (ord(pktVersion), ord(self.msgVersion)))
 
-        msgId = tip.read(self.msgIdLen)
-        advertId = tip.read(16)
+        msgId = MsgIdStr(tip.read(self.msgIdLen))
+        advertId = AdvertIdStr(tip.read(16))
 
         mx = mxRoot.advertMsgId(advertId, msgId, self.src)
         if mx:

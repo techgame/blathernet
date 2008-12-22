@@ -25,8 +25,11 @@ class AdvertLookup(dict):
     def __init__(self, AdvertEntry):
         self.AdvertEntry = AdvertEntry
 
+    def newEntry(self, adKey):
+        return self.AdvertEntry(adKey)
+
     def __missing__(self, adKey):
-        e = self.AdvertEntry(adKey)
+        e = self.newEntry(adKey)
         self[adKey] = e
         return e
 
@@ -60,11 +63,21 @@ class AdvertDB(IAdvertAPI):
         return self._entries.popitem(adKey)
     def get(self, adKey, default=None):
         return self._entries.get(adKey, default)
+    def getEntry(self, adKey, default=None):
+        return self.get(adKey, default)
 
     def find(self, adKey, orAdd=True):
         entries = self._entries
-        if orAdd: return entries[adKey]
-        else: return entries.get(adKey)
+        e = entries.get(adKey)
+        if e is None and orAdd: 
+            e = self.add(adKey, orAdd)
+        return e
+
+    def add(self, adKey, entry=None):
+        if entry in (None, True, False):
+            entry = self._entries.newEntry(adKey)
+        self[adKey] = entry
+        return entry
 
     #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     #~ Routes
@@ -72,13 +85,15 @@ class AdvertDB(IAdvertAPI):
 
     def addRoutes(self, adKey, route):
         e = self[adKey]
-        e.addRoutes(route)
+        if e is not None:
+            e.addRoutes(route)
         return e
     addAdvertRoutes = addRoutes
 
     def removeRoutes(self, adKey, route):
         e = self[adKey]
-        e.removeRoutes(route)
+        if e is not None:
+            e.removeRoutes(route)
         return e
     removeAdvertRoutes = removeRoutes
 
@@ -95,10 +110,13 @@ class AdvertDB(IAdvertAPI):
         if advertResponder is None:
             raise ValueError("Cannot add a None advertResponder")
 
-        return self[adKey].addResponder(advertResponder)
+        e = self.find(adKey, True)
+        return e.addResponder(advertResponder)
 
     def removeResponder(self, adKey, advertResponder):
-        return self[adKey].removeResponder(advertResponder)
+        e = self.get(adKey)
+        if e is not None:
+            return e.removeResponder(advertResponder)
 
     def addResponderFn(self, advertId, msgfn=None):
         if msgfn is None:

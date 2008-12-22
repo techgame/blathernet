@@ -14,10 +14,16 @@ import os
 from hashlib import md5
 
 from ...base import PacketNS
+from ...adverts import advertIdForNS, AdvertIdStr
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 #~ Msg Codec
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+class MsgIdStr(str):
+    __slots__ = ()
+    def __repr__(self):
+        return '<msgId:%s>' % (self.encode('hex'),)
 
 def iterMsgId(count, seed=None):
     if seed is None:
@@ -25,7 +31,7 @@ def iterMsgId(count, seed=None):
     h = md5(seed)
     while 1:
         h.update(h.digest())
-        yield h.digest()[:count]
+        yield MsgIdStr(h.digest()[:count])
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
