@@ -40,19 +40,24 @@ class IAdvertResponder(object):
     def msg(self, body, fmt, topic, mctx):
         pass
 
-    def addAsResponderTo(self, host):
-        return host.addResponder(self.advertId, self)
+    def addAsResponderTo(self, host, advertId=None):
+        if advertId is None:
+            advertId = getattr(self, 'advertId', None)
+            if advertId is None:
+                raise ValueError("advertId is None")
+        return host.addResponder(advertId, self)
     addTo = property(lambda self: self.addAsResponderTo)
         
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-def buildAdvertIdFrom(pAdvertNS):
+def buildAdvertIdFrom(pAdvertNS, priority=-5):
     def buildAdvertId(pName, obInstance):
         advertNS = getattr(obInstance, pAdvertNS)
         advertId = advertIdForNS(advertNS)
         setattr(obInstance, pName, advertId)
         return advertId
 
+    buildAdvertId.priority = priority
     buildAdvertId.onObservableInit = buildAdvertId
     buildAdvertId.__name__ = 'buildAdvertIdFrom#'+pAdvertNS
     return buildAdvertId
