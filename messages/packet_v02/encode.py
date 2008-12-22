@@ -144,7 +144,7 @@ class MsgEncoder_v02(MsgEncoderBase):
         # XXX: UNUSED
         '1011': '!H9q',
 
-        # msgs with integer as topicId
+        # msgs with 4-byte integer as topicId
         '1100': '!HI',
 
         # msg with 4-byte topic
@@ -153,7 +153,7 @@ class MsgEncoder_v02(MsgEncoderBase):
         # msg with 8-byte topic
         '1110': '!H8s',
 
-        # msgs with advertId-length string as topicId
+        # msgs with 16-byte advertId-length string as topicId
         '1111': '!H16s',
     }
     _msgPackFmt.update(
