@@ -128,19 +128,23 @@ class MsgCommandObject(object):
         if fwdAdvertId in (True, False):
             fwdAdvertId = None
         self._cmd_('forward', breadthLimit, whenUnhandled, fwdAdvertId)
+        return self
 
     def replyRef(self, replyAdvertIds):
         if not replyAdvertIds: return
         if isinstance(replyAdvertIds, str):
             replyAdvertIds = [replyAdvertIds]
         self._cmd_('replyRef', replyAdvertIds)
+        return self
 
     def adRefs(self, advertIds, key=None):
         if not advertIds: return
         self._cmd_('adRefs', advertIds, key)
+        return self
 
     def msg(self, body, fmt=0, topic=None):
         self._cmd_('msg', body, fmt, topic)
+        return self
     
     def complete(self):
         return self
