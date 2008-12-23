@@ -15,6 +15,7 @@ from __future__ import with_statement
 
 from ..base import BlatherObject
 from ..base.tracebackBoundry import localtb
+from .advertId import advertIdForNS
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 #~ Definitions 
