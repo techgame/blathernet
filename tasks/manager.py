@@ -117,7 +117,7 @@ class BasicBlatherTimerMgr(BasicBlatherTaskMgr):
         if task is None:
             return None
 
-        if tsStart <= 4000:
+        if tsStart <= 100000:
             tsStart += self.timestamp()
 
         with self.lockTimerHQ:
@@ -133,7 +133,7 @@ class BasicBlatherTimerMgr(BasicBlatherTaskMgr):
         with self.lockTimerHQ:
             hqTimer = self.hqTimer
             for (tsStart, task) in timerEvents:
-                if tsStart <= 4000:
+                if tsStart <= 100000:
                     tsStart += ts
                 heappush(hqTimer, (tsStart, task))
 
