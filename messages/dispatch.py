@@ -101,13 +101,12 @@ class MsgDispatch(object):
 
     def forward(self, breadthLimit=1, whenUnhandled=True, fwdAdvertId=None):
         # let mctx know that it was intended to be forwarded...
-        if not self.mrules.allowForward:
-            return
-
         mctx = self.mctx
         mctx.forwarding(breadthLimit, whenUnhandled, fwdAdvertId)
         if whenUnhandled and mctx.handled:
             # we were handled, so don't forward
+            return
+        if not self.mrules.allowForward:
             return
 
         fwdAdEntries = [self.mctx.adEntry]

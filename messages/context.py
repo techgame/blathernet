@@ -23,6 +23,7 @@ class MsgContext(IMessageAPI):
     ts = None
     advertId = None
     msgId = None
+    replyId = None
     adRefs = None
     src = None
 
