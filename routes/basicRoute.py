@@ -50,7 +50,6 @@ class BasicBlatherRoute(BlatherObject):
         pkt = self.newPacketNS(data, addr=addr, ts=ts)
         pkt.route = self.findReturnRouteFor(addr)
         pkt.recvRoute = self.wrRoute
-        assert pkt.ts is not None
 
         self.dispatchPacket(pkt)
 
