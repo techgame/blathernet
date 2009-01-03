@@ -76,12 +76,12 @@ class MsgContext(IMessageAPI):
         return self.newMsg(replyId, respondId)
 
     # returns a contextmanager
-    def reply(self, replyId=True, respondId=True, forward=True):
+    def reply(self, replyId=True, respondId=True):
         if replyId is True: replyId = self.replyId
         if respondId is True: respondId = self.advertId
 
         # sendTo returns a contextmanager
-        return self.sendTo(replyId, respondId, forward)
+        return self.sendTo(replyId, respondId)
 
     #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     #~ Flyweight support

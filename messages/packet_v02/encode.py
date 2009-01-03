@@ -75,6 +75,8 @@ class MsgEncoder_v02(MsgEncoderBase):
         self._writeCmd(0, 0)
         return False
 
+    def noForard(self):
+        return self.forward(-1, True, None)
     def forward(self, breadthLimit=1, whenUnhandled=True, fwdAdvertId=None):
         cmd = 0x1; flags = 0
 
@@ -84,9 +86,19 @@ class MsgEncoder_v02(MsgEncoderBase):
             # 1: best route
             flags |= breadthLimit
         elif not isinstance(breadthLimit, int):
-            if breadthLimit not in (None, 'all', '*'):
+            if breadthLimit in (None, 'all', '*'):
+                # 0: all
+                flags |= 0x0
+            elif breadthLimit in ('local', ):
+                # 2: local only
+                flags |= 0x2; fwdAdvertId = None
+            else:
                 raise ValueError("Invalid breadth limit value: %r" % (breadthLimit))
-            #else: flags |= 0x0
+        elif breadthLimit < 0:
+            # 2: local only
+            if breadthLimit != -1:
+                raise ValueError("BreadthLimit must be -1 if it is negative")
+            flags |= 0x2; fwdAdvertId = None
         else:
             # 3: best n routes [1..16]; high nibble is unused/reserved
             flags |= 0x3

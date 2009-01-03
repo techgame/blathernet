@@ -38,6 +38,7 @@ class MessageMgr(IMessageAPI):
     def newMsg(self, advertId=None, replyId=None):
         return self.MsgObject(advertId, replyId)
     def sendMsg(self, mobj):
+        mobj.enqueSendOn(self)
         return self.queueMsg(mobj)
 
     def queueMsg(self, mobj):

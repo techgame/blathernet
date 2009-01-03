@@ -60,6 +60,9 @@ class MsgDecoder_v02(object):
         mx = MsgPPrint(out)
         self.executeOn(mx)
 
+    def enqueSendOn(self, msgapi):
+        self.ensureMsgId()
+
     #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     #~ Routing and Delivery Commands
     #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -76,13 +79,13 @@ class MsgDecoder_v02(object):
         breadthLimit = (flags & 0x3)
         # 0: all
         # 1: best route
-        # 2: unused/reserved
+        # 2: local only
         # 3: best n routes [1..16]; n = next byte, high nibble is unused/reserved
         if breadthLimit == 3:
             breadthLimit = ord(tip.read(1))
             breadthLimit = (breadthLimit&0xf) + 1
         else:
-            breadthLimit = 1 if breadthLimit else None
+            breadthLimit = [None, 1, -1][breadthLimit]
 
         whenUnhandled = bool(flags & 0x4)
 

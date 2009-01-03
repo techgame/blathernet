@@ -103,6 +103,8 @@ class MsgDispatch(object):
         # let mctx know that it was intended to be forwarded...
         mctx = self.mctx
         mctx.forwarding(breadthLimit, whenUnhandled, fwdAdvertId)
+        if breadthLimit == -1:
+            return
         if whenUnhandled and mctx.handled:
             # we were handled, so don't forward
             return

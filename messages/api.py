@@ -23,15 +23,9 @@ class IMessageAPI(object):
         raise NotImplementedError('Interface method: %r' % (self,))
 
     @contextmanager
-    def sendTo(self, advertId, replyId=None, forward=True):
+    def sendTo(self, advertId, replyId=None):
         mobj = self.newMsg(advertId, replyId)
-
         yield mobj
-
-        if forward is not False:
-            if not mobj.isForwarded():
-                mobj.forward(forward, advertId != replyId)
-
         self.sendMsg(mobj)
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

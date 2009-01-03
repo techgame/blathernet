@@ -94,8 +94,8 @@ class MsgCommandObject(object):
         self._cmd_clear_()
     advertId = property(getAdvertId, setAdvertId)
 
-    hexAdvertId = property(lambda self:self.advertId.encode('hex'))
-    hexMsgId = property(lambda self:(self.msgId or '').encode('hex'))
+    hexAdvertId = property(lambda self:(self.advertId or '').encode('hex') or None)
+    hexMsgId = property(lambda self:(self.msgId or '').encode('hex') or None)
 
     def ensureMsgId(self):
         msgId = self.msgId
@@ -103,6 +103,32 @@ class MsgCommandObject(object):
             msgId = self.codec.newMsgId()
             self.msgId = msgId
         return msgId
+
+    #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+    def getReplyId(self):
+        replyIds = self._findCmd_('replyRef')
+        if replyIds:
+            return replyIds[0]
+    def setReplyId(self, replyId):
+        self.replyRef(replyId)
+    replyId = property(getReplyId, setReplyId)
+
+    hexReplyId = property(lambda self:(self.replyId or '').encode('hex') or None)
+
+    #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+    def isForwarded(self):
+        return self._findCmd_('forward') is not None
+    def autoForward(self):
+        if not self.isForwarded(): 
+            breadth = (self.replyId != self.advertId)
+            self.forward(breadth)
+        return self
+
+    def enqueSendOn(self, msgapi):
+        self.ensureMsgId()
+        self.autoForward()
 
     #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     #~ Msg Builder Interface
@@ -119,11 +145,8 @@ class MsgCommandObject(object):
         self._cmd_('end')
         return False
 
-    def isForwarded(self):
-        for fn, args in self.iterCmds(False):
-            if fn == 'forward':
-                return True
-        else: return False
+    def noForard(self):
+        return self.forward(-1, True, None)
     def forward(self, breadthLimit=1, whenUnhandled=True, fwdAdvertId=None):
         if fwdAdvertId in (True, False):
             fwdAdvertId = None
@@ -131,6 +154,7 @@ class MsgCommandObject(object):
         return self
 
     def replyRef(self, replyAdvertIds):
+        self._cmd_clear_('replyRef')
         if not replyAdvertIds: return
         if isinstance(replyAdvertIds, str):
             replyAdvertIds = [replyAdvertIds]
@@ -186,6 +210,12 @@ class MsgCommandObject(object):
         self._cmdList.append(ce)
         return ce
     
+    def _findCmd_(self, cmd):
+        for fn, args in self.iterCmds(False):
+            if fn == cmd:
+                return args
+        else: return None
+
     def _cmd_clear_(self, name=None):
         if self.fwd is not None:
             self.fwd.packet = None

@@ -66,6 +66,21 @@ class TestMsgObject(unittest.TestCase):
         mobj.msg('a test')
         self.dynTestRoundtrip(mobj)
 
+    def testAutoForwardFalse(self):
+        mobj = packet.MsgObject(self.advertId)
+        mobj.forward()
+        mobj.replyRef('0123456789abcdef')
+        mobj.msg('a test')
+        mobj.autoForward()
+        self.dynTestRoundtrip(mobj)
+
+    def testAutoForwardFalse(self):
+        mobj = packet.MsgObject(self.advertId)
+        mobj.replyRef('0123456789abcdef')
+        mobj.msg('a test')
+        mobj.autoForward()
+        self.dynTestRoundtrip(mobj)
+
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 #~ Unittest Main  
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
