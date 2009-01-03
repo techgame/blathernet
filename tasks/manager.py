@@ -26,6 +26,7 @@ from .api import ITaskAPI
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 class BasicBlatherTaskMgr(BlatherObject, ITaskAPI):
+    done = False
     timeout = 0.05
     tasksleep = sleep
 
@@ -57,6 +58,10 @@ class BasicBlatherTaskMgr(BlatherObject, ITaskAPI):
         self.tasks.add(task)
         self._e_tasks.set()
         return task
+
+    def extendTasks(self, tasks):
+        self.tasks.update(t for t in tasks if t is not None)
+        self._e_tasks.set()
 
     def run(self, threaded=False):
         if threaded:
@@ -100,7 +105,6 @@ class BasicBlatherTaskMgr(BlatherObject, ITaskAPI):
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 class BasicBlatherTimerMgr(BasicBlatherTaskMgr):
-    done = False
     timestamp = timestamp
 
     def __init__(self, name):
@@ -113,12 +117,14 @@ class BasicBlatherTimerMgr(BasicBlatherTaskMgr):
             self.hqTimer = []
         self.threadTimers()
 
-    def addTimer(self, tsStart, task):
+    def addTimer(self, tsStart, task, tsBase=None):
         if task is None:
             return None
 
         if tsStart <= 100000:
-            tsStart += self.timestamp()
+            if tsBase is None:
+                tsBase = self.timestamp()
+            tsStart += tsBase
 
         with self.lockTimerHQ:
             hqTimer = self.hqTimer
@@ -154,20 +160,14 @@ class BasicBlatherTimerMgr(BasicBlatherTaskMgr):
                         firedTimers.append(task)
 
                 if firedTimers:
-                    self.addTask(partial(self._processFiredTimers, ts, firedTimers))
+                    self.extendTasks(partial(self._processFiredTask, ts, tfn) for tfn in firedTimers)
 
             self.timersleep(self.minTimerFrequency)
 
-    def _processFiredTimers(self, ts, firedTimers):
-        timerEvents = []
-        for task in firedTimers:
-            tsNext = task(ts)
-            if tsNext is not None:
-                timerEvents.append((tsNext, task))
-        firedTimers[:] = []
-
-        if timerEvents:
-            self.extendTimers(timerEvents, ts)
+    def _processFiredTask(self, ts, task):
+        tsNext = task(ts)
+        if tsNext is not None:
+            self.addTimer(tsNext, task, ts)
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 #~ Blather Task Manger
