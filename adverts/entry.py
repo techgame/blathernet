@@ -70,7 +70,7 @@ class AdvertEntry(object):
         if routes:
             for r in routes.keys():
                 if r() is None: 
-                    routes.pop(r(), None)
+                    routes.pop(r, None)
 
             if limit:
                 routes = routes.items()
