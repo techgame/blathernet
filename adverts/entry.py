@@ -74,7 +74,7 @@ class AdvertEntry(object):
 
             if limit:
                 routes = routes.items()
-                routes.sort(key=lambda (r,i): i)
+                routes.sort(key=lambda (r,i): -i)
                 routes = [r for r,i in routes[:limit]]
             else: routes = routes.keys()
 
