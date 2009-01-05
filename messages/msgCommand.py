@@ -150,6 +150,8 @@ class MsgCommandObject(object):
     def forward(self, breadthLimit=1, whenUnhandled=True, fwdAdvertId=None):
         if fwdAdvertId in (True, False):
             fwdAdvertId = None
+        if breadthLimit in ('*', None, 'all'): 
+            breadthLimit = 0
         self._cmd_('forward', breadthLimit, whenUnhandled, fwdAdvertId)
         return self
 

@@ -40,7 +40,7 @@ class AdvertEntry(object):
     #~ Routes
     #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-    def addRoutes(self, routes):
+    def addRoutes(self, routes, ts=0):
         if isBlatherRoute(routes):
             routes = [routes]
 
@@ -52,7 +52,7 @@ class AdvertEntry(object):
         for r in routes:
             if not isinstance(r, ref):
                 r = ref(r)
-            routeMap[r] += 1
+            routeMap[r] = max(routeMap[r], ts)
     addRoute = addRoutes
 
     def removeRoutes(self, routes):

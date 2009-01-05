@@ -145,13 +145,10 @@ class MsgDispatch(object):
     def adRefs(self, advertIds, key=None):
         mctx = self.mctx
         mctx.adRefs[key] = advertIds
-
         if self.mrules.allowRef:
             route = mctx.src.route or mctx.src.recvRoute
             if route is not None:
-                self.advertDb.addRouteForAdverts(route, advertIds)
-        else:
-            route = mctx.src.route or mctx.src.recvRoute
+                self.advertDb.addRouteForAdverts(route, advertIds, mctx.ts)
 
     def msg(self, body, fmt=0, topic=None):
         mctx = self.mctx
