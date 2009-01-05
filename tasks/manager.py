@@ -70,6 +70,11 @@ class BasicBlatherTaskMgr(BlatherObject, ITaskAPI):
         while not self.done:
             self.process(False)
 
+    def stop(self):
+        self.done = True
+        e_task = self._e_tasks
+        e_task.set()
+
     @threadcall
     def runThreaded(self):
         self.run(False)

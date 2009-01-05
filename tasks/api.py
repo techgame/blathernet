@@ -21,6 +21,8 @@ class ITaskAPI(object):
         raise NotImplementedError('Interface method: %r' % (self,))
     def run(self, threaded=False):
         raise NotImplementedError('Interface method: %r' % (self,))
+    def stop(self):
+        raise NotImplementedError('Interface method: %r' % (self,))
 
     def addTimer(self, tsStart, task):
         raise NotImplementedError('Interface method: %r' % (self,))
@@ -44,6 +46,8 @@ class TaskDelegateAPI(ITaskAPI):
         return self._tasks_.process(allActive)
     def run(self, threaded=False):
         return self._tasks_.run(threaded)
+    def stop(self):
+        return self._tasks_.stop()
 
     def addTimer(self, tsStart, task):
         return self._tasks_.addTimer(tsStart, task)
