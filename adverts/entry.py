@@ -92,7 +92,8 @@ class AdvertEntry(object):
         if responders is None:
             self._responders = responders = []
 
-        responders.append(aResponder)
+        if aResponder not in responders:
+            responders.append(aResponder)
         return aResponder
 
     def removeResponder(self, aResponder):
