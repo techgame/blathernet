@@ -13,7 +13,7 @@
 from struct import pack, unpack, calcsize
 from StringIO import StringIO
 
-from ..packet_base import AdvertIdStr, MsgIdStr
+from ..packet_base import AdvertIdStr, MsgIdStr, PacketNS
 from ..msgPPrint import MsgPPrint
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -38,10 +38,24 @@ class MsgDecoder_v02(object):
         if not isinstance(src.packet, str):
             kname = src.packet.__class__.__name__
             raise ValueError("Parameter src.packet is not a str: %s" % kname)
-        self.src = src
+        self.src = PacketNS(src, mobj=self)
 
     def __repr__(self):
         return '<%s msgId: %s advertId: %s>' % (self.__class__.__name__, self.hexMsgId, self.hexAdvertId)
+
+    @classmethod
+    def new(klass, src):
+        return klass(src)
+
+    def copy(self):
+        return self.new(self.src)
+
+    def __enter__(self):
+        """Enables use of a MsgCommandObject as a template"""
+        return self.copy()
+
+    def __exit__(self, etype, exc, tb):
+        pass
 
     def getAdvertId(self):
         return AdvertIdStr(self.src.packet[5:21])
