@@ -28,7 +28,7 @@ class BlatherNetworkRoute(BlatherChannelRoute):
         if err.args[0] == 64: # host is down
             if addr != self.addrOutbound:
                 return
-            elif self.isOpenRoute()
+            elif self.isOpenRoute():
                 return
 
             channel.unregister(self.addrInbound, self.onRecvDispatch)
