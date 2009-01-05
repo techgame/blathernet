@@ -29,10 +29,14 @@ class BasicBlatherRoute(BlatherObject):
         self.dispatchPacket = dispatchPacket
 
     def assignRouteManager(self, routeMgr):
-        routeMgr = routeMgr.asWeakProxy()
-        self.routeMgr = routeMgr
-        if self.dispatchPacket is None:
-            self.dispatchPacket = routeMgr.getDispatchForRoute(self)
+        if routeMgr is not None:
+            routeMgr = routeMgr.asWeakProxy()
+            self.routeMgr = routeMgr
+            if self.dispatchPacket is None:
+                self.dispatchPacket = routeMgr.getDispatchForRoute(self)
+        else:
+            self.routeMgr = None
+            self.dispatchPacket = None
 
     #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -46,12 +50,19 @@ class BasicBlatherRoute(BlatherObject):
         raise NotImplementedError('Subclass Responsibility: %r' % (self,))
 
     newPacketNS = PacketNS.new
-    def onRecvDispatch(self, data, addr, ts):
+    def onRecvDispatch(self, channel, data, addr, ts):
+        dispatchPacket = self.dispatchPacket
+        if dispatchPacket is None:
+            print 'UNREGISTER:', (channel, addr, ts)
+            channel.unregister(addr, self.onRecvDispatch)
+            channel.unregister(None, self.onRecvDispatch)
+            return
+
         pkt = self.newPacketNS(data, addr=addr, ts=ts)
         pkt.route = self.findReturnRouteFor(addr)
         pkt.recvRoute = self.wrRoute
 
-        self.dispatchPacket(pkt)
+        dispatchPacket(pkt)
 
     #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 

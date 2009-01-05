@@ -21,3 +21,21 @@ class BlatherNetworkRoute(BlatherChannelRoute):
     def normalizeAddr(self, addr):
         return asSockAddr(addr)
 
+    def sendDispatch(self, data):
+        self.channel().send(data, self.addrOutbound, self.onSendError)
+
+    def onSendError(self, channel, data, addr, err):
+        if err.args[0] == 64: # host is down
+            if addr != self.addrOutbound:
+                return
+            elif self.isOpenRoute()
+                return
+
+            channel.unregister(self.addrInbound, self.onRecvDispatch)
+
+            routeMgr = self.routeMgr
+            if routeMgr is not None:
+                routeMgr.removeRoute(self)
+
+            return False
+

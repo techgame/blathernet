@@ -57,22 +57,36 @@ class UDPBaseChannel(SocketChannel):
 
         self.registry[address] = entry
 
-    def send(self, data, address, onNotify=None):
+    def unregister(self, address, recv):
+        entry = self.registry.get(address)
+        if entry is not None:
+            if isinstance(entry, set):
+                entry.discard(recv)
+                return True
+
+            if entry == recv:
+                del self.registry[address]
+                return True
+
+        return False
+
+    def send(self, data, address, onErrorNotify=None):
         try:
             # send it directly, if we can
             self.sock.sendto(data, address)
             return 
         except SocketError, err:
-            if onNotify is None:
+            if onErrorNotify is None:
                 reraise = self.reraiseSocketError(err, err.args[0])
-            else: reraise = onNotify('error', data, address, err)
+            else: 
+                reraise = onErrorNotify(self, data, address, err)
             if reraise: 
                 traceback.print_exc()
+            elif reraise is None:
+                self.sendQueue.put((data, address, onErrorNotify))
+                self.needsWrite = True
 
-        self.sendQueue.put((data, address, onNotify))
-        self.needsWrite = True
-
-    def recvDefault(self, data, address, ts):
+    def recvDefault(self, channel, data, address, ts):
         print
         print self.sock.getsockname(), 'recvDefault:'
         print '   ', address, 'not in:', self.registry.keys()
@@ -152,9 +166,9 @@ class UDPBaseChannel(SocketChannel):
             recvFns = registry.get(address, default)
             if isinstance(recvFns, set):
                 for recv in recvFns:
-                    recv(data, address, ts)
+                    recv(self, data, address, ts)
             else: 
-                recvFns(data, address, ts)
+                recvFns(self, data, address, ts)
 
     def performRead(self, tasks):
         sock = self.sock
@@ -182,19 +196,19 @@ class UDPBaseChannel(SocketChannel):
         iterThrottle = xrange(self.sendThrottle)
         try:
             for n in iterThrottle:
-                data, address, onNotify = sendQueue.get(False, 0.1)
+                data, address, onErrorNotify = sendQueue.get(False, 0.1)
                 sock.sendto(data, address)
         except Queue.Empty:
             self.needsWrite = False
         except SocketError, err:
-            if onNotify is None:
+            if onErrorNotify is None:
                 reraise = self.reraiseSocketError(err, err.args[0])
             else: 
-                reraise = onNotify('error', data, address, err)
+                reraise = onErrorNotify(self, data, address, err)
             if reraise:
                 traceback.print_exc()
-            else:
-                sendQueue.put((data, address, onNotify))
+            elif reraise is None:
+                sendQueue.put((data, address, onErrorNotify))
 
         return n
 

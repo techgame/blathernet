@@ -40,6 +40,10 @@ class BlatherRouteMgr(BlatherObject, IRouteAPI):
         route.assignRouteManager(self)
         self.routes.add(route)
 
+    def removeRoute(self, route):
+        route.assignRouteManager(None)
+        self.routes.discard(route)
+
     def findPeerRoute(self, addr):
         for route in self.routes:
             if route.matchPeerAddr(addr):

@@ -73,12 +73,26 @@ class InprocChannel(NetworkChannel):
 
         self.registry[address] = entry
 
-    def recvDefault(self, data, address, ts):
+
+    def unregister(self, address, recv):
+        entry = self.registry.get(address)
+        if entry is not None:
+            if isinstance(entry, set):
+                entry.discard(recv)
+                return True
+
+            if entry == recv:
+                del self.registry[address]
+                return True
+
+        return False
+
+    def recvDefault(self, channel, data, address, ts):
         pass
 
     #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-    def send(self, data, address, onNotify=None):
+    def send(self, data, address, onErrorNotify=None):
         fromAddress = self.address
         for dest in self.inprocRegistry.get(address) or ():
             dest = dest()
@@ -114,7 +128,7 @@ class InprocChannel(NetworkChannel):
             recvFns = registry.get(address, default)
             if isinstance(recvFns, set):
                 for recv in recvFns:
-                    recv(data, address, ts)
+                    recv(self, data, address, ts)
             else: 
-                recvFns(data, address, ts)
+                recvFns(self, data, address, ts)
 
