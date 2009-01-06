@@ -30,16 +30,13 @@ blather = Blather('Chat')
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 def setup():
-    rn = blather.routes.network
-    print 
-    for e, lst in rn.getIFIndexes():
-        print 'I:', e, lst
-    print 
-    for e, lst in rn.getIFAddrs():
-        print 'A:', e, lst
-    print 
     rf = blather.routes.factory
-    rf.connectMUDP()
+    mudpRoutes = rf.connectAllMUDP()
+    print
+    print 'ALL UDP Routes:'
+    for k, v in mudpRoutes:
+        print '   %r: %r,' %(k, v)
+    print
 
     blather.run(True)
 

@@ -93,6 +93,20 @@ class BlatherRouteFactory(object):
         route.registerForInbound(self.routes, [mch])
         return route
 
+    def connectAllMUDP(self, mcastAddr=('238.1.9.1', 8469)):
+        network = self.network
+        allRoutes = []
+        for ifName, addrList in network.getIFAddrs_v4():
+            for ifAddr in addrList:
+                mch = network.addMudpChannel(mcastAddr, ifAddr, False)
+
+                route = BlatherNetworkRoute()
+                route.channel = mch.asWeakRef()
+                route.setAddrs(mch.grpAddr, None)
+                route.registerForInbound(self.routes, [mch])
+                allRoutes.append(((ifName, ifAddr), route))
+        return allRoutes
+
     def connectDiscovery(self):
         ch = self.network.udpChannel
         mch = self.network.mudpChannel
