@@ -146,8 +146,6 @@ class MsgCommandObject(object):
         self._cmd_('end')
         return False
 
-    def noForward(self):
-        return self.forward(-1, True, None)
     def broadcastOnce(self, whenUnhandled=True, fwdAdvertId=None):
         return self.forwardOnce(0, whenUnhandled, fwdAdvertId)
     def forwardOnce(self, breadthLimit=1, whenUnhandled=True, fwdAdvertId=None):
@@ -157,8 +155,11 @@ class MsgCommandObject(object):
             breadthLimit = 0
         self._cmd_('forwardOnce', breadthLimit, whenUnhandled, fwdAdvertId)
         return self
+
     def broadcast(self, whenUnhandled=True, fwdAdvertId=None):
         return self.forward(0, whenUnhandled, fwdAdvertId)
+    def noForward(self):
+        return self.forward(-1, True, None)
     def forward(self, breadthLimit=1, whenUnhandled=True, fwdAdvertId=None):
         if fwdAdvertId in (True, False):
             fwdAdvertId = None
