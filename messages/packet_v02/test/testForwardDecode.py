@@ -45,13 +45,13 @@ class TestForwardDecode(unittest.TestCase):
         data = ("02323436382f4b896fc298bf778c3c64d2ad25d92514").decode("hex")
 
         mobj, r = self.buildMsgObj(data, 1)
-        self.assertEqual(r[0], ('forward', (None, True, None)))
+        self.assertEqual(r[0], ('forward', (0, True, None)))
 
     def testDecodeForwardAllRoutesEx(self):
         data = ("02323436382f4b896fc298bf778c3c64d2ad25d92510").decode("hex")
 
         mobj, r = self.buildMsgObj(data, 1)
-        self.assertEqual(r[0], ('forward', (None, False, None)))
+        self.assertEqual(r[0], ('forward', (0, False, None)))
 
     def testDecodeForwardBest3Routes(self):
         data = ("02323436382f4b896fc298bf778c3c64d2ad25d9251702").decode("hex")
@@ -81,13 +81,13 @@ class TestForwardDecode(unittest.TestCase):
         data = ("02323436382f4b896fc298bf778c3c64d2ad25d9251c30313233343536373839616263646566").decode("hex")
 
         mobj, r = self.buildMsgObj(data, 1)
-        self.assertEqual(r[0], ('forward', (None, True, '0123456789abcdef')))
+        self.assertEqual(r[0], ('forward', (0, True, '0123456789abcdef')))
 
     def testDecodeForwardAllRoutesFwdAdIdEx(self):
         data = ("02323436382f4b896fc298bf778c3c64d2ad25d9251830313233343536373839616263646566").decode("hex")
 
         mobj, r = self.buildMsgObj(data, 1)
-        self.assertEqual(r[0], ('forward', (None, False, '0123456789abcdef')))
+        self.assertEqual(r[0], ('forward', (0, False, '0123456789abcdef')))
 
     def testDecodeForwardBest3RoutesFwdAdId(self):
         data = ("02323436382f4b896fc298bf778c3c64d2ad25d9251f0230313233343536373839616263646566").decode("hex")
