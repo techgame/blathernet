@@ -15,6 +15,7 @@ from __future__ import with_statement
 
 import sys
 import time
+import platform
 from getpass import getuser
 from TG.blathernet import Blather, advertIdForNS
 
@@ -43,7 +44,7 @@ def setup():
 
 @blather.respondTo(adChat)
 def chatResponder(body, fmt, topic, mctx):
-    if topic.startswith(me):
+    if 'replybot' in topic:
         return
 
     body = body.decode('utf-8')
@@ -55,7 +56,7 @@ def chatResponder(body, fmt, topic, mctx):
         robj.forward(None, False)
         robj.msg(response, fmt, me+'-'+topic)
 
-me = 'replybot'
+me = 'replybot:'+platform.node()
 prompt = '>>'
 def main():
     setup()
