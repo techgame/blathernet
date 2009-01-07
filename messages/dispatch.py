@@ -86,7 +86,6 @@ class MsgDispatch(object):
         else: adResponders = []
 
         mrules = self.MsgDispatchRules(adEntry)
-        self.mrules = mrules
         mctx.mrules = mrules
 
         self.adResponders = adResponders
@@ -99,25 +98,48 @@ class MsgDispatch(object):
     def end(self):
         return False
 
+    def broadcastOnce(self, whenUnhandled=True, fwdAdvertId=None):
+        return self.forward(0, whenUnhandled, fwdAdvertId)
+    def forwardOnce(self, breadthLimit=1, whenUnhandled=True, fwdAdvertId=None):
+        return self.forward(breadthLimit, whenUnhandled, fwdAdvertId)
+
+    def broadcast(self, whenUnhandled=True, fwdAdvertId=None):
+        return self.forward(0, whenUnhandled, fwdAdvertId)
+    def noForward(self):
+        return self.mctx
     def forward(self, breadthLimit=1, whenUnhandled=True, fwdAdvertId=None):
-        # let mctx know that it was intended to be forwarded...
         mctx = self.mctx
+        if breadthLimit < 0:
+            if breadthLimit is not None:
+                return mctx # negative breadth signals no-forward
+            breadthLimit = 0
+
+        # let mctx know that it was intended to be forwarded...
         mctx.forwarding(breadthLimit, whenUnhandled, fwdAdvertId)
-        if breadthLimit == -1:
-            return
+
         if whenUnhandled and mctx.handled:
             # we were handled, so don't forward
-            return
-        if not self.mrules.allowForward:
-            return
+            return mctx
+        if not mctx.mrules.allowForward:
+            return mctx
 
-        fwdAdEntries = [self.mctx.adEntry]
+        fwdRoutes = []
+        adEntry = mctx.adEntry
+        if adEntry is not None:
+            fwdRoutes.extend(adEntry.getRoutes(breadthLimit))
+
         if fwdAdvertId is not None:
-            # lookup entry for specified adEntry
-            fwdAdEntries.append(self.advertDb.get(fwdAdvertId))
+            # lookup entry for specified fwdAdEntry
+            fwdEntry = self.advertDb.get(fwdAdvertId)
+            if fwdEntry is not None:
+                for fr in fwdEntry.allResponders():
+                    if fr.prohibitForwardToward(mctx):
+                        # do not break -- notify all entries of the attempt
+                        fwdEntry = None
 
-        fwdRoutes = [r for ae in fwdAdEntries if ae is not None
-                        for r in ae.getRoutes(breadthLimit)]
+                if fwdEntry is not None:
+                    fwdRoutes.extend(fwdEntry.getRoutes(breadthLimit))
+
         if not fwdRoutes: 
             return
 
@@ -133,6 +155,7 @@ class MsgDispatch(object):
                 continue
 
             route().sendDispatch(fwdPacket)
+        return mctx
 
     def replyRef(self, replyAdvertIds):
         if isinstance(replyAdvertIds, str):
@@ -140,15 +163,16 @@ class MsgDispatch(object):
 
         mctx = self.mctx
         mctx.replyId = replyAdvertIds[0] if replyAdvertIds else None
-        self.adRefs(replyAdvertIds, True)
+        return self.adRefs(replyAdvertIds, True)
 
     def adRefs(self, advertIds, key=None):
         mctx = self.mctx
         mctx.adRefs[key] = advertIds
-        if self.mrules.allowRef:
+        if mctx.mrules.allowRef:
             route = mctx.src.route or mctx.src.recvRoute
             if route is not None:
                 self.advertDb.addRouteForAdverts(route, advertIds, mctx.ts)
+        return mctx
 
     def msg(self, body, fmt=0, topic=None):
         mctx = self.mctx
@@ -157,10 +181,12 @@ class MsgDispatch(object):
                 v = r.msg(body, fmt, topic, mctx)
                 if v is not False:
                     mctx.handled += 1
+        return mctx
 
     def complete(self):
         mctx = self.mctx
         for r in self.adResponders:
             with localtb:
                 r.finishResponse(mctx)
+        return mctx
 

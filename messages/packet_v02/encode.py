@@ -75,32 +75,41 @@ class MsgEncoder_v02(MsgEncoderBase):
         self._writeCmd(0, 0)
         return False
 
-    def noForard(self):
+    def broadcastOnce(self, whenUnhandled=True, fwdAdvertId=None):
+        return self.forwardOnce(0, whenUnhandled, fwdAdvertId)
+    def forwardOnce(self, breadthLimit=1, whenUnhandled=True, fwdAdvertId=None):
+        # local forward do not get encoded into packet, making it
+        # only work on the host that sends it
+        return self
+
+    def broadcast(self, whenUnhandled=True, fwdAdvertId=None):
+        return self.forward(0, whenUnhandled, fwdAdvertId)
+    def noFowrard(self):
         return self.forward(-1, True, None)
     def forward(self, breadthLimit=1, whenUnhandled=True, fwdAdvertId=None):
         cmd = 0x1; flags = 0
 
         fwdBreadth = ''
         if breadthLimit in (0,1):
-            # 0: all
-            # 1: best route
+            # flag 0: all
+            # flag 1: best route
             flags |= breadthLimit
         elif not isinstance(breadthLimit, int):
             if breadthLimit in (None, 'all', '*'):
-                # 0: all
+                # flag 0: all
                 flags |= 0x0
             elif breadthLimit in ('local', ):
-                # 2: local only
+                # flag 2: local only
                 flags |= 0x2; fwdAdvertId = None
             else:
                 raise ValueError("Invalid breadth limit value: %r" % (breadthLimit))
         elif breadthLimit < 0:
-            # 2: local only
+            # flag 2: local only
             if breadthLimit != -1:
                 raise ValueError("BreadthLimit must be -1 if it is negative")
             flags |= 0x2; fwdAdvertId = None
         else:
-            # 3: best n routes [1..16]; high nibble is unused/reserved
+            # flag 3: best n routes [1..16]; high nibble is unused/reserved
             flags |= 0x3
             fwdBreadth = max(min(breadthLimit, 16), 1) - 1
             fwdBreadth = chr(fwdBreadth)
@@ -114,6 +123,7 @@ class MsgEncoder_v02(MsgEncoderBase):
         else: fwdAdvertId = ''
 
         self._writeCmd(cmd, flags, fwdBreadth, fwdAdvertId)
+        return self
 
     def replyRef(self, replyAdvertIds):
         if not replyAdvertIds: return
@@ -140,6 +150,7 @@ class MsgEncoder_v02(MsgEncoderBase):
         if advertIds:
             flags = len(advertIds)-1 # [1..16] => [0..15]
             self._writeCmd(cmd, flags, key, ''.join(advertIds))
+        return self
 
     #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     #~ Message and Topic Commands
@@ -202,6 +213,7 @@ class MsgEncoder_v02(MsgEncoderBase):
 
         cmd, prefix = self._msgCmdPrefix(len(body), topic)
         self._writeCmd(cmd, fmt, prefix, body)
+        return self
 
     def complete(self):
         return self.getPacketNS()

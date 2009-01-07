@@ -29,6 +29,8 @@ class IAdvertResponder(object):
         pass
     def finishResponse(self, mctx):
         pass
+    def prohibitForwardToward(self, mctx):
+        return False
 
     def msg(self, body, fmt, topic, mctx):
         pass

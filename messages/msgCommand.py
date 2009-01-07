@@ -107,7 +107,7 @@ class MsgCommandObject(object):
     #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
     def getReplyId(self):
-        replyIds = self._findCmd_('replyRef')
+        replyIds = self._findCmds_('replyRef')
         if replyIds:
             return replyIds[0]
     def setReplyId(self, replyId):
@@ -119,11 +119,12 @@ class MsgCommandObject(object):
     #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
     def isForwarded(self):
-        return self._findCmd_('forward') is not None
+        return self._findCmds_('forward', 'forwardOnce') is not None
     def autoForward(self):
         if not self.isForwarded(): 
-            breadth = (self.replyId != self.advertId)
-            self.forward(breadth)
+            if self.replyId != self.advertId:
+                self.forward()
+            else: self.broadcast()
         return self
 
     def enqueSendOn(self, msgapi):
@@ -145,8 +146,19 @@ class MsgCommandObject(object):
         self._cmd_('end')
         return False
 
-    def noForard(self):
+    def noForward(self):
         return self.forward(-1, True, None)
+    def broadcastOnce(self, whenUnhandled=True, fwdAdvertId=None):
+        return self.forwardOnce(0, whenUnhandled, fwdAdvertId)
+    def forwardOnce(self, breadthLimit=1, whenUnhandled=True, fwdAdvertId=None):
+        if fwdAdvertId in (True, False):
+            fwdAdvertId = None
+        if breadthLimit in ('*', None, 'all'): 
+            breadthLimit = 0
+        self._cmd_('forwardOnce', breadthLimit, whenUnhandled, fwdAdvertId)
+        return self
+    def broadcast(self, whenUnhandled=True, fwdAdvertId=None):
+        return self.forward(0, whenUnhandled, fwdAdvertId)
     def forward(self, breadthLimit=1, whenUnhandled=True, fwdAdvertId=None):
         if fwdAdvertId in (True, False):
             fwdAdvertId = None
@@ -212,9 +224,9 @@ class MsgCommandObject(object):
         self._cmdList.append(ce)
         return ce
     
-    def _findCmd_(self, cmd):
+    def _findCmds_(self, *cmds):
         for fn, args in self.iterCmds(False):
-            if fn == cmd:
+            if fn in cmds:
                 return args
         else: return None
 
