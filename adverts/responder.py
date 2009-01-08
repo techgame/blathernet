@@ -45,14 +45,14 @@ class IAdvertResponder(object):
         
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-def buildAdvertIdFrom(pAdvertNS, priority=-5):
+def buildAdvertIdFrom(pAdvertNS, **kw):
     def buildAdvertId(pName, obInstance):
         advertNS = getattr(obInstance, pAdvertNS)
         advertId = advertIdForNS(advertNS)
         setattr(obInstance, pName, advertId)
         return advertId
 
-    buildAdvertId.priority = priority
+    buildAdvertId.priority = kw.pop('priority', -5)
     buildAdvertId.onObservableInit = buildAdvertId
     buildAdvertId.__name__ = 'buildAdvertIdFrom#'+pAdvertNS
     return buildAdvertId
