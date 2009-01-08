@@ -102,6 +102,12 @@ class AdvertDB(IAdvertAPI):
             for adId in advertIds:
                 self.addRoutes(adId, route, ts)
 
+    def getRoutesForEntry(self, adEntry, breadthLimit):
+        # Essentially an extensibity point
+        if adEntry is not None:
+            return adEntry.getRoutes(breadthLimit)
+        else: return []
+
     #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     #~ Responders
     #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
