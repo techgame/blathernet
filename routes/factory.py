@@ -93,6 +93,15 @@ class BlatherRouteFactory(object):
         route.registerForInbound(self.routes, [mch])
         return route
 
+    def connectLocalMUDP(self, mcastAddr=('238.1.9.1', 8469), ifAddr='127.0.0.1'):
+        mch = self.network.addMudpChannel(mcastAddr, ifAddr, False)
+
+        route = BlatherNetworkRoute()
+        route.channel = mch.asWeakRef()
+        route.setAddrs(mch.grpAddr, None)
+        route.registerForInbound(self.routes, [mch])
+        return route
+
     def connectAllMUDPv4(self, mcastAddr=('238.1.9.1', 8469)):
         network = self.network
         allRoutes = []
