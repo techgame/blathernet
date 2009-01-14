@@ -63,6 +63,7 @@ class AdvertResponder(BlatherObject, IAdvertResponder):
     advertId = buildAdvertIdFrom('advertNS')
 
     buildAdvertIdFrom = staticmethod(buildAdvertIdFrom)
+    advertIdForNS = staticmethod(advertIdForNS)
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 #~ Advert Responder for a function
