@@ -181,6 +181,8 @@ class MsgCommandObject(object):
         return self
 
     def msg(self, body, fmt=0, topic=None):
+        if isinstance(topic, unicode):
+            raise ValueError("Topic may not be unicode")
         self._cmd_('msg', body, fmt, topic)
         return self
     

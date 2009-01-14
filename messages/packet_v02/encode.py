@@ -192,7 +192,10 @@ class MsgEncoder_v02(MsgEncoderBase):
                 topic = ''
                 cmd = 0x8
             else: cmd = 0xc
-        elif isinstance(topic, str):
+        elif isinstance(topic, basestring):
+            if isinstance(topic, unicode):
+                raise ValueError("Topic cannot be unicode")
+
             cmd = self._cmdByTopicLen.get(len(topic))
         else:
             cmd = 0xc
