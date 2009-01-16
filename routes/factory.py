@@ -163,9 +163,6 @@ class BlatherRouteFactory(object):
         @ch.addResolver
         def peerResolver(addr):
             route = self.connectDirectUDP(addr)
-            print
-            print 'NEW PEER for:', (addr, route)
-            print
             return route
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

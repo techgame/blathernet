@@ -35,10 +35,15 @@ class AddressRegistry(dict):
 
     def __missing__(self, address):
         for addrRes in self.resolvers:
-            if addrRes(address):
+            r = addrRes(address)
+            if not r:
+                continue
+
+            if callable(r):
+                self[address] = fn = r
+            else:
                 fn = self.get(address)
-                assert fn is not None
-                return fn
+            return fn
         else:
             return self.fallback
 
