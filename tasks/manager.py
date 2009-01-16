@@ -17,7 +17,7 @@ from heapq import heappop, heappush
 
 from ..base import BlatherObject, timestamp, sleep
 from ..base.tracebackBoundry import localtb
-from ..base.threadutils import threadcall, Event, Lock
+from ..base.threadutils import threadcall, dispatchInThread, Event, Lock
 
 from .api import ITaskAPI
 
@@ -66,18 +66,35 @@ class BasicBlatherTaskMgr(BlatherObject, ITaskAPI):
     def run(self, threaded=False):
         if threaded:
             return self.runThreaded()
+        else:
+            self.processUntilDone()
 
-        while not self.done:
-            self.process(False)
+    def runJoin(self, timeout=None):
+        tt = self.runThreaded()
+        if timeout in (None, False):
+            while tt.isAlive():
+                tt.join(1.0)
+        else: tt.join(timeout)
+
+        return tt.isAlive()
 
     def stop(self):
         self.done = True
         e_task = self._e_tasks
         e_task.set()
 
-    @threadcall
+    _taskThread = None
     def runThreaded(self):
-        self.run(False)
+        tt = self._taskThread
+        if tt is None:
+            tt = dispatchInThread(self.processUntilDone)
+            self._taskThread = tt
+            self.run = self.runJoin
+        return tt
+
+    def processUntilDone(self):
+        while not self.done:
+            self.process(False)
 
     def process(self, allActive=True):
         n = 0

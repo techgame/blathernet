@@ -16,6 +16,12 @@ from threading import Event, Lock, Thread
 #~ Definitions 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
+def dispatchInThread(method, *args, **kw):
+    t = Thread(target=method, args=args, kwargs=kw)
+    t.setDaemon(True)
+    t.start()
+    return t
+
 def threadcall(method):
     def decorate(*args, **kw):
         t = Thread(target=method, args=args, kwargs=kw)
@@ -25,6 +31,4 @@ def threadcall(method):
     decorate.__name__ = method.__name__
     decorate.__doc__ = method.__doc__
     return decorate
-
-#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 

@@ -21,6 +21,8 @@ class ITaskAPI(object):
         raise NotImplementedError('Interface method: %r' % (self,))
     def run(self, threaded=False):
         raise NotImplementedError('Interface method: %r' % (self,))
+    def runJoin(self, timeout=None):
+        raise NotImplementedError('Interface method: %r' % (self,))
     def stop(self):
         raise NotImplementedError('Interface method: %r' % (self,))
 
@@ -46,6 +48,8 @@ class TaskDelegateAPI(ITaskAPI):
         return self._tasks_.process(allActive)
     def run(self, threaded=False):
         return self._tasks_.run(threaded)
+    def runJoin(self, timeout=None):
+        return self._tasks_.runJoin(timeout)
     def stop(self):
         return self._tasks_.stop()
 
