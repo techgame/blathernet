@@ -157,6 +157,17 @@ class BlatherRouteFactory(object):
         route.registerForInbound(self.routes, [ch, bcastCh])
         return route
 
+    def addPeersForIncoming(self):
+        ch = self.network.udpChannel
+
+        @ch.addResolver
+        def peerResolver(addr):
+            route = self.connectDirectUDP(addr)
+            print
+            print 'NEW PEER for:', (addr, route)
+            print
+            return route
+
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 #~ Imports 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

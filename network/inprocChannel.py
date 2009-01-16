@@ -38,7 +38,9 @@ class InprocChannel(NetworkChannel):
 
         self.address = address
         self.inprocRegistry = self.interfaceRegistryFor(interface)
-        self.registry = {}
+
+        self.registry = AddressRegistry()
+        self.registry.fallback = self.recvDefault
 
         self.recvQueueLock = threading.Lock()
         with self.recvQueueLock:
@@ -121,11 +123,10 @@ class InprocChannel(NetworkChannel):
 
     def _dispatchDataPackets(self, data):
         registry = self.registry
-        default = registry.get(None) or self.recvDefault
 
         ts = self.timestamp()
         for data, address in data:
-            recvFns = registry.get(address, default)
+            recvFns = registry[address]
             if isinstance(recvFns, set):
                 for recv in recvFns:
                     recv(self, data, address, ts)

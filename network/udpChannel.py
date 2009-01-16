@@ -18,6 +18,7 @@ from socket import error as SocketError
 
 from .socketChannel import SocketChannel
 from .socketConfigTools import udpSocketErrorMap
+from .addrRegistry import AddressRegistry
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 #~ Definitions 
@@ -35,12 +36,20 @@ class UDPBaseChannel(SocketChannel):
 
     def __init__(self, address=None, interface=None, onBindError=None):
         SocketChannel.__init__(self)
-        self.registry = {}
+
+        self.registry = AddressRegistry()
+        self.registry.fallback = self.recvDefault
+
         self.sendQueue = Queue.Queue()
         if address:
             self.setSocketAddress(address, interface, onBindError)
 
     #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+    def addResolver(self, addrRes):
+        return self.registry.addResolver(addrRes)
+    def removeResolver(self, addrRes):
+        return self.registry.removeResolver(addrRes)
 
     def register(self, address, recv):
         entry = self.registry.get(address)
@@ -159,11 +168,10 @@ class UDPBaseChannel(SocketChannel):
 
     def _dispatchDataPackets(self, dataPackets):
         registry = self.registry
-        default = registry.get(None) or self.recvDefault
 
         ts = self.timestamp()
         for data, address in dataPackets:
-            recvFns = registry.get(address, default)
+            recvFns = registry[address]
             if isinstance(recvFns, set):
                 for recv in recvFns:
                     recv(self, data, address, ts)
