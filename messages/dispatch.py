@@ -123,10 +123,8 @@ class MsgDispatch(object):
         if not mctx.mrules.allowForward:
             return mctx
 
-        fwdRoutes = []
-        adEntry = mctx.adEntry
-        if adEntry is not None:
-            fwdRoutes.extend(adEntry.getRoutes(breadthLimit))
+        advertDb = self.advertDb
+        fwdRoutes = advertDb.getRoutesForEntry(mctx.adEntry, breadthLimit)
 
         if fwdAdvertId is not None:
             # lookup entry for specified fwdAdEntry
@@ -137,8 +135,7 @@ class MsgDispatch(object):
                         # do not break -- notify all entries of the attempt
                         fwdEntry = None
 
-                if fwdEntry is not None:
-                    fwdRoutes.extend(fwdEntry.getRoutes(breadthLimit))
+                fwdRoutes += advertDb.getRoutesForEntry(fwdEntry, breadthLimit)
 
         if not fwdRoutes: 
             return
