@@ -55,7 +55,6 @@ class BlatherHost(BlatherObject):
     msgs = property(lambda self: self._msgs_)
     routes = property(lambda self: self._routes_)
 
-
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 class Blather(BlatherHost, 
@@ -65,4 +64,11 @@ class Blather(BlatherHost,
         messages.api.MessageDelegateAPI,
         ):
     """Entrypoint into the blather system"""
+
+    def __init__(self, name=None, *args, **kw):
+        super(Blather, self).__init__(name)
+        self.init(*args, **kw)
+
+    def init(self):
+        """Override init to configure your blather host"""
 
