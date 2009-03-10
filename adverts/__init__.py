@@ -12,7 +12,7 @@
 
 from . import api
 from .advertId import AdvertIdStr, advertIdForNS
-from .responder import IAdvertResponder, AdvertResponder
+from .responder import IAdvertResponder, BasicAdvertResponder, AdvertResponder
 from .entry import AdvertEntry
 from .db import BlatherAdvertDB
 

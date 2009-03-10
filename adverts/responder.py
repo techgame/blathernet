@@ -30,6 +30,8 @@ class IAdvertResponder(object):
     def finishResponse(self, mctx):
         pass
     def prohibitForwardToward(self, mctx):
+        """Commonly named adverts that are generically added to nodes should
+        override and return True so they cannot be used for fwdAdvertId boards"""
         return False
 
     def msg(self, body, fmt, topic, mctx):
@@ -42,28 +44,39 @@ class IAdvertResponder(object):
                 raise ValueError("advertId is None")
         return host.addResponder(advertId, self)
     addTo = property(lambda self: self.addAsResponderTo)
-        
+
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-def buildAdvertIdFrom(pAdvertNS, **kw):
-    def buildAdvertId(pName, obInstance):
-        advertNS = getattr(obInstance, pAdvertNS)
-        advertId = advertIdForNS(advertNS)
-        setattr(obInstance, pName, advertId)
+class buildAdvertIdFrom(object):
+    priority = -5
+
+    def __init__(self, pAdvertNS, **kw):
+        self.pAdvertNS = pAdvertNS
+        self.priority = kw.pop('priority', -5)
+        self.__name__ = 'buildAdvertIdFrom#'+pAdvertNS
+
+    def __get__(self, obInst, obKlass=None):
+        if obInst is None:
+            return obKlass
+        return self.getAdvertIdFrom(obInst)
+
+    def getAdvertIdFrom(self, obInst):
+        advertNS = getattr(obInst, self.pAdvertNS)
+        return advertIdForNS(advertNS)
+
+    def onObservableInit(self, pName, obInst):
+        advertId = self.getAdvertIdFrom(obInst)
+        setattr(obInst, pName, advertId)
         return advertId
 
-    buildAdvertId.priority = kw.pop('priority', -5)
-    buildAdvertId.onObservableInit = buildAdvertId
-    buildAdvertId.__name__ = 'buildAdvertIdFrom#'+pAdvertNS
-    return buildAdvertId
 
-
-class AdvertResponder(BlatherObject, IAdvertResponder):
-    advertNS = None
-    advertId = buildAdvertIdFrom('advertNS')
-
+class BasicAdvertResponder(BlatherObject, IAdvertResponder):
     buildAdvertIdFrom = staticmethod(buildAdvertIdFrom)
     advertIdForNS = staticmethod(advertIdForNS)
+
+class AdvertResponder(BasicAdvertResponder):
+    advertNS = None
+    advertId = BasicAdvertResponder.buildAdvertIdFrom('advertNS')
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 #~ Advert Responder for a function
@@ -115,4 +128,4 @@ class AdvertResponderList(IAdvertResponder):
         for ar in self._responders:
             with localtb:
                 ar.msg(body, fmt, topic, mctx)
-        
+
