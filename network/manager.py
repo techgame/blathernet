@@ -73,13 +73,13 @@ class BlatherNetworkMgr(BlatherObject):
         return ch
 
     _allUdpChannels = None
-    def allUdpChannels(self):
+    def allUdpChannels(self, port=8470):
         allChannels = self._allUdpChannels
         if allChannels is None:
             allChannels = []
             for ifname, ifaddrs in netif.getifaddrs_v4():
                 for addr in ifaddrs:
-                    ch = self.addUdpChannel((str(addr), 8470), str(addr), False)
+                    ch = self.addUdpChannel((str(addr), port), str(addr), False)
                     allChannels.append((addr, ch))
 
             self._allUdpChannels = allChannels
