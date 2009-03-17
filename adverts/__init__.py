@@ -11,7 +11,7 @@
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 from . import api
-from .advertId import AdvertIdStr, advertIdForNS
+from .advertId import AdvertIdStr, advertIdForNS, AdvertMessageAPI
 from .responder import IAdvertResponder, BasicAdvertResponder, AdvertResponder
 from .entry import AdvertEntry
 from .db import BlatherAdvertDB

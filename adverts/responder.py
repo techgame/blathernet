@@ -15,7 +15,7 @@ from __future__ import with_statement
 
 from ..base import BlatherObject
 from ..base.tracebackBoundry import localtb
-from .advertId import advertIdForNS
+from .advertId import advertIdForNS, buildAdvertIdFrom, AdvertMessageAPI
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 #~ Definitions 
@@ -46,29 +46,6 @@ class IAdvertResponder(object):
     addTo = property(lambda self: self.addAsResponderTo)
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-class buildAdvertIdFrom(object):
-    priority = -5
-
-    def __init__(self, pAdvertNS, **kw):
-        self.pAdvertNS = pAdvertNS
-        self.priority = kw.pop('priority', -5)
-        self.__name__ = 'buildAdvertIdFrom#'+pAdvertNS
-
-    def __get__(self, obInst, obKlass=None):
-        if obInst is None:
-            return obKlass
-        return self.getAdvertIdFrom(obInst)
-
-    def getAdvertIdFrom(self, obInst):
-        advertNS = getattr(obInst, self.pAdvertNS)
-        return advertIdForNS(advertNS)
-
-    def onObservableInit(self, pName, obInst):
-        advertId = self.getAdvertIdFrom(obInst)
-        setattr(obInst, pName, advertId)
-        return advertId
-
 
 class BasicAdvertResponder(BlatherObject, IAdvertResponder):
     buildAdvertIdFrom = staticmethod(buildAdvertIdFrom)
