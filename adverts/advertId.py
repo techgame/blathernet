@@ -12,6 +12,7 @@
 
 from hashlib import md5
 from contextlib import contextmanager
+from ..base import BlatherObject
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 #~ Definitions 
@@ -52,15 +53,16 @@ class BuildAdvertId(object):
         return advertId
     onObservableInit.priority = 5
 
-buildAdvertIdFrom = staticmethod(BuildAdvertId.fromAttr)
+buildAdvertIdFrom = BuildAdvertId.fromAttr
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 class AdvertMessageAPI(BlatherObject):
-    buildAdvertIdFrom = staticmethod(buildAdvertIdFrom)
 
     apiNS = None
     apiAdvertId = buildAdvertIdFrom('apiNS')
+
+    buildAdvertIdFrom = staticmethod(buildAdvertIdFrom)
 
     def __init__(self, iMsgApi, replyId=None):
         self._mobj_ = iMsgApi.newMsg(self.apiAdvertId, replyId)
