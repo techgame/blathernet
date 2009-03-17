@@ -10,7 +10,7 @@
 #~ Imports 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-from .base import BlatherObject
+from .base import BlatherObject, OBFactoryMap
 from . import tasks
 from . import routes 
 from . import messages
@@ -23,7 +23,7 @@ from . import adverts
 class BlatherHost(BlatherObject):
     """BlatherHost for components of the blather system"""
 
-    _fm_ = BlatherObject._fm_.branch(
+    _fm_ = OBFactoryMap(
             TaskMgr = tasks.BlatherTaskMgr,
             RouteMgr = routes.BlatherRouteMgr,
             AdvertDB = adverts.BlatherAdvertDB,

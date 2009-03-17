@@ -30,7 +30,6 @@ else: timestamp = time.time
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 class BlatherObject(KVObject):
-    _fm_ = OBFactoryMap()
     timestamp = staticmethod(timestamp)
 
     def asStrongProxy(self, cb=None): return self

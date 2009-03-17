@@ -11,7 +11,7 @@
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 from TG.kvObserving import kvobserve
-from ..base import BlatherObject
+from ..base import BlatherObject, OBFactoryMap
 from .. import network
 from .factory import BlatherRouteFactory
 from .api import IRouteAPI
@@ -21,7 +21,7 @@ from .api import IRouteAPI
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 class BlatherRouteMgr(BlatherObject, IRouteAPI):
-    _fm_ = BlatherObject._fm_.branch(
+    _fm_ = OBFactoryMap(
             RouteFactory = BlatherRouteFactory,
             NetworkMgr = network.BlatherNetworkMgr,
             )

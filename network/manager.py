@@ -10,7 +10,7 @@
 #~ Imports 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-from ..base import BlatherObject
+from ..base import BlatherObject, OBFactoryMap
 
 from .socketConfigTools import netif, AF_INET, AF_INET6
 from .selectTask import NetworkSelector
@@ -22,7 +22,7 @@ from . import inprocChannel
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 class BlatherNetworkMgr(BlatherObject):
-    _fm_ = BlatherObject._fm_.branch(
+    _fm_ = OBFactoryMap(
             NetworkSelector=NetworkSelector,)
 
     _networkSelector = None
