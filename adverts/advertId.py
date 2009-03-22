@@ -40,8 +40,9 @@ class BuildAdvertId(object):
 
     def __get__(self, obInst, obKlass=None):
         if obInst is None:
-            return self
-        return self.getAdvertIdFrom(obInst)
+            return self.getAdvertIdFrom(obKlass)
+        else:
+            return self.getAdvertIdFrom(obInst)
 
     def getAdvertIdFrom(self, obInst):
         advertNS = getattr(obInst, self.pAdvertNS)
@@ -49,23 +50,42 @@ class BuildAdvertId(object):
 
     def onObservableInit(self, pName, obInst):
         advertId = self.getAdvertIdFrom(obInst)
-        setattr(obInst, pName, advertId)
-        return advertId
+        if advertId is not None:
+            setattr(obInst, pName, advertId)
+            return advertId
     onObservableInit.priority = 5
+
+    def onObservableClassInit(self, pName, obKlass):
+        advertId = self.getAdvertIdFrom(obInst)
+        if advertId is not None:
+            setattr(obInst, pName, advertId)
+            return advertId
+    onObservableClassInit.priority = 5
 
 buildAdvertIdFrom = BuildAdvertId.fromAttr
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 class AdvertMessageAPI(BlatherObject):
-
     apiNS = None
     apiAdvertId = buildAdvertIdFrom('apiNS')
 
     buildAdvertIdFrom = staticmethod(buildAdvertIdFrom)
 
-    def __init__(self, iMsgApi, replyId=None):
-        self._mobj_ = iMsgApi.newMsg(self.apiAdvertId, replyId)
+    def __init__(self, mobj):
+        self._mobj_ = mobj.copy()
+
+    @classmethod
+    def new(klass, iMsgApi, advertId=None, replyId=None):
+        if advertId is None:
+            advertId = klass.apiAdvertId
+
+        mobj = iMsgApi.newMsg(advertId, replyId)
+        return klass(mobj)
+
+    @classmethod
+    def newWithReply(klass, iMsgApi, replyId):
+        return klass.new(iMsgApi, None, replyId)
 
     """
     def example(self):
