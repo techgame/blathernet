@@ -96,10 +96,11 @@ class UDPBaseChannel(SocketChannel):
                 self.needsWrite = True
 
     def recvDefault(self, channel, data, address, ts):
-        print
-        print self.sock.getsockname(), 'recvDefault:'
-        print '   ', address, 'not in:', self.registry.keys()
-        print
+        pass
+        #print
+        #print self.sock.getsockname(), 'recvDefault:'
+        #print '   ', address, 'not in:', self.registry.keys()
+        #print
 
     #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
