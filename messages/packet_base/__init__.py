@@ -63,7 +63,7 @@ class MsgCodecBase(object):
         encoder = self.newEncoder()
         pkt = mobj.executeOn(encoder)
         if not isinstance(pkt, str):
-            raise RuntimeError("Packet is not of type str: %s" % (type(r),))
+            raise RuntimeError("Packet is not of type str: %s" % (type(pkt),))
 
         if assign:
             mobj.encodedAs(encoder.msgId, pkt)
