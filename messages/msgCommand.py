@@ -71,7 +71,7 @@ class MsgCommandObject(object):
 
     def encodedAs(self, msgId, pkt):
         self.msgId = msgId
-        self.fwd.packet = pkt
+        self.fwd.update(pkt)
 
     def getFwdPacket(self, assign=True):
         fwd = self.fwd
