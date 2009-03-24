@@ -62,8 +62,8 @@ class MsgCodecBase(object):
     def encode(self, mobj, assign=False):
         encoder = self.newEncoder()
         pkt = mobj.executeOn(encoder)
-        if not isinstance(pkt, str):
-            raise RuntimeError("Packet is not of type str: %s" % (type(pkt),))
+        if not isinstance(pkt.packet, str):
+            raise RuntimeError("Packet is not of type str: %s" % (type(pkt.packet),))
 
         if assign:
             mobj.encodedAs(encoder.msgId, pkt)
