@@ -44,9 +44,10 @@ class MsgContext(IMessageAPI):
     _fwdPacket = None
     def getFwdPacket(self):
         def findPkt(src):
-            return src.packet or src.mobj.encode().packet
+            return src.packet or src.mobj.getFwdPacket()
 
         pkt = self._fwdPacket or findPkt(self.src)
+        self._fwdPacket = pkt
         return pkt
     fwdPacket = property(getFwdPacket)
 

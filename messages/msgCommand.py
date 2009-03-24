@@ -73,11 +73,11 @@ class MsgCommandObject(object):
         self.msgId = msgId
         self.fwd.packet = pkt
 
-    def getFwdPacket(self):
+    def getFwdPacket(self, assign=True):
         fwd = self.fwd
         if fwd.packet is None:
-            fwd = self.encode()
-        return fwd
+            fwd = self.encode(assign)
+        return fwd.packet
 
     #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 

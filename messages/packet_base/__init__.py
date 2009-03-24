@@ -63,7 +63,7 @@ class MsgCodecBase(object):
         encoder = self.newEncoder()
         pkt = mobj.executeOn(encoder)
         if assign:
-            mobj.encodedAs(encoder.msgid, pkt)
+            mobj.encodedAs(encoder.msgId, pkt)
         return pkt
 
     #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
