@@ -187,7 +187,19 @@ class BasicBlatherTimerMgr(BasicBlatherTaskMgr):
             self.timersleep(self.minTimerFrequency)
 
     def _processFiredTask(self, ts, task):
-        tsNext = task(ts)
+        if callable(task):
+            tsNext = task(ts)
+            next = getattr(tsNext, 'next', None)
+            if next is not None:
+                # task returned a generator or iterator so it becomse our new
+                # task, and the tsNext is returned by the first result
+                task = tsNext
+                tsNext = next()
+        elif getattr(task, 'gi_running', None):
+            tsNext = task.send(ts)
+        else:
+            tsNext = task.next()
+
         if tsNext is not None:
             self.addTimer(tsNext, task, ts)
 
