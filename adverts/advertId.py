@@ -84,6 +84,12 @@ class AdvertMessageAPI(BlatherObject):
         return klass(mobj)
 
     @classmethod
+    def newCtx(klass, mctx, replyId, adKey=True):
+        adKey = mctx.adRefs.get(adKey)
+        if adKey:
+            return klass.new(mctx.host, adKey[0], replyId)
+
+    @classmethod
     def newWithReply(klass, iMsgApi, replyId):
         return klass.new(iMsgApi, None, replyId)
 
