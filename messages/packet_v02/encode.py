@@ -15,12 +15,13 @@ from struct import pack, unpack, calcsize
 from StringIO import StringIO
 
 from ..packet_base import MsgEncoderBase, iterMsgId
+from ..apiMsgExecute import MsgExecuteAPI
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 #~ Definitions 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-class MsgEncoder_v02(MsgEncoderBase):
+class MsgEncoder_v02(MsgExecuteAPI, MsgEncoderBase):
     msgVersion = '\x02'
 
     advertId = None

@@ -13,13 +13,18 @@
 from ..base import PacketNS
 
 from ..adverts import advertIdForNS
+from .apiMsgExecute import MsgExecuteAPI
+from .msgSizer import MsgSizer
 from .msgPPrint import MsgPPrint
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 #~ Definitions 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-class MsgCommandObject(object):
+class CacheNS(object):
+    pass
+
+class MsgCommandObject(MsgExecuteAPI):
     codec = None # class variable
 
     msgId = None
@@ -45,6 +50,7 @@ class MsgCommandObject(object):
         r = self.new()
         r.advertMsgId(self.advertId, self.msgId, self.src)
         r._cmdList = self._cmdList[:]
+        r._cmdCache = {}
         return r
 
     def __enter__(self):
@@ -142,10 +148,6 @@ class MsgCommandObject(object):
         self.fwd = PacketNS(self.src.packet)
         return self
 
-    def end(self):
-        self._cmd_('end')
-        return False
-
     def broadcastOnce(self, whenUnhandled=True, fwdAdvertId=None):
         return self.forwardOnce(0, whenUnhandled, fwdAdvertId)
     def forwardOnce(self, breadthLimit=1, whenUnhandled=True, fwdAdvertId=None):
@@ -187,6 +189,10 @@ class MsgCommandObject(object):
         self._cmd_('msg', body, fmt, topic)
         return self
     
+    def end(self):
+        self._cmd_('end')
+        return False
+
     def complete(self):
         return self
 
@@ -198,8 +204,7 @@ class MsgCommandObject(object):
         mx = mxRoot.advertMsgId(self.advertId, self.msgId, self.src)
         if mx:
             for fn, args in self.iterCmds():
-                fn = getattr(mx, fn)
-                r = fn(*args)
+                r = mx.cmdPerform(fn, args)
                 if r is False:
                     break
 
@@ -224,6 +229,7 @@ class MsgCommandObject(object):
             self.fwd.packet = None
 
         ce = (name, args)
+        self._cmdCache.clear()
         self._cmdList.append(ce)
         return ce
     
@@ -236,10 +242,29 @@ class MsgCommandObject(object):
     def _cmd_clear_(self, name=None):
         if self.fwd is not None:
             self.fwd.packet = None
+        self._cmdCache = {}
         if name is None:
             self._cmdList = []
         else:
             self._cmdList[:] = [(n,a) for n,a in self._cmdList if n != name]
+
+    #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+    def __len__(self):
+        return self.size
+
+    def getSize(self):
+        size = self._cmdCache.get('size', None)
+        if size is None:
+            size = self.calcSize(True)
+            self._cmdCache['size'] = size
+
+        return size
+    size = property(getSize)
+
+    def calcSize(self, incProtocol=True):
+        mx = MsgSizer(incProtocol)
+        return self.executeOn(mx)
 
     #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     #~ Utility Flyweight integration

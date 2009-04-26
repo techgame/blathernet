@@ -14,6 +14,7 @@ from __future__ import with_statement
 from ..base.tracebackBoundry import localtb
 
 from .context import MsgContext
+from .apiMsgExecute import MsgExecuteAPI
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 #~ Message Dispatch Rules
@@ -52,7 +53,7 @@ class MsgDispatchRules(object):
 #~ Message Dispatching
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-class MsgDispatch(object):
+class MsgDispatch(MsgExecuteAPI):
     MsgDispatchRules = MsgDispatchRules
     MsgContext = MsgContext 
     mctx = None
@@ -95,16 +96,6 @@ class MsgDispatch(object):
 
         return self
 
-    def end(self):
-        return False
-
-    def broadcastOnce(self, whenUnhandled=True, fwdAdvertId=None):
-        return self.forward(0, whenUnhandled, fwdAdvertId)
-    def forwardOnce(self, breadthLimit=1, whenUnhandled=True, fwdAdvertId=None):
-        return self.forward(breadthLimit, whenUnhandled, fwdAdvertId)
-
-    def broadcast(self, whenUnhandled=True, fwdAdvertId=None):
-        return self.forward(0, whenUnhandled, fwdAdvertId)
     def noForward(self):
         return self.mctx
     def forward(self, breadthLimit=1, whenUnhandled=True, fwdAdvertId=None):
@@ -179,6 +170,9 @@ class MsgDispatch(object):
                 if v is not False:
                     mctx.handled += 1
         return mctx
+
+    def end(self):
+        return False
 
     def complete(self):
         mctx = self.mctx

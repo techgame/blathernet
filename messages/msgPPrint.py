@@ -10,11 +10,13 @@
 #~ Imports 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
+from .apiMsgExecute import MsgExecuteAPI
+
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 #~ Definitions 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-class MsgPPrint(object):
+class MsgPPrint(MsgExecuteAPI):
     def __init__(self, out=None):
         self.out = out
 
@@ -36,10 +38,14 @@ class MsgPPrint(object):
         self._print_cmd_('end')
         return False
 
+    def forwardOnce(self, breadthLimit=1, whenUnhandled=True, fwdAdvertId=None):
+        if fwdAdvertId in (True, False):
+            fwdAdvertId = None
+        self._print_cmd_('forwardOnce(%r, %r, %s)', breadthLimit, whenUnhandled, self._anAdId_(fwdAdvertId))
+
     def forward(self, breadthLimit=1, whenUnhandled=True, fwdAdvertId=None):
         if fwdAdvertId in (True, False):
             fwdAdvertId = None
-
         self._print_cmd_('forward(%r, %r, %s)', breadthLimit, whenUnhandled, self._anAdId_(fwdAdvertId))
 
     def replyRef(self, replyAdvertIds):
