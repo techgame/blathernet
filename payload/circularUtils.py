@@ -23,6 +23,11 @@ class Circular(object):
     def __init__(self, value=0):
         self.value = value
 
+    def __int__(self):
+        return int(self.value)
+    def __float__(self):
+        return float(self.value)
+
     def setModulus(self, base, pivot=None):
         self.base = base
         if pivot is None:
@@ -43,12 +48,14 @@ class Circular(object):
             return v0, dv
         else: return dv
 
-    def phaseCorrect(self, cv, update=True):
+    def phaseCorrect(self, cv, split=False, update=True):
         v0, dv = self.phaseDelta(cv, True)
         v = v0+dv
         if update and dv>0:
             self.value = v
-        return v
+        if split:
+            return v, dv
+        else: return v
 
     #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -69,8 +76,13 @@ class Circular(object):
 
     #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-    def decode(self, cv, update=False):
-        return self.phaseCorrect(cv, update)
+    def decode(self, cv, update=False, split=False):
+        return self.phaseCorrect(cv, split, update)
+
+    def splitDecode(self, cv, update=True):
+        v0 = self.value
+        v1 = self.decode(cv, update)
+        return v0, v1
 
     def vecDecode(self, cvec, update=False):
         phC = self.decode
