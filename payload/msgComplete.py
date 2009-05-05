@@ -56,7 +56,7 @@ class MsgCompleteCodec(object):
             raise ValueError('No message ids available')
 
         self.nextMsgId = msgId+1
-        entry = [None, body]
+        entry = [body, None]
         self.msgDb[msgId] = entry
         return self.pktEncodeEntry(msgId, entry, 0)
     encode = msgEncode
@@ -68,7 +68,7 @@ class MsgCompleteCodec(object):
     def iterResendAckIds(self, delta=0):
         ackId = self.acks.tipAckId.value + delta
         result = [(m,e) for m,e in self.msgDb.iteritems() if m < ackId]
-        result.sort(key=lambda (m,e): (e[0], m))
+        result.sort(key=lambda (m,e): (e[-1], m))
         return result
 
     def resendEncode(self, msgIds=True):
@@ -89,14 +89,14 @@ class MsgCompleteCodec(object):
         # flags: 0x80 -> protocol cmd; 0x40 -> undefined; 0x3f -> ack length
         pktId = self.nextPktId
         self.nextPktId = pktId+1
-        entry[0] = pktId
+        entry[-1] = pktId
 
         ackPayload = self.acks.encode()
         if ackPayload:
             flags |= len(ackPayload)
         parts = [
             self.fmtHeader.pack(pktId & 0xffff, flags, entryId),
-            ackPayload, entry[-1]]
+            ackPayload, entry[0]]
         return ''.join(parts)
 
     #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -192,7 +192,7 @@ class AckCodec(object):
 
             entry = msgDb.get(ackId, None)
             if entry is not None:
-                entry[0] = max(pktId, entry[0])
+                entry[-1] = max(pktId, entry[-1])
 
     def recvMsgId(self, msgId):
         oldId, msgId = self.tipMsgId.splitDecode(msgId)
