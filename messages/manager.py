@@ -28,7 +28,7 @@ class MessageMgr(IMessageAPI):
 
     def __init__(self, host):
         self.host = host.asWeakProxy()
-        self.tasks = host.tasks
+        self.tasks = host.tasks.asWeakProxy()
         self.advertDb = host.advertDb
         self.msgFilter = MsgAdvertIdBloomFilter()
         self._cfgFlyweights()

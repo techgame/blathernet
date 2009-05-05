@@ -39,7 +39,8 @@ class AdvertDB(IAdvertAPI):
     AdvertEntry = AdvertEntry
     AdvertLookup = AdvertLookup
 
-    def __init__(self):
+    def __init__(self, host):
+        self.tasks = host.tasks.asWeakProxy()
         self._entries = self.AdvertLookup(self.AdvertEntry)
 
     #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
