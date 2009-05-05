@@ -14,6 +14,7 @@ from __future__ import with_statement
 
 import threading
 from socketChannel import NetworkChannel
+from .dispatchChannel import DispatchChannelMixin
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 #~ Definitions 
@@ -24,11 +25,10 @@ def count(i=0):
         yield i
         i+=1
 
-class InprocChannel(NetworkChannel):
+class InprocChannel(DispatchChannelMixin, NetworkChannel):
     _nextAddr = count()
     needsSelect = False
 
-    registry = None
     inprocRegistry = None
 
     address = None
@@ -38,9 +38,7 @@ class InprocChannel(NetworkChannel):
 
         self.address = address
         self.inprocRegistry = self.interfaceRegistryFor(interface)
-
-        self.registry = AddressRegistry()
-        self.registry.fallback = self.recvDefault
+        self.initRegistry()
 
         self.recvQueueLock = threading.Lock()
         with self.recvQueueLock:
@@ -59,38 +57,6 @@ class InprocChannel(NetworkChannel):
     def interfaceRegistryFor(klass, interface):
         return klass._inprocInterfaceRegistry.setdefault(interface, {})
     _inprocInterfaceRegistry = {}
-
-    def register(self, address, recv):
-        entry = self.registry.get(address)
-        if entry is None:
-            entry = recv
-        elif not isinstance(entry, set):
-            if entry == recv:
-                assert not address, (address, recv)
-                return
-
-            entry = set([entry, recv])
-        else: 
-            entry.add(recv)
-
-        self.registry[address] = entry
-
-
-    def unregister(self, address, recv):
-        entry = self.registry.get(address)
-        if entry is not None:
-            if isinstance(entry, set):
-                entry.discard(recv)
-                return True
-
-            if entry == recv:
-                del self.registry[address]
-                return True
-
-        return False
-
-    def recvDefault(self, channel, data, address, ts):
-        pass
 
     #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -120,16 +86,4 @@ class InprocChannel(NetworkChannel):
             tasks.append((self._dispatchDataPackets, data))
         self.needsVisit = False
         return len(data)
-
-    def _dispatchDataPackets(self, data):
-        registry = self.registry
-
-        ts = self.timestamp()
-        for data, address in data:
-            recvFns = registry[address]
-            if isinstance(recvFns, set):
-                for recv in recvFns:
-                    recv(self, data, address, ts)
-            else: 
-                recvFns(self, data, address, ts)
 

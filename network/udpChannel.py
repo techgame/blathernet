@@ -18,15 +18,13 @@ from socket import error as SocketError
 
 from .socketChannel import SocketChannel
 from .socketConfigTools import udpSocketErrorMap
-from .addrRegistry import AddressRegistry
+from .dispatchChannel import DispatchChannelMixin
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 #~ Definitions 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-class UDPBaseChannel(SocketChannel):
-    registry = None
-
+class UDPBaseChannel(DispatchChannelMixin, SocketChannel):
     socketErrorMap = udpSocketErrorMap
 
     sockType = SOCK_DGRAM
@@ -36,48 +34,13 @@ class UDPBaseChannel(SocketChannel):
 
     def __init__(self, address=None, interface=None, onBindError=None):
         SocketChannel.__init__(self)
-
-        self.registry = AddressRegistry()
-        self.registry.fallback = self.recvDefault
+        self.initRegistry()
 
         self.sendQueue = Queue.Queue()
         if address:
             self.setSocketAddress(address, interface, onBindError)
 
     #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-    def addResolver(self, addrRes):
-        return self.registry.addResolver(addrRes)
-    def removeResolver(self, addrRes):
-        return self.registry.removeResolver(addrRes)
-
-    def register(self, address, recv):
-        entry = self.registry.get(address)
-        if entry is None:
-            entry = recv
-        elif not isinstance(entry, set):
-            if entry == recv:
-                assert not address, (address, recv)
-                return
-
-            entry = set([entry, recv])
-        else: 
-            entry.add(recv)
-
-        self.registry[address] = entry
-
-    def unregister(self, address, recv):
-        entry = self.registry.get(address)
-        if entry is not None:
-            if isinstance(entry, set):
-                entry.discard(recv)
-                return True
-
-            if entry == recv:
-                del self.registry[address]
-                return True
-
-        return False
 
     def send(self, data, address, onErrorNotify=None):
         try:
@@ -94,13 +57,6 @@ class UDPBaseChannel(SocketChannel):
             elif reraise is None:
                 self.sendQueue.put((data, address, onErrorNotify))
                 self.needsWrite = True
-
-    def recvDefault(self, channel, data, address, ts):
-        pass
-        #print
-        #print self.sock.getsockname(), 'recvDefault:'
-        #print '   ', address, 'not in:', self.registry.keys()
-        #print
 
     #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -166,18 +122,6 @@ class UDPBaseChannel(SocketChannel):
     #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     #~ Socket processing
     #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-    def _dispatchDataPackets(self, dataPackets):
-        registry = self.registry
-
-        ts = self.timestamp()
-        for data, address in dataPackets:
-            recvFns = registry[address]
-            if isinstance(recvFns, set):
-                for recv in recvFns:
-                    recv(self, data, address, ts)
-            else: 
-                recvFns(self, data, address, ts)
 
     def performRead(self, tasks):
         sock = self.sock

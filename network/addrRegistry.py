@@ -16,7 +16,6 @@
 
 class AddressRegistry(dict):
     resolvers = ()
-    fallback = None
 
     def addResolver(self, addrRes):
         resolvers = self.resolvers
@@ -46,4 +45,10 @@ class AddressRegistry(dict):
             return fn
         else:
             return self.fallback
+
+    def getFallback(self):
+        return self.get(None, None)
+    def setFallback(self, fallback):
+        self[None] = fallback
+    fallback = property(getFallback, setFallback) 
 
