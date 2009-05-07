@@ -26,7 +26,7 @@ class TestMsgComplete(unittest.TestCase):
             sampleMsgs = self.sampleMsgs
 
         n0 = MsgCompleteCodec()
-        n0.acks.decodeDebug = True
+        n0.msgAcks.decodeDebug = True
         n1 = MsgCompleteCodec()
 
         messages = self.sampleMsgs
@@ -45,7 +45,7 @@ class TestMsgComplete(unittest.TestCase):
     def checkReply(self, info):
         srcNode, dstNode, packets, messages = info
 
-        knownId = dstNode.acks.tipMsgId.value
+        knownId = dstNode.msgAcks.tipMsgId.value
         reply = dstNode.encode('')
 
         srcNode.decode(reply)

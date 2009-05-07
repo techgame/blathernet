@@ -12,6 +12,7 @@
 
 from struct import Struct
 from array import array
+from bisect import insort
 
 from .circularUtils import Circular8b, Circular16b
 
@@ -35,20 +36,22 @@ fmtHeader = Struct('!HBB')
 
 class MsgCompleteCodec(object):
     fmtHeader = fmtHeader
+    tipPktId = -1
 
     nextPktId = 0
     nextMsgId = 0
 
     def __init__(self):
         self.msgDb = {}
-        self.acks = AckCodec(self.msgDb)
+        self.msgAcks = AckCodec(self.msgDb)
+        self.tipPktId = Circular16b(self.tipPktId)
 
     def __nonzero__(self):
         return self.available() > 0
     def available(self, msgId=None):
         if msgId is None:
             msgId = self.nextMsgId-1
-        return self.acks.msgAckDiff(msgId)
+        return self.msgAcks.msgAckDiff(msgId)
 
     def msgEncode(self, body):
         msgId = self.nextMsgId
@@ -58,7 +61,7 @@ class MsgCompleteCodec(object):
         self.nextMsgId = msgId+1
         entry = [body, None]
         self.msgDb[msgId] = entry
-        return self.pktEncodeEntry(msgId, entry, 0)
+        return self.pktEncodeEntry(msgId, entry, 0, self.msgAcks)
     encode = msgEncode
 
     def iterResendPktIds(self, delta=-1):
@@ -66,12 +69,12 @@ class MsgCompleteCodec(object):
         return ((m,e) for m,e in self.msgDb.iteritems() if e[0] < pktId)
 
     def iterResendAckIds(self, delta=0):
-        ackId = self.acks.tipAckId.value + delta
+        ackId = self.msgAcks.tipAckId.value + delta
         result = [(m,e) for m,e in self.msgDb.iteritems() if m < ackId]
         result.sort(key=lambda (m,e): (e[-1], m))
         return result
 
-    def resendEncode(self, msgIds=True):
+    def iterReencode(self, msgIds=True):
         if msgIds is True:
             results = self.iterResendAckIds()
         elif msgIds:
@@ -83,15 +86,15 @@ class MsgCompleteCodec(object):
             results = self.iterResendPktIds()
 
         for msgId, entry in results:
-            yield self.pktEncodeEntry(msgId, entry, 0)
+            yield self.pktEncodeEntry(msgId, entry, 0, self.msgAcks)
 
-    def pktEncodeEntry(self, entryId, entry, flags=0):
+    def pktEncodeEntry(self, entryId, entry, flags, acks):
         # flags: 0x80 -> protocol cmd; 0x40 -> undefined; 0x3f -> ack length
         pktId = self.nextPktId
         self.nextPktId = pktId+1
         entry[-1] = pktId
 
-        ackPayload = self.acks.encode()
+        ackPayload = acks.encode()
         if ackPayload:
             flags |= len(ackPayload)
         parts = [
@@ -102,7 +105,7 @@ class MsgCompleteCodec(object):
     #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
     def getMissingIds(self):
-        return self.acks.msgNacks
+        return self.msgAcks.msgNacks
     missingIds = property(getMissingIds)
 
     def decode(self, payload):
@@ -112,17 +115,18 @@ class MsgCompleteCodec(object):
         ackPayload = payload[4:ph1]
         payload = payload[ph1:]
 
-        pktId = self.acks.decode(pktId, ackPayload)
+        pktId = self.tipPktId.decode(pktId, True)
 
         if flags & 0x80:
             return self._cmdRecv(pktId, payloadId, payload)
         else:
+            pktId = self.msgAcks.decode(pktId, ackPayload)
             return self._msgRecv(pktId, payloadId, payload)
 
     def _cmdRecv(self, pktId, cmdId, command):
         return None
     def _msgRecv(self, pktId, msgId, body):
-        isNew = self.acks.recvMsgId(msgId)
+        isNew = self.msgAcks.recvMsgId(msgId)
         return isNew, msgId, body
 
     #def msg(self, payload, fmt, topic, mctx):
@@ -130,6 +134,35 @@ class MsgCompleteCodec(object):
     #    if msgPayload:
     #        isNew, msgId, msgBody = msgPayload
 
+class OrderedMsgCompleteCodec(object):
+    nextMsgId = 0
+
+    def __init__(self, mc=None):
+        if mc is None:
+            mc = MsgCompleteCodec()
+        self.mc = mc
+        self.msgLst = []
+
+    def decode(self, payload):
+        isNew, msgId, msgBody = self.mc.decode(payload)
+        if isNew:
+            insort(self.msgLst, (msgId, msgBody))
+        return msgId == self.nextMsgId
+
+    def fetch(self):
+        msgList = self.msgLst
+        nextMsgId = self.nextMsgId
+
+        while msgList and nextMsgId == msgList[0][0]:
+            nextMsgId += 1
+            self.nextMsgId = nextMsgId
+            yield msgList.pop(0)[-1]
+
+    def isCurrent(self):
+        return not self.msgList
+
+    def encode(self, body):
+        return self.mc.encode(body)
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 #~ Ack Codec
@@ -137,14 +170,12 @@ class MsgCompleteCodec(object):
 
 class AckCodec(object):
     msgDb = None    # dict()
-    tipPktId = -1
     tipAckId = -1    # Circular8b()
     tipMsgId = -1    # Circular8b()
     msgNacks = None # set()
 
     def __init__(self, msgDb):
         self.msgDb = msgDb
-        self.tipPktId = Circular16b(self.tipPktId)
         self.tipAckId = Circular8b(self.tipAckId)
 
         self.tipMsgId = Circular8b(self.tipMsgId)
@@ -168,8 +199,6 @@ class AckCodec(object):
             ackId = array('B', ackPayload[:1])[0]
             nackIds = array('B', ackPayload[1:])
             self.recvAck(pktId, ackId, nackIds)
-
-        return self.tipPktId.decode(pktId, True)
 
     #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
