@@ -76,7 +76,7 @@ class MsgDispatch(MsgExecuteAPI):
     #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
     def advertMsgId(self, advertId, msgId, src=None):
-        adEntry = self.advertDb.get(advertId)
+        adEntry = self.advertDb.getDispatchEntry(advertId)
 
         mctx = self.MsgContext(advertId, msgId, src)
         mctx.adEntry = adEntry
@@ -119,7 +119,7 @@ class MsgDispatch(MsgExecuteAPI):
 
         if fwdAdvertId is not None:
             # lookup entry for specified fwdAdEntry
-            fwdEntry = self.advertDb.get(fwdAdvertId)
+            fwdEntry = self.advertDb.getForwardEntry(fwdAdvertId)
             if fwdEntry is not None:
                 for fr in fwdEntry.allResponders():
                     if fr.prohibitForwardToward(mctx):

@@ -67,6 +67,9 @@ class AdvertDB(IAdvertAPI):
     def getEntry(self, adKey, default=None):
         return self.get(adKey, default)
 
+    getDispatchEntry = getEntry
+    getForwardEntry = getEntry
+
     def find(self, adKey, orAdd=True):
         entries = self._entries
         e = entries.get(adKey)
