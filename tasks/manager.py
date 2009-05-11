@@ -84,6 +84,9 @@ class BasicBlatherTaskMgr(BlatherObject, ITaskAPI):
     def processLoop(self, isDone=lambda n: False):
         while not self.done:
             n = self.processTasks()
+
+            if n: self.tasksleep(0)
+            else: self.tasksleep(self.timeout)
             if isDone(n):
                 break
         return tn
@@ -177,6 +180,9 @@ class BasicBlatherTimerMgr(BasicBlatherTaskMgr):
         while not self.done:
             self.processTimers(hqTimer)
             n = self.processTasks()
+
+            if n: self.tasksleep(0)
+            else: self.tasksleep(self.timeout)
             if isDone(n):
                 break
         return tn
