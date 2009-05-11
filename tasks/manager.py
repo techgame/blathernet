@@ -36,6 +36,7 @@ class BasicBlatherTaskMgr(BlatherObject, ITaskAPI):
         self.initTasks()
 
     def initTasks(self):
+        self.lockTasks = Lock()
         self.tasks = set()
         self._e_tasks = Event()
         self.setTaskSleep()
@@ -55,72 +56,78 @@ class BasicBlatherTaskMgr(BlatherObject, ITaskAPI):
         if task is None:
             return None
 
-        self.tasks.add(task)
+        with self.lockTasks:
+            self.tasks.add(task)
         self._e_tasks.set()
         return task
 
     def extendTasks(self, tasks):
-        self.tasks.update(t for t in tasks if t is not None)
+        with self.lockTasks:
+            self.tasks.update(t for t in tasks if t is not None)
         self._e_tasks.set()
 
-    def run(self, threaded=False):
-        if threaded:
-            return self.runThreaded()
-        else:
-            self.processUntilDone()
-
-    def runJoin(self, timeout=None):
-        tt = self.runThreaded()
-        if timeout in (None, False):
-            while tt.isAlive():
-                tt.join(1.0)
-        else: tt.join(timeout)
-
-        return tt.isAlive()
-
-    def stop(self):
-        self.done = True
-        e_task = self._e_tasks
-        e_task.set()
-
-    _taskThread = None
-    def runThreaded(self):
-        tt = self._taskThread
-        if tt is None:
-            tt = dispatchInThread(self.processUntilDone)
-            self._taskThread = tt
-            self.run = self.runJoin
-        return tt
+    def setDone(self, bDone=True):
+        self.done = bDone
+        self._e_tasks.set()
 
     def processUntilDone(self):
-        while not self.done:
-            self.process(False)
+        isDone = lambda n: False
+        return self.processLoop(isDone)
 
     def process(self, allActive=True):
+        if allActive:
+            isDone = lambda n: (n <= 0)
+        else:
+            isDone = lambda n: True
+        return self.processLoop(isDone)
+
+    def processLoop(self, isDone=lambda n: False):
+        while not self.done:
+            n = self.processTasks()
+            if isDone(n):
+                break
+        return tn
+
+    def processTasks(self):
         n = 0
         activeTasks = self.tasks
-        e_task = self._e_tasks
-
-        if not activeTasks:
-            e_task.clear()
-            self.tasksleep(self.timeout)
+        self.e_tasks.clear()
+        if activeTasks:
             return n
 
-        while activeTasks:
-            self.tasksleep(0)
-
-            e_task.clear()
-            for task in list(activeTasks):
-                n += 1
+        lockTasks = self.lockTasks
+        fireTask = self._processFiredTask
+        for task in list(activeTasks):
+            with lockTasks:
                 activeTasks.discard(task)
-                with localtb:
-                    if task():
-                        activeTasks.add(task)
 
-            if not allActive:
-                break
+            if task: 
+                n += 1
+                task = fireTask(task)
+
+            if task: 
+                with lockTasks:
+                    activeTasks.add(task)
 
         return n
+
+    def _processFiredTask(self, task):
+        if callable(task):
+            with localtb:
+                result = task()
+
+            if not hasattr(result, 'next'):
+                return result
+
+            # result is an iterator/generator style task
+            task = result
+
+        with localtb(StopIteration):
+            try:
+                task.next()
+                return task
+            except StopIteration:
+                return None
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 #~ Timer based Tasks
@@ -137,10 +144,9 @@ class BasicBlatherTimerMgr(BasicBlatherTaskMgr):
         self.lockTimerHQ = Lock()
         with self.lockTimerHQ:
             self.hqTimer = []
-        self.threadTimers()
 
     def addTimer(self, tsStart, task, tsBase=None):
-        if task is None:
+        if task is None or tsStart is None:
             return None
 
         if tsStart <= 100000:
@@ -165,48 +171,87 @@ class BasicBlatherTimerMgr(BasicBlatherTaskMgr):
                     tsStart += ts
                 heappush(hqTimer, (tsStart, task))
 
-    debug = False
-    timersleep = sleep
-    minTimerFrequency = 0.008
-    @threadcall
-    def threadTimers(self):
+    timeout = 0.005
+    def processLoop(self, isDone=lambda n: False):
         hqTimer = self.hqTimer
         while not self.done:
-            if hqTimer:
-                ts = self.timestamp()
+            self.processTimers(hqTimer)
+            n = self.processTasks()
+            if isDone(n):
+                break
+        return tn
 
-                firedTimers = []
-                with self.lockTimerHQ:
-                    while hqTimer and ts > hqTimer[0][0]:
-                        tsTask, task = heappop(hqTimer)
-                        firedTimers.append(task)
+    def processTimers(self, hqTimer=None):
+        if hqTimer is None:
+            hqTimer = self.hqTimer
 
-                if firedTimers:
-                    self.extendTasks(partial(self._processFiredTask, ts, tfn) for tfn in firedTimers)
+        ts = self.timestamp()
+        self.ts = ts
+        if not (hqTimer and ts > hqTimer[0][0]):
+            return
 
-            self.timersleep(self.minTimerFrequency)
+        firedTimers = []
+        with self.lockTimerHQ:
+            while hqTimer and ts > hqTimer[0][0]:
+                tsTask, task = heappop(hqTimer)
+                firedTimers.append(task)
 
-    def _processFiredTask(self, ts, task):
+        if firedTimers:
+            fireTask = self._processFiredTimerTask
+            self.extendTasks(partial(fireTask, ts, tfn) for tfn in firedTimers)
+
+    def _processFiredTimerTask(self, ts, task):
         if callable(task):
-            tsNext = task(ts)
-            next = getattr(tsNext, 'next', None)
-            if next is not None:
-                # task returned a generator or iterator so it becomse our new
-                # task, and the tsNext is returned by the first result
-                task = tsNext
-                tsNext = next()
-        elif getattr(task, 'gi_running', None):
-            tsNext = task.send(ts)
-        else:
-            tsNext = task.next()
+            with localtb:
+                tsNext = task()
 
-        if tsNext is not None:
-            self.addTimer(tsNext, task, ts)
+            if not hasattr(tsNext, 'next'):
+                self.addTimer(tsNext, task, ts)
+                return None
+
+            # tsNext is an iterator/generator style task
+            task = tsNext
+
+        with localtb(StopIteration):
+            try:
+                if getattr(task, 'gi_running', None):
+                    tsNext = task.send(ts)
+                else:
+                    tsNext = task.next()
+
+                self.addTimer(tsNext, task, ts)
+            except StopIteration:
+                pass
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 #~ Blather Task Manger
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 class BlatherTaskMgr(BasicBlatherTimerMgr):
-    pass
+    def run(self, threaded=False):
+        if threaded:
+            return self.runThreaded()
+        else:
+            self.processUntilDone()
+
+    def stop(self):
+        self.setDone(True)
+
+    def runJoin(self, timeout=None):
+        tt = self.runThreaded()
+        if timeout in (None, False):
+            while tt.isAlive():
+                tt.join(1.0)
+        else: tt.join(timeout)
+
+        return tt.isAlive()
+
+    _taskThread = None
+    def runThreaded(self):
+        tt = self._taskThread
+        if tt is None:
+            tt = dispatchInThread(self.processUntilDone)
+            self._taskThread = tt
+            self.run = self.runJoin
+        return tt
 
