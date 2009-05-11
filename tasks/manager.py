@@ -94,7 +94,7 @@ class BasicBlatherTaskMgr(BlatherObject, ITaskAPI):
     def processTasks(self):
         n = 0
         activeTasks = self.tasks
-        self.e_tasks.clear()
+        self._e_tasks.clear()
         if activeTasks:
             return n
 
