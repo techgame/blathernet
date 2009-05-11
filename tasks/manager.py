@@ -76,14 +76,16 @@ class BasicBlatherTaskMgr(BlatherObject, ITaskAPI):
 
     def process(self, allActive=True):
         if allActive:
-            isDone = lambda n: (n <= 0)
+            isDone = lambda n: (not self.tasks)
         else:
             isDone = lambda n: True
         return self.processLoop(isDone)
 
     def processLoop(self, isDone=lambda n: False):
+        tn = 0
         while not self.done:
             n = self.processTasks()
+            tn += n
 
             if n: self.tasksleep(0)
             else: self.tasksleep(self.timeout)
@@ -95,7 +97,7 @@ class BasicBlatherTaskMgr(BlatherObject, ITaskAPI):
         n = 0
         activeTasks = self.tasks
         self._e_tasks.clear()
-        if activeTasks:
+        if not activeTasks:
             return n
 
         lockTasks = self.lockTasks
@@ -176,10 +178,12 @@ class BasicBlatherTimerMgr(BasicBlatherTaskMgr):
 
     timeout = 0.005
     def processLoop(self, isDone=lambda n: False):
+        tn = 0
         hqTimer = self.hqTimer
         while not self.done:
             self.processTimers(hqTimer)
             n = self.processTasks()
+            tn += n
 
             if n: self.tasksleep(0)
             else: self.tasksleep(self.timeout)
@@ -209,7 +213,7 @@ class BasicBlatherTimerMgr(BasicBlatherTaskMgr):
     def _processFiredTimerTask(self, ts, task):
         if callable(task):
             with localtb:
-                tsNext = task()
+                tsNext = task(ts)
 
             if not hasattr(tsNext, 'next'):
                 self.addTimer(tsNext, task, ts)
