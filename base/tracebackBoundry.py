@@ -21,13 +21,26 @@ import traceback
 class TracebackBoundry(object):
     printException = staticmethod(traceback.print_exception)
 
+    ignoreTypes = set()
+
+    def __init__(self, ignoreTypes=None):
+        if ignoreTypes:
+            self.ignoreTypes = set(ignoreTypes)
+
+    @classmethod
+    def __call__(klass, *args):
+        return klass(args)
+
     def __enter__(self):
         pass
 
     def __exit__(self, exc_type, exc_value, exc_traceback):
-        if exc_type is not None:
+        if exc_type is None:
+            return None
+
+        if exc_type not in self.ignoreTypes:
             self.printException(exc_type, exc_value, exc_traceback)
-            return True
+        return True
 
 localtb = TracebackBoundry()
 
