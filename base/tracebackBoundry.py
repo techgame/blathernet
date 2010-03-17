@@ -12,15 +12,12 @@
 
 from __future__ import with_statement
 import sys
-import traceback
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 #~ Definitions 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 class TracebackBoundry(object):
-    printException = staticmethod(traceback.print_exception)
-
     ignoreTypes = set()
 
     def __init__(self, ignoreTypes=None):
@@ -39,7 +36,7 @@ class TracebackBoundry(object):
             return None
 
         if exc_type not in self.ignoreTypes:
-            self.printException(exc_type, exc_value, exc_traceback)
+            sys.excepthook(exc_type, exc_value, exc_traceback)
         return True
 
 localtb = TracebackBoundry()

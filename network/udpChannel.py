@@ -10,7 +10,7 @@
 #~ Imports 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-import traceback
+import sys
 import Queue
 
 from socket import SOCK_DGRAM
@@ -53,7 +53,7 @@ class UDPBaseChannel(DispatchChannelMixin, SocketChannel):
             else: 
                 reraise = onErrorNotify(self, data, address, err)
             if reraise: 
-                traceback.print_exc()
+                sys.excepthook(*sys.exc_info())
             elif reraise is None:
                 self.sendQueue.put((data, address, onErrorNotify))
                 self.needsWrite = True
@@ -133,7 +133,7 @@ class UDPBaseChannel(DispatchChannelMixin, SocketChannel):
                 dataPackets.append(sock.recvfrom(65536))
         except SocketError, err:
             if self.reraiseSocketError(err, err.args[0]):
-                traceback.print_exc()
+                sys.excepthook(*sys.exc_info())
 
         if dataPackets:
             tasks.append((self._dispatchDataPackets, dataPackets))
@@ -159,7 +159,7 @@ class UDPBaseChannel(DispatchChannelMixin, SocketChannel):
             else: 
                 reraise = onErrorNotify(self, data, address, err)
             if reraise:
-                traceback.print_exc()
+                sys.excepthook(*sys.exc_info())
             elif reraise is None:
                 sendQueue.put((data, address, onErrorNotify))
 
