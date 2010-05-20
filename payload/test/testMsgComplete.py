@@ -55,7 +55,7 @@ class TestMsgComplete(unittest.TestCase):
     def checkResends(self, info):
         srcNode, dstNode, packets, messages = info
 
-        for pkt in srcNode.resendEncode():
+        for pkt in srcNode.iterReencode():
             dstNode.decode(pkt)
 
     def test0123(self):
