@@ -38,10 +38,13 @@ class SocketConfigUtils(object):
             sock.setsockopt(socket.IPPROTO_IPV6, socket.IPV6_V6ONLY, 1)
 
     def reuseAddress(self, bReuse=True):
-        sock = self.sock
-        sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, bReuse)
+        self.sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, bReuse)
+        self.reusePort(bReuse)
+        return bReuse
+    def reusePort(self, bReuse=True):
         if hasattr(socket, "SO_REUSEPORT"):
-            sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEPORT, bReuse)
+            self.sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEPORT, bReuse)
+            return bReuse
 
     def getBroadcast(self):
         if hasattr(socket, "SO_BROADCAST"):
